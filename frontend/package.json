@@ -19,7 +19,6 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
-    "invertory-manager": "file:..",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.460.0",
     "node-cron": "^3.0.3",
