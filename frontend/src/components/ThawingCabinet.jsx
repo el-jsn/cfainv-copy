@@ -43,7 +43,7 @@ const ThawingCabinet = () => {
 
   const getCurrentDay = () => {
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    return days[new Date().getUTCDay()];
+    return days[new Date().getDay()];
   };
 
   const toggleFullScreen = useCallback(() => {
@@ -270,10 +270,10 @@ const ThawingCabinet = () => {
                   
                   if (durationUnit === "days") {
                     // For days, add duration - 1 (since start date counts as first day)
-                    closureEndDate.setUTCDate(closureStartDate.getUTCDate() + (durationValue - 1));
+                    closureEndDate.setDate(closureStartDate.getDate() + (durationValue - 1));
                   } else if (durationUnit === "weeks") {
                     // For weeks, add (7 * weeks) - 1 days
-                    closureEndDate.setUTCDate(closureStartDate.getUTCDate() + (7 * durationValue) - 1);
+                    closureEndDate.setDate(closureStartDate.getDate() + (7 * durationValue) - 1);
                   }
                 }
                 
@@ -282,14 +282,14 @@ const ThawingCabinet = () => {
                 const todayUTC = new Date(Date.UTC(
                   today.getUTCFullYear(),
                   today.getUTCMonth(),
-                  today.getUTCDate()
+                  today.getDate()
                 ));
                 
                 // Calculate the entry date in UTC
                 const daysToAdd = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-                  .indexOf(entry.day) - todayUTC.getUTCDay();
-                const entryDate = new Date(todayUTC);
-                entryDate.setUTCDate(todayUTC.getUTCDate() + daysToAdd);
+                  .indexOf(entry.day) - today.getDay();
+                const entryDate = new Date(today);
+                entryDate.setDate(today.getDate() + daysToAdd);
                 
                 // Debug logging
                 console.log('Closure check:', {

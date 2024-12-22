@@ -31,7 +31,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173", 
+    origin: ["http://localhost:5173", "https://cfanbinv.onrender.com"],
     credentials: true, // Allow cookies to be sent
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -76,7 +76,7 @@ app.use(limiter);
 
 // Enable CORS with specific options to restrict origins and methods
 const corsOptions = {
-  origin: ["https://cfa-nb-inv-mngr.onrender.com", "http://localhost:5173"], // Allow your React app's origins
+  origin: ["https://cfanbinv.onrender.com", "http://localhost:5173"], // Allow your React app's origins
   methods: "GET, POST, PUT, DELETE", // Allow specific HTTP methods
   credentials: true, // If your requests include credentials like cookies
 };

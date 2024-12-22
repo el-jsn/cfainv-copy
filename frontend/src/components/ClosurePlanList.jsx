@@ -9,19 +9,19 @@ const ClosurePlanList = () => {
   const [deleteModal, setDeleteModal] = useState({ show: false, planId: null });
   const navigate = useNavigate();
 
-  // Helper function to format UTC dates
-  const formatUTCDate = (dateString) => {
+  // Helper function to format dates
+  const formatDate = (dateString) => {
     const date = new Date(dateString);
     return new Date(date.getTime() + date.getTimezoneOffset() * 60000)
-      .toLocaleDateString('en-US', {
+      .toLocaleDateString('en-CA', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
       });
   };
 
-  // Helper function to format UTC date-time
-  const formatUTCDateTime = (dateString) => {
+  // Helper function to format date-time
+  const formatDateTime = (dateString) => {
     const date = new Date(dateString);
     return new Date(date.getTime() + date.getTimezoneOffset() * 60000)
       .toLocaleString('en-US', {
@@ -120,7 +120,7 @@ const ClosurePlanList = () => {
                   <div className="flex items-center space-x-2">
                     <Calendar className="w-5 h-5 text-blue-500 flex-shrink-0" />
                     <h2 className="text-xl font-bold text-gray-900">
-                      {formatUTCDate(plan.date)}
+                      {formatDate(plan.date)}
                     </h2>
                   </div>
                 </div>
@@ -139,7 +139,7 @@ const ClosurePlanList = () => {
                   {plan.expiresAt && (
                     <div className="flex items-center text-sm text-amber-600 bg-amber-50 rounded-lg p-3">
                       <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-                      <span>Expires: {formatUTCDateTime(plan.expiresAt)}</span>
+                      <span>Expires: {formatDateTime(plan.expiresAt)}</span>
                     </div>
                   )}
                 </div>
