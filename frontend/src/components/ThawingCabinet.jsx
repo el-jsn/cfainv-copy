@@ -27,7 +27,6 @@ const ThawingCabinet = () => {
   const requestWakeLock = async () => {
     try {
       wakeLock = await navigator.wakeLock.request('screen');
-      console.log('Wake Lock is active');
     } catch (err) {
       console.error(`${err.name}, ${err.message}`);
     }
@@ -37,14 +36,23 @@ const ThawingCabinet = () => {
     if (wakeLock) {
       await wakeLock.release();
       wakeLock = null;
-      console.log('Wake Lock has been released');
     }
   };
 
   const getCurrentDay = () => {
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    return days[new Date().getDay()];
+    const now = new Date();
+    return days[now.getDay()]; // Use local time instead of UTC
   };
+  
+
+  const isInCurrentWeek = (date) => {
+    const now = new Date();
+    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+    const endOfWeek = new Date(now.setDate(now.getDate() + (6 - now.getDay())));
+    return date >= startOfWeek && date <= endOfWeek;
+  };
+  
 
   const toggleFullScreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -79,13 +87,27 @@ const ThawingCabinet = () => {
     try {
       const closuresResponse = await axiosInstance.get("/closure/plans");
       const closuresData = Array.isArray(closuresResponse.data) ? closuresResponse.data : [closuresResponse.data];
-      setClosures(closuresData);
-      console.log('Fetched closures:', closuresData);
+  
+      // Get today's date in UTC
+      const today = new Date();
+      const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  
+      // Filter closures to include only those from today onward
+      const filteredClosures = closuresData.filter((closure) => {
+        const closureDateUTC = new Date(closure.date); // Convert closure.date to Date object
+        return closureDateUTC >= todayUTC; // Compare UTC dates
+      });
+  
+      setClosures(filteredClosures);
+      console.log('Filtered closures:', filteredClosures);
     } catch (error) {
       console.error("Error fetching closures:", error);
       setClosures([]);
     }
   };
+  
+  
+  
 
   const fetchData = useCallback(async () => {
     try {
@@ -132,7 +154,6 @@ const ThawingCabinet = () => {
       const calculatedCases = sortedSales.map((entry, index) => {
         const nextDaySales = sortedSales[(index + 1) % sortedSales.length]?.sales || 0;
         const dayMessages = messagesRef.current.filter(msg => msg.day === entry.day);
-        console.log(`Processing ${entry.day} messages:`, dayMessages);
 
         const applyMessage = (product, cases, bags = 0) => {
           const message = dayMessages.find(msg => msg.product === product);
@@ -140,7 +161,6 @@ const ThawingCabinet = () => {
           let finalBags = bags;
 
           if (message) {
-            console.log(`Applying message for ${product}:`, message);
             const parts = message.message.split(' and ');
             parts.forEach(part => {
               const [change, unit] = part.trim().split(' ');
@@ -204,7 +224,7 @@ const ThawingCabinet = () => {
 
     const intervalId = setInterval(fetchData, 15 * 60 * 1000);
     const messageIntervalId = setInterval(fetchMessages, 5 * 60 * 1000);
-    const closuresIntervalId = setInterval(fetchClosures, 60 * 60 * 1000);
+    const closuresIntervalId = setInterval(fetchClosures, 10 * 60 * 1000);
 
     const storedFullScreenPreference = localStorage.getItem('isFullScreen');
     if (storedFullScreenPreference === 'true' && !document.fullscreenElement) {
@@ -270,10 +290,10 @@ const ThawingCabinet = () => {
                   
                   if (durationUnit === "days") {
                     // For days, add duration - 1 (since start date counts as first day)
-                    closureEndDate.setDate(closureStartDate.getDate() + (durationValue - 1));
+                    closureEndDate.setUTCDate(closureStartDate.getUTCDate() + (durationValue - 1));
                   } else if (durationUnit === "weeks") {
                     // For weeks, add (7 * weeks) - 1 days
-                    closureEndDate.setDate(closureStartDate.getDate() + (7 * durationValue) - 1);
+                    closureEndDate.setUTCDate(closureStartDate.getUTCDate() + (7 * durationValue) - 1);
                   }
                 }
                 
@@ -282,14 +302,14 @@ const ThawingCabinet = () => {
                 const todayUTC = new Date(Date.UTC(
                   today.getUTCFullYear(),
                   today.getUTCMonth(),
-                  today.getDate()
+                  today.getUTCDate()
                 ));
                 
                 // Calculate the entry date in UTC
                 const daysToAdd = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-                  .indexOf(entry.day) - today.getDay();
-                const entryDate = new Date(today);
-                entryDate.setDate(today.getDate() + daysToAdd);
+                  .indexOf(entry.day) - todayUTC.getUTCDay();
+                const entryDate = new Date(todayUTC);
+                entryDate.setUTCDate(todayUTC.getUTCDate() + daysToAdd);
                 
                 // Debug logging
                 console.log('Closure check:', {
