@@ -18,15 +18,17 @@ const LoginPage = () => {
         pin,
       });
   
-      console.log("Login successful.");
-      navigate("/"); // Redirect after successful login
+      if (response.status === 200 && response.data.token) {
+        // Store token in localStorage
+        localStorage.setItem('authToken', response.data.token);
+        console.log('Token stored:', localStorage.getItem('authToken'));
+        navigate("/");
+      }
     } catch (err) {
       console.error("Login failed:", err);
       setError("Login failed. Please check your credentials.");
     }
   };
-  
-
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">

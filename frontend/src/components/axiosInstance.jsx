@@ -11,20 +11,23 @@ const axiosInstance = axios.create({
 });
 
 axiosInstance.interceptors.request.use((config) => {
-  const token = document.cookie.split("; ").find((row) => row.startsWith("token="))?.split("=")[1];
-  
+  const token = localStorage.getItem('authToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  
   return config;
 });
 
 
+
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('Axios response:', response);
+    console.log('Response cookies:', document.cookie);
+    return response;
+  },
   (error) => {
-    console.error("Axios error:", error);
+    console.error('Axios error:', error);
     return Promise.reject(error);
   }
 );

@@ -30,18 +30,23 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid PIN." });
     }
 
-    // Generate JWT
     const token = jwt.sign({ id: user._id, username: user.username }, JWT_SECRET, {
       expiresIn: "30d", 
     });
 
-    res.cookie("token", token, {
-        httpOnly: true, // Prevent access via JavaScript
-        secure: process.env.NODE_ENV === "production", // Send only over HTTPS in production
-        sameSite: "Strict", // Prevent CSRF attacks
-        maxAge: 3600000, // 1 hour
-      });
-      return res.status(200).json({ message: "Login successful." });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false, // for development
+      sameSite: 'lax',
+      path: '/',
+      domain: 'localhost',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days in milliseconds
+    });
+
+    return res.status(200).json({ 
+      message: "Login successful.",
+      token
+    });
   } catch (error) {
     console.error("Error during login:", error);
     return res.status(500).json({ message: "Internal server error." });
