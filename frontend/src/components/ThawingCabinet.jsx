@@ -358,10 +358,19 @@ const ThawingCabinet = () => {
                     {entry.day}
                   </div>
                   {closure ? (
-                    <div className="flex-1 flex flex-col justify-center items-center p-4 bg-red-100">
-                      <div className="text-2xl font-bold text-red-600 mb-2">CLOSED</div>
-                      <div className="text-center text-red-800">{closure.reason}</div>
-                    </div>
+                        <div className="flex-1 flex flex-col justify-center items-center p-4 bg-gradient-to-br from-red-100 via-red-50 to-red-100 relative overflow-hidden">
+                        <div className="absolute inset-0">
+                          <div className="absolute inset-0 bg-red-200/30 animate-pulse"></div>
+                          <div className="absolute -inset-x-full top-0 h-px bg-gradient-to-r from-transparent via-red-500 to-transparent animate-[scroll_2s_linear_infinite]"></div>
+                          <div className="absolute -inset-x-full bottom-0 h-px bg-gradient-to-r from-transparent via-red-500 to-transparent animate-[scroll_2s_linear_infinite]"></div>
+                        </div>
+                        <div className="relative z-10 flex flex-col items-center">
+                          <div className="text-4xl font-bold text-red-600 mb-4">CLOSED</div>
+                          <div className="px-6 py-3 bg-white rounded-lg shadow-lg border-2 border-red-200">
+                            <div className="text-center text-red-800 font-semibold text-lg animate-pulse">{closure.reason}</div>
+                          </div>
+                        </div>
+                      </div>
                   ) : (
                     <div className="flex-1 flex flex-col gap-2 p-2">
                       {[
