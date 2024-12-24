@@ -16,28 +16,47 @@ const ThawingCabinet = () => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [closures, setClosures] = useState([]);
+  const [wakeLock, setWakeLock] = useState(null);
   const messagesRef = useRef(messages);
 
-  let wakeLock = null;
 
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
 
-  const requestWakeLock = async () => {
-    try {
-      wakeLock = await navigator.wakeLock.request('screen');
-    } catch (err) {
-      console.error(`${err.name}, ${err.message}`);
-    }
-  };
 
-  const releaseWakeLock = async () => {
-    if (wakeLock) {
-      await wakeLock.release();
-      wakeLock = null;
+  const requestWakeLock = async () => {
+    if ('wakeLock' in navigator) {
+      try {
+        const lock = await navigator.wakeLock.request('screen');
+        setWakeLock(lock);
+        lock.addEventListener('release', () => {
+          setWakeLock(null);
+        });
+      } catch (err) {
+        console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+      }
+    } else {
+      console.warn('Wake Lock API not supported in this browser.');
     }
   };
+  
+  useEffect(() => {
+    requestWakeLock();
+  
+    return () => {
+      if (wakeLock) {
+        wakeLock.release();
+      }
+    };
+  }, []);
+  
+  useEffect(() => {
+    if (!wakeLock) {
+      requestWakeLock();
+    }
+  }, [wakeLock]);
+  
 
   const getCurrentDay = () => {
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
