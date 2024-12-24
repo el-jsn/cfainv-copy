@@ -367,7 +367,7 @@ const ThawingCabinet = () => {
                         <div className="relative z-10 flex flex-col items-center">
                           <div className="text-4xl font-bold text-red-600 mb-4">CLOSED</div>
                           <div className="px-6 py-3 bg-white rounded-lg shadow-lg border-2 border-red-200">
-                            <div className="text-center text-red-800 font-semibold text-lg animate-pulse">{closure.reason}</div>
+                            <div className="text-center text-red-800 font-semibold text-lg">{closure.reason}</div>
                           </div>
                         </div>
                       </div>
