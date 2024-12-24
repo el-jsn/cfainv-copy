@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Clock, Maximize, Minimize } from "lucide-react";
 import axiosInstance from "./axiosInstance";
 
+
 const ThawingCabinet = () => {
   const [salesData, setSalesData] = useState([]);
   const [filetsUtp, setFiletsUtp] = useState(0);
@@ -14,15 +15,15 @@ const ThawingCabinet = () => {
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [adjustments, setAdjustments] = useState([]);
   const [closures, setClosures] = useState([]);
   const [wakeLock, setWakeLock] = useState(null);
-  const messagesRef = useRef(messages);
+  const adjustmentsRef = useRef(adjustments);
 
 
   useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
+    adjustmentsRef.current = adjustments;
+  }, [adjustments]);
 
 
   const requestWakeLock = async () => {
@@ -87,18 +88,18 @@ const ThawingCabinet = () => {
     }
   }, []);
 
-  const fetchMessages = async () => {
+  const fetchAdjustments = async () => {
     try {
-      const messagesResponse = await axiosInstance.get("/msg/data");
-      if (Array.isArray(messagesResponse.data)) {
-        setMessages(messagesResponse.data);
+      const adjustmentsResponse = await axiosInstance.get("/adjustment/data");
+      if (Array.isArray(adjustmentsResponse.data)) {
+        setAdjustments(adjustmentsResponse.data);
       } else {
-        console.error('Messages response is not an array:', messagesResponse.data);
-        setMessages([]);
+        console.error('Adjustments response is not an array:', adjustmentsResponse.data);
+        setAdjustments([]);
       }
     } catch (error) {
-      console.error("Error fetching messages:", error);
-      setMessages([]);
+      console.error("Error fetching adjustments:", error);
+      setAdjustments([]);
     }
   };
 
@@ -131,7 +132,7 @@ const ThawingCabinet = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      await fetchMessages();
+      await fetchAdjustments();
       await fetchClosures();
       const salesResponse = await axiosInstance.get("/sales");
       const fetchedSales = salesResponse.data;
@@ -172,10 +173,10 @@ const ThawingCabinet = () => {
 
       const calculatedCases = sortedSales.map((entry, index) => {
         const nextDaySales = sortedSales[(index + 1) % sortedSales.length]?.sales || 0;
-        const dayMessages = messagesRef.current.filter(msg => msg.day === entry.day);
+        const dayAdjustments = adjustmentsRef.current.filter(msg => msg.day === entry.day);
 
         const applyMessage = (product, cases, bags = 0) => {
-          const message = dayMessages.find(msg => msg.product === product);
+          const message = dayAdjustments.find(msg => msg.product === product);
           let finalCases = cases;
           let finalBags = bags;
 
@@ -242,7 +243,7 @@ const ThawingCabinet = () => {
     requestWakeLock();
 
     const intervalId = setInterval(fetchData, 15 * 60 * 1000);
-    const messageIntervalId = setInterval(fetchMessages, 5 * 60 * 1000);
+    const messageIntervalId = setInterval(fetchAdjustments, 5 * 60 * 1000);
     const closuresIntervalId = setInterval(fetchClosures, 10 * 60 * 1000);
 
     const storedFullScreenPreference = localStorage.getItem('isFullScreen');
@@ -261,7 +262,6 @@ const ThawingCabinet = () => {
       clearInterval(intervalId);
       clearInterval(messageIntervalId);
       clearInterval(closuresIntervalId);
-      releaseWakeLock();
       document.removeEventListener('fullscreenchange', handleFullScreenChange);
     };
   }, [fetchData]);
@@ -374,7 +374,7 @@ const ThawingCabinet = () => {
                       ].map((item, index) => (
                         <div key={index} className={`flex-1 ${item.bg} p-3 rounded flex flex-col justify-center items-center`}>
                           <div className="font-medium text-center">{item.name}</div>
-                          <div className={item.data.modified ? "text-red-600 font-bold" : ""}>
+                          <div className={item.data.modified ? "text-red-700 font-bold" : ""}>
                             {item.data.cases > 0 && <div>{item.data.cases} cases</div>}
                             {item.data.bags > 0 && <div>{item.data.bags} bags</div>}
                           </div>

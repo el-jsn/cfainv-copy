@@ -89,7 +89,7 @@ app.use(express.json({ limit: '10kb' })); // Limit request body size
 app.use("/api/upt", authenticateToken,salesRoutes);
 app.use("/api/sales", authenticateToken,ProjectedSalesRoutes);
 app.use("/api/auth", userRoutes);
-app.use('/api/msg', authenticateToken,DayDataRoutes);
+app.use('/api/adjustment', authenticateToken,DayDataRoutes);
 app.use('/api/buffer',authenticateToken, ProductBufferRoutes);
 app.use('/api/closure',authenticateToken, closureRoutes);
 
