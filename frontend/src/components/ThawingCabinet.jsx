@@ -18,6 +18,7 @@ const ThawingCabinet = () => {
   const [adjustments, setAdjustments] = useState([]);
   const [closures, setClosures] = useState([]);
   const [wakeLock, setWakeLock] = useState(null);
+  const [messages, setMessages] = useState([]);
   const adjustmentsRef = useRef(adjustments);
 
 
@@ -41,30 +42,30 @@ const ThawingCabinet = () => {
       console.warn('Wake Lock API not supported in this browser.');
     }
   };
-  
+
   useEffect(() => {
     requestWakeLock();
-  
+
     return () => {
       if (wakeLock) {
         wakeLock.release();
       }
     };
   }, []);
-  
+
   useEffect(() => {
     if (!wakeLock) {
       requestWakeLock();
     }
   }, [wakeLock]);
-  
+
 
   const getCurrentDay = () => {
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const now = new Date();
     return days[now.getDay()]; // Use local time instead of UTC
   };
-  
+
 
   const isInCurrentWeek = (date) => {
     const now = new Date();
@@ -72,7 +73,7 @@ const ThawingCabinet = () => {
     const endOfWeek = new Date(now.setDate(now.getDate() + (6 - now.getDay())));
     return date >= startOfWeek && date <= endOfWeek;
   };
-  
+
 
   const toggleFullScreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -107,33 +108,54 @@ const ThawingCabinet = () => {
     try {
       const closuresResponse = await axiosInstance.get("/closure/plans");
       const closuresData = Array.isArray(closuresResponse.data) ? closuresResponse.data : [closuresResponse.data];
-  
+
       // Get today's date in UTC
       const today = new Date();
       const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-  
-      // Filter closures to include only those from today onward
+
+      // Calculate the start and end of the current week in UTC
+      const currentWeekStart = new Date(todayUTC);
+      currentWeekStart.setUTCDate(todayUTC.getUTCDate() - todayUTC.getUTCDay()); // Start of the week (Sunday)
+
+      const currentWeekEnd = new Date(currentWeekStart);
+      currentWeekEnd.setUTCDate(currentWeekStart.getUTCDate() + 6); // End of the week (Saturday)
+
+      // Filter closures to include only those within the current week
       const filteredClosures = closuresData.filter((closure) => {
-        const closureDateUTC = new Date(closure.date); // Convert closure.date to Date object
-        return closureDateUTC >= todayUTC; // Compare UTC dates
+        const closureStartDateUTC = new Date(closure.date); // Convert closure.date to Date object
+        const closureEndDateUTC = new Date(closureStartDateUTC);
+
+        if (closure.duration) {
+          const { value: durationValue, unit: durationUnit } = closure.duration;
+          const daysToAdd = durationUnit === "weeks" ? (7 * durationValue) - 1 : durationValue - 1;
+          closureEndDateUTC.setUTCDate(closureStartDateUTC.getUTCDate() + daysToAdd);
+        }
+
+        // Check if the closure overlaps with the current week
+        return (
+          closureStartDateUTC <= currentWeekEnd &&
+          closureEndDateUTC >= currentWeekStart
+        );
       });
-  
+
       setClosures(filteredClosures);
-      console.log('Filtered closures:', filteredClosures);
+      console.log("Filtered closures:", filteredClosures);
     } catch (error) {
       console.error("Error fetching closures:", error);
       setClosures([]);
     }
   };
-  
-  
-  
+
+
+
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       await fetchAdjustments();
       await fetchClosures();
+      const messagesResponse = await axiosInstance.get("/messages");
+      setMessages(messagesResponse.data);
       const salesResponse = await axiosInstance.get("/sales");
       const fetchedSales = salesResponse.data;
       const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -298,81 +320,75 @@ const ThawingCabinet = () => {
             {calculatedData.map((entry) => {
               const isToday = entry.day === currentDay;
               const closure = closures.find(c => {
-                // Parse closure start date in UTC
                 const closureStartDate = new Date(c.date);
-                
-                // Calculate closure end date based on duration
                 const closureEndDate = new Date(closureStartDate);
+
+                // Adjust closure end date based on duration if provided
                 if (c.duration) {
-                  const durationValue = c.duration.value;
-                  const durationUnit = c.duration.unit;
-                  
-                  if (durationUnit === "days") {
-                    // For days, add duration - 1 (since start date counts as first day)
-                    closureEndDate.setUTCDate(closureStartDate.getUTCDate() + (durationValue - 1));
-                  } else if (durationUnit === "weeks") {
-                    // For weeks, add (7 * weeks) - 1 days
-                    closureEndDate.setUTCDate(closureStartDate.getUTCDate() + (7 * durationValue) - 1);
-                  }
+                  const { value: durationValue, unit: durationUnit } = c.duration;
+                  const daysToAdd = durationUnit === "weeks" ? (7 * durationValue) - 1 : durationValue - 1;
+                  closureEndDate.setUTCDate(closureStartDate.getUTCDate() + daysToAdd);
                 }
-                
-                // Get today in UTC
+
+                // Calculate the start and end of the current week
                 const today = new Date();
-                const todayUTC = new Date(Date.UTC(
-                  today.getUTCFullYear(),
-                  today.getUTCMonth(),
-                  today.getUTCDate()
-                ));
-                
-                // Calculate the entry date in UTC
+                const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+
+                const currentWeekStart = new Date(todayUTC);
+                currentWeekStart.setUTCDate(todayUTC.getUTCDate() - todayUTC.getUTCDay());
+
+                const currentWeekEnd = new Date(currentWeekStart);
+                currentWeekEnd.setUTCDate(currentWeekStart.getUTCDate() + 6);
+
+                console.log('Current week start:', currentWeekStart);
+                console.log('Current week end:', currentWeekEnd);
+                // Only consider closures that overlap with the current week
+                if (!(closureStartDate <= currentWeekEnd && closureEndDate >= currentWeekStart)) {
+                  return false;
+                }
+
+                // Calculate the specific date for the current entry's day
                 const daysToAdd = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
                   .indexOf(entry.day) - todayUTC.getUTCDay();
                 const entryDate = new Date(todayUTC);
                 entryDate.setUTCDate(todayUTC.getUTCDate() + daysToAdd);
-                
-                // Debug logging
-                console.log('Closure check:', {
-                  entryDay: entry.day,
-                  closureStart: closureStartDate.toISOString(),
-                  closureEnd: closureEndDate.toISOString(),
-                  entryDate: entryDate.toISOString(),
-                  duration: c.duration,
-                  isWithinRange: entryDate >= closureStartDate && entryDate <= closureEndDate
-                });
-                
-                // Check if entry date falls within closure period
+
+                // Check if the entry's date falls within the closure range
                 return entryDate >= closureStartDate && entryDate <= closureEndDate;
               });
               return (
                 <div
                   key={entry.day}
-                  className={`flex flex-col h-full rounded-lg border ${
-                    isToday ? 'ring-2 ring-blue-500 shadow-lg' : 'border-gray-200'
-                  }`}
+                  className={`flex flex-col h-full rounded-lg border ${isToday ? 'ring-2 ring-blue-500 shadow-lg' : 'border-gray-200'
+                    }`}
                 >
                   <div
-                    className={`p-3 rounded-t-lg font-semibold text-center ${
-                      isToday ? 'bg-blue-500 text-white' : 'bg-gray-100'
-                    }`}
+                    className={`p-3 rounded-t-lg font-semibold text-center ${isToday ? 'bg-blue-500 text-white' : 'bg-gray-100'
+                      }`}
                   >
                     {entry.day}
+                    {messages.find(msg => msg.day === entry.day) && (
+                      <div className="mt-2 text-sm bg-yellow-100 p-2 rounded-md text-yellow-800">
+                        {messages.find(msg => msg.day === entry.day).message}
+                      </div>
+                    )}
                   </div>
                   {closure ? (
-                         <div className="flex-1 flex flex-col justify-center items-center p-4 bg-gradient-to-br from-red-100 via-red-50 to-red-100 relative overflow-hidden">
-                         <div className="absolute inset-0">
-                             {/* Bubble elements */}
-                             <div className="bubble"></div>
-                             <div className="bubble"></div>
-                             <div className="bubble"></div>
-                             <div className="bubble"></div>
-                         </div>
-                         <div className="relative z-10 flex flex-col items-center">
-                             <div className="text-4xl font-bold text-red-600 mb-4">CLOSED</div>
-                             <div className="px-6 py-3 bg-white rounded-lg shadow-lg border-2 border-red-200">
-                                 <div className="text-center text-red-800 font-semibold text-lg">{closure.reason}</div>
-                             </div>
-                         </div>
-                     </div>
+                    <div className="flex-1 flex flex-col justify-center items-center p-4 bg-gradient-to-br from-red-100 via-red-50 to-red-100 relative overflow-hidden">
+                      <div className="absolute inset-0">
+                        {/* Bubble elements */}
+                        <div className="bubble"></div>
+                        <div className="bubble"></div>
+                        <div className="bubble"></div>
+                        <div className="bubble"></div>
+                      </div>
+                      <div className="relative z-10 flex flex-col items-center">
+                        <div className="text-4xl font-bold text-red-600 mb-4">CLOSED</div>
+                        <div className="px-6 py-3 bg-white rounded-lg shadow-lg border-2 border-red-200">
+                          <div className="text-center text-red-800 font-semibold text-lg">{closure.reason}</div>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex-1 flex flex-col gap-2 p-2">
                       {[

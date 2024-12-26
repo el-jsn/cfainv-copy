@@ -16,9 +16,9 @@
   
   .bubble {
     position: absolute;
-    bottom: -50px;
+    bottom: -25px;
     border-radius: 50%;
-    background-color: rgba(251, 198, 198, 0.637);
+    background-color: rgba(252, 191, 191, 0.851);
     animation: bubble linear infinite;
   }
   

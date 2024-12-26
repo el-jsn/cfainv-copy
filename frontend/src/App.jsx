@@ -12,6 +12,7 @@ import MessageListPage from "./components/MessageListPage";
 import Layout from "./components/Layout";
 import ClosurePlannerComponent from "./components/ClosurePlannerComponent";
 import ClosurePlanList from "./components/ClosurePlanList";
+import Instructions from "./components/InstructionsComponent";
 
 const App = () => {
   return (
@@ -54,9 +55,14 @@ const App = () => {
               <ClosurePlannerComponent />
             </PrivateRoute>
           } />
-        <Route path="/closure/plans" element={
+          <Route path="/closure/plans" element={
             <PrivateRoute>
               <ClosurePlanList />
+            </PrivateRoute>
+          } />
+          <Route path="/instructions" element={
+            <PrivateRoute>
+              <Instructions />
             </PrivateRoute>
           } />
         </Routes>

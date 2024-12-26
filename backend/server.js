@@ -17,6 +17,7 @@ import { cleanupExpiredRecords } from './controllers/dayData.controller.js';
 import closureRoutes from './routes/closure.route.js';
 import cron from 'node-cron';
 import {authenticateToken} from './middlewares/userAuth.js';
+import messageRoutes from './routes/message.route.js';
 import cookieParser from 'cookie-parser';
 
 
@@ -92,6 +93,8 @@ app.use("/api/auth", userRoutes);
 app.use('/api/adjustment', authenticateToken,DayDataRoutes);
 app.use('/api/buffer',authenticateToken, ProductBufferRoutes);
 app.use('/api/closure',authenticateToken, closureRoutes);
+app.use('/api/messages', authenticateToken ,messageRoutes);
+
 
 // Serve frontend in production mode
 if (process.env.NODE_ENV === 'production') {

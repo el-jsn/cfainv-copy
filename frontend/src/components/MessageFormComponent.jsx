@@ -53,7 +53,7 @@ const MessageFormComponent = () => {
     };
 
     try {
-      await axiosInstance.post("/msg/data", dataToSend);
+      await axiosInstance.post("/adjustment/data", dataToSend);
       setShowSuccess(true);
       setTimeout(() => {
         navigate("/data/message/all");

@@ -13,7 +13,7 @@ const MessageListPage = () => {
     const fetchMessages = async () => {
       try {
         setIsLoading(true);
-        const response = await axiosInstance.get("/msg/data");
+        const response = await axiosInstance.get("/adjustment/data");
         setMessages(response.data);
         setError(null);
       } catch (error) {
