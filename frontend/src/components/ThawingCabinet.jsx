@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Clock, Maximize, Minimize } from "lucide-react";
 import axiosInstance from "./axiosInstance";
-import video from "../assets/videoplayback.mp4";
+import playbackVid from "../assets/videoplayback.mp4";
 
 
 const ThawingCabinet = () => {
@@ -43,7 +43,7 @@ const ThawingCabinet = () => {
       console.warn('Wake Lock API not supported. Using fallback for iOS devices.');
       // Fallback: Use hidden video to keep the screen awake
       const video = document.createElement('video');
-      video.src = { video };
+      video.src = { playbackVid };
       video.loop = true;
       video.muted = true;
       video.style.display = 'none';
@@ -276,7 +276,7 @@ const ThawingCabinet = () => {
 
     const intervalId = setInterval(fetchData, 15 * 60 * 1000);
     const messageIntervalId = setInterval(fetchAdjustments, 5 * 60 * 1000);
-    const closuresIntervalId = setInterval(fetchClosures, 10 * 60 * 1000);
+    const closuresIntervalId = setInterval(fetchClosures, 15 * 60 * 1000);
 
     const storedFullScreenPreference = localStorage.getItem('isFullScreen');
     if (storedFullScreenPreference === 'true' && !document.fullscreenElement) {
