@@ -282,6 +282,14 @@ const ThawingCabinet = () => {
     if (storedFullScreenPreference === 'true' && !document.fullscreenElement) {
       document.documentElement.requestFullscreen();
       setIsFullScreen(true);
+      // scroll to middle of the screen
+      setTimeout(() => {
+        const middleHeight = document.body.scrollHeight / 2;
+        window.scrollTo({
+          top: middleHeight,
+          behavior: 'smooth'
+        });
+      }, 0);
     }
 
     const handleFullScreenChange = () => {
