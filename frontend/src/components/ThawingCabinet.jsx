@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Clock, Maximize, Minimize } from "lucide-react";
 import axiosInstance from "./axiosInstance";
+import video from "../assets/videoplayback.mp4";
 
 
 const ThawingCabinet = () => {
@@ -39,9 +40,18 @@ const ThawingCabinet = () => {
         console.error(`Wake Lock error: ${err.name}, ${err.message}`);
       }
     } else {
-      console.warn('Wake Lock API not supported in this browser.');
+      console.warn('Wake Lock API not supported. Using fallback for iOS devices.');
+      // Fallback: Use hidden video to keep the screen awake
+      const video = document.createElement('video');
+      video.src = { video };
+      video.loop = true;
+      video.muted = true;
+      video.style.display = 'none';
+      document.body.appendChild(video);
+      video.play().catch(err => console.error('Video playback failed:', err));
     }
   };
+
 
   useEffect(() => {
     requestWakeLock();
