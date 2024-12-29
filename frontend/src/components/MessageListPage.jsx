@@ -32,7 +32,7 @@ const MessageListPage = () => {
 
   const handleDelete = async (messageId) => {
     try {
-      await axiosInstance.delete(`/msg/data/${messageId}`);
+      await axiosInstance.delete(`/adjustment/data/${messageId}`);
       setMessages((prevMessages) =>
         prevMessages.filter((message) => message._id !== messageId)
       );
@@ -46,9 +46,9 @@ const MessageListPage = () => {
     const now = new Date();
     const expiry = new Date(expiresAt);
     const diffInSeconds = Math.floor((expiry - now) / 1000);
-    
+
     if (diffInSeconds < 0) return "Expired";
-    
+
     const days = Math.floor(diffInSeconds / 86400);
     const hours = Math.floor((diffInSeconds % 86400) / 3600);
     const minutes = Math.floor((diffInSeconds % 3600) / 60);
@@ -71,7 +71,7 @@ const MessageListPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -99,7 +99,7 @@ const MessageListPage = () => {
         ) : (
           <AnimatePresence>
             {messages.length === 0 ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -129,14 +129,14 @@ const MessageListPage = () => {
                           <Calendar className="w-5 h-5 text-indigo-500" />
                           <span className="text-gray-700">{message.day}</span>
                         </div>
-                        
+
                         <div className="flex items-center space-x-3">
                           <Package className="w-5 h-5 text-indigo-500" />
                           <span className="text-gray-800 font-semibold">
                             {message.product} {message.message}
                           </span>
                         </div>
-                        
+
                         <div className="flex items-center space-x-3">
                           <Clock className="w-5 h-5 text-indigo-500" />
                           <span className={`${getTimeRemainingColor(message.expiresAt)}`}>
