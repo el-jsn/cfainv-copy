@@ -274,9 +274,9 @@ const ThawingCabinet = () => {
     fetchData();
     requestWakeLock();
 
-    const intervalId = setInterval(fetchData, 1 * 60 * 1000);
+    const intervalId = setInterval(fetchData, 15 * 60 * 1000);
     const messageIntervalId = setInterval(fetchAdjustments, 5 * 60 * 1000);
-    const closuresIntervalId = setInterval(fetchClosures, 1 * 60 * 1000);
+    const closuresIntervalId = setInterval(fetchClosures, 15 * 60 * 1000);
 
     const storedFullScreenPreference = localStorage.getItem('isFullScreen');
     if (storedFullScreenPreference === 'true' && !document.fullscreenElement) {
