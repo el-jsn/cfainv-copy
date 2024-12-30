@@ -310,7 +310,7 @@ const ThawingCabinet = () => {
 
   return (
     <div className="bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="min-h-screen bg-white rounded-lg md:rounded-xl shadow-xl px-3 py-6 border border-gray-100">
+      <div className="min-h-screen bg-white rounded-lg md:rounded-xl shadow-xl px-3 py-2 border border-gray-100">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6 md:mb-8">
           <div className="space-y-1">
