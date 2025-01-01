@@ -1,8 +1,121 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, memo } from "react";
 import { Clock, Maximize, Minimize } from "lucide-react";
 import axiosInstance from "./axiosInstance";
 import playbackVid from "../assets/videoplayback.mp4";
 
+const DayCard = memo(({ entry, currentDay, closures, messages }) => {
+  const isToday = entry.day === currentDay;
+  const closure = closures.find(c => {
+    const closureStartDate = new Date(c.date);
+    const closureEndDate = new Date(closureStartDate);
+
+    if (c.duration) {
+      const { value: durationValue, unit: durationUnit } = c.duration;
+      const daysToAdd = durationUnit === "weeks" ? (7 * durationValue) - 1 : durationValue - 1;
+      closureEndDate.setUTCDate(closureStartDate.getUTCDate() + daysToAdd);
+    }
+
+    const today = new Date();
+    const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+    const currentWeekStart = new Date(todayUTC);
+    currentWeekStart.setUTCDate(todayUTC.getUTCDate() - todayUTC.getUTCDay());
+    const currentWeekEnd = new Date(currentWeekStart);
+    currentWeekEnd.setUTCDate(currentWeekStart.getUTCDate() + 6);
+
+    if (!(closureStartDate <= currentWeekEnd && closureEndDate >= currentWeekStart)) {
+      return false;
+    }
+
+    const daysToAddForEntry = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+      .indexOf(entry.day) - todayUTC.getUTCDay();
+    const entryDate = new Date(todayUTC);
+    entryDate.setUTCDate(todayUTC.getUTCDate() + daysToAddForEntry);
+
+    return entryDate >= closureStartDate && entryDate <= closureEndDate;
+  });
+
+  return (
+    <div
+      key={entry.day}
+      className={`flex flex-col min-h-[24rem] sm:min-h-[28rem] lg:min-h-[32rem] transition-all duration-200
+        ${isToday
+          ? 'ring-2 ring-blue-500 shadow-lg border-transparent'
+          : 'border border-gray-200 hover:shadow-md'
+        } rounded-lg md:rounded-xl`}
+    >
+      <div
+        className={`p-3 sm:p-4 rounded-t-lg md:rounded-t-xl font-semibold text-center
+          ${isToday
+            ? 'bg-blue-500 text-white'
+            : 'bg-gradient-to-r from-gray-50 to-gray-100'
+          }`}
+      >
+        <div className="text-base sm:text-lg">{entry.day}</div>
+        {messages.find(msg => msg.day === entry.day) && (
+          <div className="mt-2 text-xs sm:text-sm bg-yellow-50 p-2 sm:p-3 rounded-lg text-yellow-800 border border-yellow-200">
+            {messages.find(msg => msg.day === entry.day).message}
+          </div>
+        )}
+      </div>
+
+      {closure ? (
+        <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 bg-gradient-to-br from-red-50 via-red-100 to-red-50 relative overflow-hidden">
+          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            {[...Array(15)].map((_, i) => (
+              <circle
+                key={i}
+                cx={`${Math.random() * 100}%`}
+                cy={`${Math.random() * 100}%`}
+                r={`${Math.random() * 30 + 5}`}
+                fill="rgba(239, 68, 68, 0.1)"
+                className="animate-float"
+                style={{
+                  animationDuration: `${Math.random() * 10 + 20}s`,
+                  animationDelay: `${i * -0.5}s`
+                }}
+              />
+            ))}
+          </svg>
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-red-600 mb-4">
+              CLOSED
+            </div>
+            <div className="px-4 sm:px-6 py-2 sm:py-3 bg-white rounded-lg md:rounded-xl shadow-lg border-2 border-red-200 transition-all duration-300 hover:shadow-xl hover:scale-105 backdrop-blur-sm bg-opacity-80">
+              <div className="text-center text-red-800 font-semibold text-sm sm:text-base">
+                {closure.reason}
+              </div>
+            </div>
+          </div>
+          <div className="absolute top-0 left-0 w-16 h-16 bg-red-200 rounded-br-full opacity-50"></div>
+          <div className="absolute bottom-0 right-0 w-24 h-24 bg-red-200 rounded-tl-full opacity-50"></div>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col gap-2 sm:gap-3 p-2 sm:p-4">
+          {[
+            { name: "Filets", data: entry.filets, bg: "bg-blue-300 text-gray-800" },
+            { name: "Spicy Filets", data: entry.spicy, bg: "bg-purple-300 text-gray-800" },
+            { name: "Grilled Fillets", data: entry.grilledFilets, bg: "bg-amber-100 text-gray-800" },
+            { name: "Grilled Nuggets", data: entry.grilledNuggets, bg: "bg-gray-200 text-gray-800" },
+            { name: "Nuggets", data: entry.nuggets, bg: "bg-pink-300 text-gray-800" },
+            { name: "Spicy Strips", data: entry.strips, bg: "bg-red-400 text-gray-800" },
+          ].map((item, index) => (
+            <div
+              key={index}
+              className={`flex-1 ${item.bg} p-2 sm:p-3 md:p-4 rounded-lg transition-all duration-200
+                hover:shadow-sm flex flex-col justify-center items-center`}
+            >
+              <div className="font-medium text-center mb-1 text-sm sm:text-base">{item.name}</div>
+              <div className={`text-center text-sm sm:text-base ${item.data.modified ? "text-red-700 font-bold" : ""}`}>
+                {item.data.cases > 0 && <div>{item.data.cases} cases</div>}
+                {item.data.bags > 0 && <div>{item.data.bags} bags</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
 
 const ThawingCabinet = () => {
   const [salesData, setSalesData] = useState([]);
@@ -22,11 +135,9 @@ const ThawingCabinet = () => {
   const [messages, setMessages] = useState([]);
   const adjustmentsRef = useRef(adjustments);
 
-
   useEffect(() => {
     adjustmentsRef.current = adjustments;
   }, [adjustments]);
-
 
   const requestWakeLock = async () => {
     if ('wakeLock' in navigator) {
@@ -41,9 +152,8 @@ const ThawingCabinet = () => {
       }
     } else {
       console.warn('Wake Lock API not supported. Using fallback for iOS devices.');
-      // Fallback: Use hidden video to keep the screen awake
       const video = document.createElement('video');
-      video.src = { playbackVid };
+      video.src = playbackVid;
       video.loop = true;
       video.muted = true;
       video.style.display = 'none';
@@ -52,13 +162,17 @@ const ThawingCabinet = () => {
     }
   };
 
-
   useEffect(() => {
     requestWakeLock();
 
     return () => {
       if (wakeLock) {
         wakeLock.release();
+      }
+      // Cleanup for fallback video
+      const video = document.querySelector('video[src="' + playbackVid + '"]');
+      if (video) {
+        document.body.removeChild(video);
       }
     };
   }, []);
@@ -69,21 +183,11 @@ const ThawingCabinet = () => {
     }
   }, [wakeLock]);
 
-
   const getCurrentDay = () => {
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const now = new Date();
-    return days[now.getDay()]; // Use local time instead of UTC
+    return days[now.getDay()];
   };
-
-
-  const isInCurrentWeek = (date) => {
-    const now = new Date();
-    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
-    const endOfWeek = new Date(now.setDate(now.getDate() + (6 - now.getDay())));
-    return date >= startOfWeek && date <= endOfWeek;
-  };
-
 
   const toggleFullScreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -99,40 +203,30 @@ const ThawingCabinet = () => {
     }
   }, []);
 
-  const fetchAdjustments = async () => {
+  const fetchAdjustments = useCallback(async () => {
     try {
       const adjustmentsResponse = await axiosInstance.get("/adjustment/data");
-      if (Array.isArray(adjustmentsResponse.data)) {
-        setAdjustments(adjustmentsResponse.data);
-      } else {
-        console.error('Adjustments response is not an array:', adjustmentsResponse.data);
-        setAdjustments([]);
-      }
+      setAdjustments(Array.isArray(adjustmentsResponse.data) ? adjustmentsResponse.data : []);
     } catch (error) {
       console.error("Error fetching adjustments:", error);
       setAdjustments([]);
     }
-  };
+  }, []);
 
-  const fetchClosures = async () => {
+  const fetchClosures = useCallback(async () => {
     try {
       const closuresResponse = await axiosInstance.get("/closure/plans");
-      const closuresData = Array.isArray(closuresResponse.data) ? closuresResponse.data : [closuresResponse.data];
+      const closuresData = Array.isArray(closuresResponse.data) ? closuresResponse.data : [];
 
-      // Get today's date in UTC
       const today = new Date();
       const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-
-      // Calculate the start and end of the current week in UTC
       const currentWeekStart = new Date(todayUTC);
-      currentWeekStart.setUTCDate(todayUTC.getUTCDate() - todayUTC.getUTCDay()); // Start of the week (Sunday)
-
+      currentWeekStart.setUTCDate(todayUTC.getUTCDate() - todayUTC.getUTCDay());
       const currentWeekEnd = new Date(currentWeekStart);
-      currentWeekEnd.setUTCDate(currentWeekStart.getUTCDate() + 6); // End of the week (Saturday)
+      currentWeekEnd.setUTCDate(currentWeekStart.getUTCDate() + 6);
 
-      // Filter closures to include only those within the current week
       const filteredClosures = closuresData.filter((closure) => {
-        const closureStartDateUTC = new Date(closure.date); // Convert closure.date to Date object
+        const closureStartDateUTC = new Date(closure.date);
         const closureEndDateUTC = new Date(closureStartDateUTC);
 
         if (closure.duration) {
@@ -140,39 +234,44 @@ const ThawingCabinet = () => {
           const daysToAdd = durationUnit === "weeks" ? (7 * durationValue) - 1 : durationValue - 1;
           closureEndDateUTC.setUTCDate(closureStartDateUTC.getUTCDate() + daysToAdd);
         }
-
-        // Check if the closure overlaps with the current week
-        return (
-          closureStartDateUTC <= currentWeekEnd &&
-          closureEndDateUTC >= currentWeekStart
-        );
+        return closureStartDateUTC <= currentWeekEnd && closureEndDateUTC >= currentWeekStart;
       });
 
       setClosures(filteredClosures);
-      console.log("Filtered closures:", filteredClosures);
     } catch (error) {
       console.error("Error fetching closures:", error);
       setClosures([]);
     }
-  };
-
-
-
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      await fetchAdjustments();
-      await fetchClosures();
-      const messagesResponse = await axiosInstance.get("/messages");
+      const [
+        adjustmentsResponse,
+        closuresResponse,
+        messagesResponse,
+        salesResponse,
+        utpResponse,
+        bufferResponse,
+      ] = await Promise.all([
+        axiosInstance.get("/adjustment/data"),
+        axiosInstance.get("/closure/plans"),
+        axiosInstance.get("/messages"),
+        axiosInstance.get("/sales"),
+        axiosInstance.get("/upt"),
+        axiosInstance.get("/buffer"),
+      ]);
+
+      setAdjustments(Array.isArray(adjustmentsResponse.data) ? adjustmentsResponse.data : []);
+      setClosures(Array.isArray(closuresResponse.data) ? closuresResponse.data : []);
       setMessages(messagesResponse.data);
-      const salesResponse = await axiosInstance.get("/sales");
+
       const fetchedSales = salesResponse.data;
       const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       const sortedSales = daysOrder.map((day) => fetchedSales.find((entry) => entry.day === day) || { day, sales: 0 });
       setSalesData(sortedSales);
 
-      const utpResponse = await axiosInstance.get("/upt");
       const filetsUtpValue = utpResponse.data.find((item) => item.productName === "Filets")?.utp || 1.0;
       const spicyUtpValue = utpResponse.data.find((item) => item.productName === "Spicy Filets")?.utp || 1.0;
       const grilledFiletsUtpValue = utpResponse.data.find((item) => item.productName === "Grilled Filets")?.utp || 1.0;
@@ -180,14 +279,7 @@ const ThawingCabinet = () => {
       const nuggetsUtpValue = utpResponse.data.find((item) => item.productName === "Nuggets")?.utp || 1.0;
       const stripsUtpValue = utpResponse.data.find((item) => item.productName === "Spicy Strips")?.utp || 1.0;
 
-      const bufferResponse = await axiosInstance.get("/buffer");
-      const calculateBufferMultiplier = (bufferPrcnt) => {
-        if (bufferPrcnt < 0) {
-          return (100 + bufferPrcnt) / 100;
-        } else {
-          return (100 + bufferPrcnt) / 100;
-        }
-      };
+      const calculateBufferMultiplier = (bufferPrcnt) => (100 + bufferPrcnt) / 100;
 
       const filetsBuffer = calculateBufferMultiplier(bufferResponse.data.find((item) => item.productName === "Filets")?.bufferPrcnt || 1);
       const spicyBuffer = calculateBufferMultiplier(bufferResponse.data.find((item) => item.productName === "Spicy Filets")?.bufferPrcnt || 1);
@@ -226,7 +318,6 @@ const ThawingCabinet = () => {
               }
             });
           }
-
           return { cases: Math.max(0, finalCases), bags: Math.max(0, finalBags), modified: !!message };
         };
 
@@ -243,21 +334,14 @@ const ThawingCabinet = () => {
         const stripsCases = Math.floor(stripsBags / 6);
         const remainingStripsBags = stripsBags % 6;
 
-        const filetsData = applyMessage("Filets", filetsCases);
-        const spicyData = applyMessage("Spicy Filets", spicyCases);
-        const grilledFiletsData = applyMessage("Grilled Filets", grilledFiletsCases, remainingGrilledFiletsBags);
-        const grilledNuggetsData = applyMessage("Grilled Nuggets", grilledNuggetsCases, remainingGrilledNuggetsBags);
-        const nuggetsData = applyMessage("Nuggets", nuggetsCases);
-        const stripsData = applyMessage("Spicy Strips", stripsCases, remainingStripsBags);
-
         return {
           day: entry.day,
-          filets: filetsData,
-          spicy: spicyData,
-          grilledFilets: grilledFiletsData,
-          grilledNuggets: grilledNuggetsData,
-          nuggets: nuggetsData,
-          strips: stripsData
+          filets: applyMessage("Filets", filetsCases),
+          spicy: applyMessage("Spicy Filets", spicyCases),
+          grilledFilets: applyMessage("Grilled Filets", grilledFiletsCases, remainingGrilledFiletsBags),
+          grilledNuggets: applyMessage("Grilled Nuggets", grilledNuggetsCases, remainingGrilledNuggetsBags),
+          nuggets: applyMessage("Nuggets", nuggetsCases),
+          strips: applyMessage("Spicy Strips", stripsCases, remainingStripsBags)
         };
       });
 
@@ -268,21 +352,20 @@ const ThawingCabinet = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [adjustmentsRef]); // Added adjustmentsRef as a dependency
 
   useEffect(() => {
     fetchData();
     requestWakeLock();
 
-    const intervalId = setInterval(fetchData, 15 * 60 * 1000);
+    const intervalId = setInterval(fetchData, 10 * 60 * 1000);
     const messageIntervalId = setInterval(fetchAdjustments, 5 * 60 * 1000);
-    const closuresIntervalId = setInterval(fetchClosures, 15 * 60 * 1000);
+    const closuresIntervalId = setInterval(fetchClosures, 10 * 60 * 1000);
 
     const storedFullScreenPreference = localStorage.getItem('isFullScreen');
     if (storedFullScreenPreference === 'true' && !document.fullscreenElement) {
       document.documentElement.requestFullscreen();
       setIsFullScreen(true);
-      // scroll to middle of the screen
       setTimeout(() => {
         const middleHeight = document.body.scrollHeight / 2;
         window.scrollTo({
@@ -304,7 +387,7 @@ const ThawingCabinet = () => {
       clearInterval(closuresIntervalId);
       document.removeEventListener('fullscreenchange', handleFullScreenChange);
     };
-  }, [fetchData]);
+  }, [fetchData, fetchAdjustments, fetchClosures]); // Added fetch functions as dependencies
 
   const currentDay = getCurrentDay();
 
@@ -343,134 +426,15 @@ const ThawingCabinet = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 lg:grid-cols-6 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
-            {calculatedData.map((entry) => {
-              const isToday = entry.day === currentDay;
-              const closure = closures.find(c => {
-                const closureStartDate = new Date(c.date);
-                const closureEndDate = new Date(closureStartDate);
-
-                // Adjust closure end date based on duration if provided
-                if (c.duration) {
-                  const { value: durationValue, unit: durationUnit } = c.duration;
-                  const daysToAdd = durationUnit === "weeks" ? (7 * durationValue) - 1 : durationValue - 1;
-                  closureEndDate.setUTCDate(closureStartDate.getUTCDate() + daysToAdd);
-                }
-
-                // Calculate the start and end of the current week
-                const today = new Date();
-                const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-
-                const currentWeekStart = new Date(todayUTC);
-                currentWeekStart.setUTCDate(todayUTC.getUTCDate() - todayUTC.getUTCDay());
-
-                const currentWeekEnd = new Date(currentWeekStart);
-                currentWeekEnd.setUTCDate(currentWeekStart.getUTCDate() + 6);
-
-                console.log('Current week start:', currentWeekStart);
-                console.log('Current week end:', currentWeekEnd);
-                // Only consider closures that overlap with the current week
-                if (!(closureStartDate <= currentWeekEnd && closureEndDate >= currentWeekStart)) {
-                  return false;
-                }
-
-                // Calculate the specific date for the current entry's day
-                const daysToAdd = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-                  .indexOf(entry.day) - todayUTC.getUTCDay();
-                const entryDate = new Date(todayUTC);
-                entryDate.setUTCDate(todayUTC.getUTCDate() + daysToAdd);
-
-                // Check if the entry's date falls within the closure range
-                return entryDate >= closureStartDate && entryDate <= closureEndDate;
-              });
-              return (
-                <div
-                  key={entry.day}
-                  className={`flex flex-col min-h-[24rem] sm:min-h-[28rem] lg:min-h-[32rem] transition-all duration-200
-                    ${isToday
-                      ? 'ring-2 ring-blue-500 shadow-lg border-transparent'
-                      : 'border border-gray-200 hover:shadow-md'
-                    } rounded-lg md:rounded-xl`}
-                >
-                  <div
-                    className={`p-3 sm:p-4 rounded-t-lg md:rounded-t-xl font-semibold text-center
-                      ${isToday
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gradient-to-r from-gray-50 to-gray-100'
-                      }`}
-                  >
-                    <div className="text-base sm:text-lg">{entry.day}</div>
-                    {messages.find(msg => msg.day === entry.day) && (
-                      <div className="mt-2 text-xs sm:text-sm bg-yellow-50 p-2 sm:p-3 rounded-lg text-yellow-800 border border-yellow-200">
-                        {messages.find(msg => msg.day === entry.day).message}
-                      </div>
-                    )}
-                  </div>
-
-                  {closure ? (
-                    <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 bg-gradient-to-br from-red-50 via-red-100 to-red-50 relative overflow-hidden">
-                      {/* Animated background elements */}
-                      <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                        {[...Array(15)].map((_, i) => (
-                          <circle
-                            key={i}
-                            cx={`${Math.random() * 100}%`}
-                            cy={`${Math.random() * 100}%`}
-                            r={`${Math.random() * 30 + 5}`}
-                            fill="rgba(239, 68, 68, 0.1)"
-                            className="animate-float"
-                            style={{
-                              animationDuration: `${Math.random() * 10 + 20}s`,
-                              animationDelay: `${i * -0.5}s`
-                            }}
-                          />
-                        ))}
-                      </svg>
-
-                      {/* Content */}
-                      <div className="relative z-10 flex flex-col items-center">
-                        <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-red-600 mb-4">
-                          CLOSED
-                        </div>
-                        <div className="px-4 sm:px-6 py-2 sm:py-3 bg-white rounded-lg md:rounded-xl shadow-lg border-2 border-red-200 transition-all duration-300 hover:shadow-xl hover:scale-105 backdrop-blur-sm bg-opacity-80">
-                          <div className="text-center text-red-800 font-semibold text-sm sm:text-base">
-                            {closure.reason}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Modern decorative elements */}
-                      <div className="absolute top-0 left-0 w-16 h-16 bg-red-200 rounded-br-full opacity-50"></div>
-                      <div className="absolute bottom-0 right-0 w-24 h-24 bg-red-200 rounded-tl-full opacity-50"></div>
-                    </div>
-
-
-                  ) : (
-                    <div className="flex-1 flex flex-col gap-2 sm:gap-3 p-2 sm:p-4">
-                      {[
-                        { name: "Filets", data: entry.filets, bg: "bg-blue-300 text-gray-800" },
-                        { name: "Spicy Filets", data: entry.spicy, bg: "bg-purple-300 text-gray-800" },
-                        { name: "Grilled Fillets", data: entry.grilledFilets, bg: "bg-amber-100 text-gray-800" },
-                        { name: "Grilled Nuggets", data: entry.grilledNuggets, bg: "bg-gray-200 text-gray-800" },
-                        { name: "Nuggets", data: entry.nuggets, bg: "bg-pink-300 text-gray-800" },
-                        { name: "Spicy Strips", data: entry.strips, bg: "bg-red-400 text-gray-800" },
-                      ].map((item, index) => (
-                        <div
-                          key={index}
-                          className={`flex-1 ${item.bg} p-2 sm:p-3 md:p-4 rounded-lg transition-all duration-200
-                            hover:shadow-sm flex flex-col justify-center items-center`}
-                        >
-                          <div className="font-medium text-center mb-1 text-sm sm:text-base">{item.name}</div>
-                          <div className={`text-center text-sm sm:text-base ${item.data.modified ? "text-red-700 font-bold" : ""}`}>
-                            {item.data.cases > 0 && <div>{item.data.cases} cases</div>}
-                            {item.data.bags > 0 && <div>{item.data.bags} bags</div>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {calculatedData.map((entry) => (
+              <DayCard
+                key={entry.day}
+                entry={entry}
+                currentDay={currentDay}
+                closures={closures}
+                messages={messages}
+              />
+            ))}
           </div>
         )}
       </div>
