@@ -72,7 +72,7 @@ const App = () => {
     }
 
     if (adminOnly && !user.isAdmin) {
-      return <Navigate to="/thawing-cabinet" />;
+      return <Navigate to="/" />;
     }
 
     return children;
