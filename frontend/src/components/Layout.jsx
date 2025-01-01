@@ -16,7 +16,7 @@ const Layout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-50">
-      {location.pathname !== "/thawing-cabinet" && (
+      {location.pathname !== "/thawing-cabinet" && location.pathname !== "/login" && (
         <>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}

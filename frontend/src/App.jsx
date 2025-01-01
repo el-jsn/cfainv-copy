@@ -5,7 +5,6 @@ import HomePage from "./components/HomePage";
 import UpdateUPTs from "./components/UpdateUPTs";
 import UpdateSalesProjection from "./components/UpdateSalesProjection";
 import ThawingCabinet from "./components/ThawingCabinet";
-import PrivateRoute from "./components/PrivateRoute";
 import LoginPage from "./components/LoginPage";
 import MessageFormComponent from "./components/MessageFormComponent";
 import MessageListPage from "./components/MessageListPage";
@@ -14,6 +13,8 @@ import ClosurePlannerComponent from "./components/ClosurePlannerComponent";
 import ClosurePlanList from "./components/ClosurePlanList";
 import Instructions from "./components/InstructionsComponent";
 import { useEffect } from "react";
+import { AuthProvider, useAuth } from "./components/AuthContext";
+import { Navigate } from "react-router-dom";
 
 const App = () => {
 
@@ -63,59 +64,77 @@ const App = () => {
     };
   }, []);
 
+  const ProtectedRoute = ({ children, adminOnly = false }) => {
+    const { user } = useAuth();
+
+    if (!user) {
+      return <Navigate to="/login" />;
+    }
+
+    if (adminOnly && !user.isAdmin) {
+      return <Navigate to="/thawing-cabinet" />;
+    }
+
+    return children;
+  };
+
   return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={
-            <PrivateRoute>
-              <HomePage />
-            </PrivateRoute>
-          } />
-          <Route path="/update-upt" element={
-            <PrivateRoute>
-              <UpdateUPTs />
-            </PrivateRoute>
-          } />
-          <Route path="/update-sales-projection" element={
-            <PrivateRoute>
-              <UpdateSalesProjection />
-            </PrivateRoute>
-          } />
-          <Route path="/thawing-cabinet" element={
-            <PrivateRoute>
-              <ThawingCabinet />
-            </PrivateRoute>
-          } />
-          <Route path="/data/message/add" element={
-            <PrivateRoute>
-              <MessageFormComponent />
-            </PrivateRoute>
-          } />
-          <Route path="/data/message/all" element={
-            <PrivateRoute>
-              <MessageListPage />
-            </PrivateRoute>
-          } />
-          <Route path="/closure/plan/add" element={
-            <PrivateRoute>
-              <ClosurePlannerComponent />
-            </PrivateRoute>
-          } />
-          <Route path="/closure/plans" element={
-            <PrivateRoute>
-              <ClosurePlanList />
-            </PrivateRoute>
-          } />
-          <Route path="/instructions" element={
-            <PrivateRoute>
-              <Instructions />
-            </PrivateRoute>
-          } />
-        </Routes>
-      </Layout>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Layout>
+          <Routes>
+            <Route path="/login" element={
+              <LoginPage />
+            } />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/update-upt" element={
+              <ProtectedRoute adminOnly>
+                <UpdateUPTs />
+              </ProtectedRoute>
+            } />
+            <Route path="/update-sales-projection" element={
+              <ProtectedRoute adminOnly>
+                <UpdateSalesProjection />
+              </ProtectedRoute>
+            } />
+            <Route path="/thawing-cabinet" element={
+              <ProtectedRoute>
+                <ThawingCabinet />
+              </ProtectedRoute>
+            } />
+            <Route path="/data/message/add" element={
+              <ProtectedRoute adminOnly>
+                <MessageFormComponent />
+              </ProtectedRoute>
+            } />
+            <Route path="/data/message/all" element={
+              <ProtectedRoute adminOnly>
+                <MessageListPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/closure/plan/add" element={
+              <ProtectedRoute adminOnly>
+                <ClosurePlannerComponent />
+              </ProtectedRoute>
+            } />
+            <Route path="/closure/plans" element={
+              <ProtectedRoute adminOnly>
+                <ClosurePlanList />
+              </ProtectedRoute>
+            } />
+            <Route path="/instructions" element={
+              <ProtectedRoute adminOnly>
+                <Instructions />
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </Layout>
+      </Router>
+    </AuthProvider>
   );
 };
 

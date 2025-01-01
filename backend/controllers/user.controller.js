@@ -30,7 +30,7 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid PIN." });
     }
 
-    const token = jwt.sign({ id: user._id, username: user.username }, JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, username: user.username , isAdmin: user.isAdmin}, JWT_SECRET, {
       expiresIn: "30d", 
     });
 

@@ -1,27 +1,29 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "./axiosInstance";
+import { jwtDecode } from "jwt-decode";
+import { useAuth } from "./AuthContext";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     try {
       const response = await axiosInstance.post("/auth/login", {
         username,
         pin,
       });
-  
+
       if (response.status === 200 && response.data.token) {
-        // Store token in localStorage
-        localStorage.setItem('authToken', response.data.token);
-        console.log('Token stored:', localStorage.getItem('authToken'));
+        login(response.data.token);
+        // Redirect based on user role
+        const decodedToken = jwtDecode(response.data.token);
         navigate("/");
       }
     } catch (err) {
