@@ -150,48 +150,53 @@ const HomePage = () => {
             An Overview of sales, projections, and buffer management
           </p>
         </div>
-        {renderAdminSection(
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            <div className="bg-white shadow-xl rounded-2xl p-6 border-t-4 border-blue-500 transform transition hover:scale-[1.02]">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
-                  <BarChart2 className="mr-2 text-blue-500" /> UPTs Data
-                </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+          <div className="bg-white shadow-xl rounded-2xl p-6 border-t-4 border-blue-500 transform transition hover:scale-[1.02]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
+                <BarChart2 className="mr-2 text-blue-500" /> UPTs Data
+              </h2>
+              {renderAdminSection(
+
                 <Link to="/update-upt" className="text-blue-600 hover:text-blue-800 transition">
                   Update <ChevronRight className="inline-block" size={16} />
                 </Link>
-              </div>
-              <Chart data={salesData} />
+              )}
+
             </div>
-            <div className="bg-white shadow-xl rounded-2xl p-6 border-t-4 border-green-500 transform transition hover:scale-[1.02]">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
-                  <TrendingUp className="mr-2 text-green-500" /> Sales Projections
-                </h2>
+            <Chart data={salesData} />
+          </div>
+          <div className="bg-white shadow-xl rounded-2xl p-6 border-t-4 border-green-500 transform transition hover:scale-[1.02]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
+                <TrendingUp className="mr-2 text-green-500" /> Sales Projections
+              </h2>
+              {renderAdminSection(
+
                 <Link to="/update-sales-projection" className="text-green-600 hover:text-green-800 transition">
                   Update <ChevronRight className="inline-block" size={16} />
                 </Link>
-              </div>
-              <div className="h-64">
-                <Line options={chartOptions} data={chartData} />
-              </div>
-              <div className="mt-6">
-                <div className="grid grid-cols-3 gap-4">
-                  {salesProjection.length > 0 ? (
-                    salesProjection.map((projection) => (
-                      <div key={projection._id} className="bg-gray-50 rounded-lg p-3 text-center">
-                        <p className="text-sm font-medium text-gray-600">{projection.day}</p>
-                        <p className="text-lg font-bold text-blue-600">${projection.sales}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 italic col-span-3 text-center">No sales projections available</p>
-                  )}
-                </div>
+              )}
+            </div>
+            <div className="h-64">
+              <Line options={chartOptions} data={chartData} />
+            </div>
+            <div className="mt-6">
+              <div className="grid grid-cols-3 gap-4">
+                {salesProjection.length > 0 ? (
+                  salesProjection.map((projection) => (
+                    <div key={projection._id} className="bg-gray-50 rounded-lg p-3 text-center">
+                      <p className="text-sm font-medium text-gray-600">{projection.day}</p>
+                      <p className="text-lg font-bold text-blue-600">${projection.sales}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 italic col-span-3 text-center">No sales projections available</p>
+                )}
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {renderAdminSection(
           <div className="bg-white shadow-xl rounded-2xl p-6 border-t-4 border-indigo-500 mb-12 transform transition hover:scale-[1.01]">
