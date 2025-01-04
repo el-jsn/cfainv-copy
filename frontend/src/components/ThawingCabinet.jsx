@@ -46,8 +46,8 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
       <div
         className={`p-3 sm:p-4 rounded-t-lg md:rounded-t-xl font-semibold text-center
           ${isToday
-            ? 'bg-blue-500 text-white'
-            : 'bg-gradient-to-r from-gray-50 to-gray-100'
+            ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+            : 'bg-gradient-to-r from-gray-100 to-gray-200'
           }`}
       >
         <div className="text-base sm:text-lg">{entry.day}</div>
@@ -68,10 +68,10 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
                 cy={`${Math.random() * 100}%`}
                 r={`${Math.random() * 30 + 5}`}
                 fill="rgba(239, 68, 68, 0.1)"
-                className="animate-float"
+                className="animate-pulse"
                 style={{
-                  animationDuration: `${Math.random() * 10 + 20}s`,
-                  animationDelay: `${i * -0.5}s`
+                  animationDuration: `${Math.random() * 10 + 15}s`,
+                  animationDelay: `${i * -0.2}s`
                 }}
               />
             ))}
@@ -92,12 +92,12 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
       ) : (
         <div className="flex-1 flex flex-col gap-2 sm:gap-3 p-2 sm:p-4">
           {[
-            { name: "Filets", data: entry.filets, bg: "bg-blue-300 text-gray-800" },
-            { name: "Spicy Filets", data: entry.spicy, bg: "bg-purple-300 text-gray-800" },
-            { name: "Grilled Fillets", data: entry.grilledFilets, bg: "bg-amber-100 text-gray-800" },
-            { name: "Grilled Nuggets", data: entry.grilledNuggets, bg: "bg-gray-200 text-gray-800" },
-            { name: "Nuggets", data: entry.nuggets, bg: "bg-pink-300 text-gray-800" },
-            { name: "Spicy Strips", data: entry.strips, bg: "bg-red-400 text-gray-800" },
+            { name: "Filets", data: entry.filets, bg: "bg-gradient-to-l from-blue-300 to-blue-400 text-gray-800" },
+            { name: "Spicy Filets", data: entry.spicy, bg: "bg-gradient-to-l from-purple-300 to-purple-400 text-gray-800" },
+            { name: "Grilled Fillets", data: entry.grilledFilets, bg: "bg-gradient-to-l from-amber-200 to-amber-300 text-gray-800" },
+            { name: "Grilled Nuggets", data: entry.grilledNuggets, bg: "bg-gradient-to-l from-gray-200 to-gray-300 text-gray-800" },
+            { name: "Nuggets", data: entry.nuggets, bg: "bg-gradient-to-l from-pink-400 via-pink-300 to-pink-400 text-gray-800" },
+            { name: "Spicy Strips", data: entry.strips, bg: "bg-gradient-to-l from-red-400 to-red-500 text-gray-800" },
           ].map((item, index) => (
             <div
               key={index}
@@ -395,7 +395,7 @@ const ThawingCabinet = () => {
     <div className="bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="min-h-screen bg-white rounded-lg md:rounded-xl shadow-xl px-3 py-2 border border-gray-100">
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6 md:mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3  sm:mb-4 md:mb-5">
           <div className="space-y-1">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">Thawing Cabinet</h2>
           </div>
