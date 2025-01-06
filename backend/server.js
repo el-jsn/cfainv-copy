@@ -55,7 +55,7 @@ app.use(helmet({
         defaultSrc: ["'self'"],
         imgSrc: ["'self'", "https://upload.wikimedia.org"], // Allow images from Wikimedia
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'"],
+        styleSrc: ["'self', 'unsafe-inline'"], // allow material UI
       },
     },
   }));
