@@ -54,9 +54,6 @@ app.use(helmet({
       directives: {
         defaultSrc: ["'self'"],
         imgSrc: ["'self'", "https://upload.wikimedia.org"], // Allow images from Wikimedia
-        scriptSrc: ["'unsafe-inline'"],
-        // allow inline scripts if needed
-        styleSrc: ["'unsafe-inline'"], // allow inline styles if needed
       },
     },
   }));
