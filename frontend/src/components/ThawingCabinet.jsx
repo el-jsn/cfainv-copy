@@ -53,13 +53,13 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
       style={{ height: '100%', width: '100%' }}
     >
       <div
-        className={`p-1 sm:p-2 rounded-t-lg md:rounded-t-xl font-semibold text-center text-sm sm:text-base
+        className={`p-2 sm:p-2 rounded-t-lg md:rounded-t-xl font-bold text-center text-sm sm:text-base
           ${isToday
             ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
             : 'bg-gradient-to-r from-gray-100 to-gray-200'
           }`}
       >
-        <div>{entry.day}</div>
+        <div className="p-1">{entry.day}</div>
         {messages.find(msg => msg.day === entry.day) && (
           <div className="mt-1 text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200">
             {messages.find(msg => msg.day === entry.day).message}
@@ -75,11 +75,11 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
                 key={i}
                 cx={`${Math.random() * 100}%`}
                 cy={`${Math.random() * 100}%`}
-                r={`${Math.random() * 20 + 5}`}
+                r={`${Math.random() * 40 + 10}`}
                 fill="rgba(239, 68, 68, 0.1)"
-                className="animate-pulse"
+                className="animate-float"
                 style={{
-                  animationDuration: `${Math.random() * 10 + 15}s`,
+                  animationDuration: `${Math.random() * 20 + 20}s`,
                   animationDelay: `${i * -0.2}s`
                 }}
               />
@@ -113,8 +113,8 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
               className={`flex-1 ${item.bg} p-2 m-1 rounded-md transition-all duration-200
                 hover:shadow-sm flex flex-col justify-center items-center`}
             >
-              <div className="font-medium text-center mb-0.5 text-sm sm:text-base">{item.name}</div>
-              <div className={`text-center text-sm sm:text-base ${item.data.modified ? "text-red-700 font-bold" : ""}`}>
+              <div className="font-semibold text-center mb-0.5 text-l sm:text-base">{item.name}</div>
+              <div className={`text-center text-l sm:text-base ${item.data.modified ? "text-red-700 font-bold" : ""}`}>
                 {item.data.cases > 0 && <div>{item.data.cases} cases</div>}
                 {item.data.bags > 0 && <div>{item.data.bags} bags</div>}
               </div>

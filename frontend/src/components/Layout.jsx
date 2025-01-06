@@ -1,42 +1,146 @@
-import React, { useState, useCallback, memo } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Home, Menu, X, BarChart2, MessageSquare, Calendar, InspectionPanelIcon } from "lucide-react";
+import React, { useState, useCallback, memo, useEffect } from "react";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
+import {
+  Home,
+  Menu,
+  X,
+  Upload, // For Update UPT
+  Hammer, // For Adjust Allocations
+  CalendarClock, // For Store Closures
+  HelpCircle, // For Allocations Instructions
+  Calendar, // For Thawing Cabinet
+} from "lucide-react";
 import { useAuth } from "./AuthContext";
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  IconButton,
+  Box,
+  Typography,
+  useMediaQuery,
+  useTheme,
+  Divider, // Import Divider
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
 
-const NavLink = memo(({ to, icon, label, onClick }) => (
-  <Link
-    to={to}
-    className="flex items-center space-x-3 text-gray-600 hover:text-blue-600 transition-colors duration-200"
-    onClick={onClick}
+const drawerWidth = 240;
+
+const NavItem = styled(ListItemButton)(({ theme, active }) => ({
+  borderRadius: theme.shape.borderRadius, // Rounded corners for list items
+  marginBottom: theme.spacing(0.5), // Add a little spacing between items
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover, // Keep the standard hover
+    '& .MuiListItemIcon-root': {
+      color: theme.palette.primary.main, // Change icon color on hover
+    },
+  },
+  ...(active && {
+    backgroundColor: theme.palette.primary.light, // Highlight for active item
+    '& .MuiListItemIcon-root': {
+      color: theme.palette.primary.contrastText, // Adjust active icon color
+    },
+    '& .MuiListItemText-primary': {
+      fontWeight: theme.typography.fontWeightMedium, // Make active text bolder
+    },
+  }),
+  transition: theme.transitions.create('background-color', { // Smooth transition
+    duration: theme.transitions.duration.shortest,
+  }),
+}));
+
+const NavLink = memo(({ to, icon, label, onClick, active }) => {
+  return (
+    <NavItem component={RouterLink} to={to} onClick={onClick} active={active}>
+      <ListItemIcon sx={{ minWidth: 36 }}>{icon}</ListItemIcon> {/* Adjust icon spacing */}
+      <ListItemText primary={label} />
+    </NavItem>
+  );
+});
+
+const Sidebar = memo(({ open, onClose, quickAccessLinks, location }) => (
+  <Drawer
+    variant="temporary"
+    open={open}
+    onClose={onClose}
+    ModalProps={{
+      keepMounted: true, // Better open performance on mobile.
+    }}
+    sx={{
+      '& .MuiDrawer-paper': {
+        width: drawerWidth,
+        boxSizing: 'border-box',
+        backgroundColor: '#f8f9fa', // Subtle background color
+        borderRadius: 2, // Rounded corners for the sidebar
+      },
+    }}
   >
-    {icon}
-    <span>{label}</span>
-  </Link>
+    <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
+      <IconButton onClick={onClose} aria-label="close menu">
+        <X />
+      </IconButton>
+    </Box>
+    <Box sx={{ overflow: 'auto', px: 1, py: 1 }}> {/* Add padding to the content */}
+      <Typography variant="subtitle1" gutterBottom sx={{ px: 1, mt: 1, fontWeight: 'bold' }}>
+        Quick Access
+      </Typography>
+      <Divider sx={{ my: 0.5 }} /> {/* Subtle divider */}
+      <List>
+        {quickAccessLinks.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            icon={link.icon}
+            label={link.label}
+            onClick={onClose} // Pass onClose here to close on navigation
+            active={location.pathname === link.to} // Check if the route is active
+          />
+        ))}
+      </List>
+    </Box>
+  </Drawer>
 ));
 
-const Sidebar = memo(({ isOpen, toggleMenu, quickAccessLinks }) => (
-  <nav className={`fixed top-0 left-0 h-full w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} z-40`}>
-    <div className="p-5">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Quick Access</h2>
-      <ul className="space-y-4">
-        {quickAccessLinks.map((link) => (
-          <li key={link.to}>
-            <NavLink to={link.to} icon={React.cloneElement(link.icon, { className: "w-5 h-5" })} label={link.label} onClick={toggleMenu} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  </nav>
-));
+const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })(
+  ({ theme, open }) => ({
+    flexGrow: 1,
+    padding: theme.spacing(3),
+    transition: theme.transitions.create('margin', {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    marginLeft: 0,
+    ...(open && {
+      transition: theme.transitions.create('margin', {
+        easing: theme.transitions.easing.easeOut,
+        duration: theme.transitions.duration.enteringScreen,
+      }),
+      marginLeft: drawerWidth,
+    }),
+  }),
+);
 
 const Layout = memo(({ children }) => {
   const location = useLocation();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const toggleMenu = useCallback(() => {
-    setIsMenuOpen(prevState => !prevState);
+  const handleDrawerToggle = useCallback(() => {
+    setMobileOpen(prevState => !prevState);
   }, []);
+
+  const handleNavigation = useCallback((to) => {
+    if (isMobile) {
+      handleDrawerToggle(); // Close the drawer only on mobile
+    }
+    navigate(to);
+  }, [isMobile, handleDrawerToggle, navigate]);
 
   const quickAccessLinks = React.useMemo(() => {
     const links = [
@@ -45,10 +149,11 @@ const Layout = memo(({ children }) => {
     ];
 
     if (user && user.isAdmin) {
-      links.splice(1, 0, { to: "/update-upt", icon: <BarChart2 />, label: "Update UPT" },
-        { to: "/data/message/all", icon: <MessageSquare />, label: "Adjust Allocations" },
-        { to: "/closure/plans", icon: <Calendar />, label: "Store Closures" },
-        { to: "/instructions", icon: <InspectionPanelIcon />, label: "Allocations Instructions" },
+      links.splice(1, 0,
+        { to: "/update-upt", icon: <Upload />, label: "Update UPT" },
+        { to: "/data/message/all", icon: <Hammer />, label: "Adjust Allocations" },
+        { to: "/closure/plans", icon: <CalendarClock />, label: "Store Closures" },
+        { to: "/instructions", icon: <HelpCircle />, label: "Allocations Instructions" }
       ); // Insert after Home
     }
 
@@ -57,24 +162,80 @@ const Layout = memo(({ children }) => {
 
   const shouldRenderMenu = location.pathname !== "/thawing-cabinet" && location.pathname !== "/login";
 
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-50">
+    <Box sx={{ display: 'flex' }}>
       {shouldRenderMenu && (
         <>
-          <button
-            onClick={toggleMenu}
-            className="fixed top-4 left-4 z-50 bg-white p-2 rounded-full shadow-md hover:shadow-lg transition-shadow duration-200"
-            aria-label="Toggle menu"
+          <IconButton
+            onClick={handleDrawerToggle}
+            sx={{
+              position: 'fixed',
+              top: 16,
+              left: 16,
+              zIndex: 1201, // Ensure it's above the drawer
+              display: { sm: 'none' }, // Hide on larger screens where the permanent drawer is visible
+              bgcolor: 'background.paper',
+              borderRadius: '50%', // Make the menu button round
+              boxShadow: 1,
+              '&:hover': {
+                boxShadow: 2,
+              },
+            }}
+            aria-label="open drawer"
           >
-            {isMenuOpen ? <X className="w-6 h-6 text-gray-600" /> : <Menu className="w-6 h-6 text-gray-600" />}
-          </button>
-          <Sidebar isOpen={isMenuOpen} toggleMenu={toggleMenu} quickAccessLinks={quickAccessLinks} />
+            <Menu />
+          </IconButton>
+          <Box
+            component="nav"
+            sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+            aria-label="mailbox folders"
+          >
+            {/* The implementation can be swapped with js to avoid SEO duplication of links. */}
+            <Sidebar
+              open={mobileOpen}
+              onClose={handleDrawerToggle}
+              quickAccessLinks={quickAccessLinks}
+              location={location} // Pass the location to the Sidebar
+            />
+            <Drawer
+              variant="permanent"
+              sx={{
+                display: { xs: 'none', sm: 'block' },
+                '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+              }}
+              open
+            >
+              <Box sx={{ overflow: 'auto', px: 1, py: 1 }}> {/* Add padding to the content */}
+                <Typography variant="subtitle1" gutterBottom sx={{ px: 1, mt: 1, fontWeight: 'bold' }}>
+                  Quick Access
+                </Typography>
+                <Divider sx={{ my: 0.5 }} /> {/* Subtle divider */}
+                <List>
+                  {quickAccessLinks.map((link) => (
+                    <NavLink
+                      key={link.to}
+                      to={link.to}
+                      icon={link.icon}
+                      label={link.label}
+                      onClick={() => handleNavigation(link.to)} // Close and navigate conditionally
+                      active={location.pathname === link.to} // Check if the route is active
+                    />
+                  ))}
+                </List>
+              </Box>
+            </Drawer>
+          </Box>
         </>
       )}
-      <main className={`transition-all duration-300 ${isMenuOpen ? 'ml-64' : 'ml-0'}`}>
+      <Main open={shouldRenderMenu ? mobileOpen : false}>
         {children}
-      </main>
-    </div>
+      </Main>
+    </Box>
   );
 });
 

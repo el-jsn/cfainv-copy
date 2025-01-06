@@ -89,7 +89,7 @@ const ClosurePlanList = () => {
               <Calendar className="w-12 h-12 text-gray-400" />
               <h3 className="text-lg font-medium text-gray-900">No Closure Plans</h3>
               <p className="text-gray-500">Get started by adding your first store closure plan.</p>
-              <button 
+              <button
                 onClick={handleAddNew}
                 className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200"
               >
@@ -100,8 +100,8 @@ const ClosurePlanList = () => {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {closurePlans.map((plan) => (
-              <div 
-                key={plan._id} 
+              <div
+                key={plan._id}
                 className="bg-white rounded-lg shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative group"
               >
                 {/* Delete Button */}
@@ -130,12 +130,12 @@ const ClosurePlanList = () => {
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-gray-700 font-medium">{plan.reason}</p>
                   </div>
-                  
+
                   <div className="flex items-center text-sm text-gray-600">
                     <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
                     <span>Duration: {plan.duration.value} {plan.duration.unit}</span>
                   </div>
-                  
+
                   {plan.expiresAt && (
                     <div className="flex items-center text-sm text-amber-600 bg-amber-50 rounded-lg p-3">
                       <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
@@ -199,15 +199,5 @@ const ClosurePlanList = () => {
   );
 };
 
-// Add this to your CSS for the modal animation
-const style = `
-  @keyframes fade-scale {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-  }
-  .animate-fade-scale {
-    animation: fade-scale 0.2s ease-out;
-  }
-`;
 
 export default ClosurePlanList;

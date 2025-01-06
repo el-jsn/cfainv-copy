@@ -1,6 +1,8 @@
 // components/LogoutButton.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@mui/material";
+import { red } from "@mui/material/colors";
 
 const LogoutButton = () => {
   const navigate = useNavigate();
@@ -11,18 +13,19 @@ const LogoutButton = () => {
   };
 
   return (
-    <button
+    <Button
       onClick={handleLogout}
-      style={{
-        padding: "10px 20px",
-        backgroundColor: "#FF4D4D",
-        color: "white",
-        border: "none",
-        borderRadius: "5px",
+      variant="contained"
+      sx={{
+        backgroundColor: red[500],
+        color: 'white',
+        '&:hover': {
+          backgroundColor: red[700],
+        },
       }}
     >
       Logout
-    </button>
+    </Button>
   );
 };
 
