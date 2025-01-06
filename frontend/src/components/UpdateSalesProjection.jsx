@@ -77,8 +77,8 @@ const UpdateSalesProjection = () => {
           </div>
 
           {/* Form Container */}
-          <form 
-            onSubmit={handleSubmit} 
+          <form
+            onSubmit={handleSubmit}
             className="p-6 md:p-10 space-y-6"
           >
             {Object.keys(sales).map((day) => (
@@ -118,10 +118,10 @@ const UpdateSalesProjection = () => {
                 className={`w-full py-3 px-4 rounded-xl text-white font-bold 
                            transition duration-300 transform hover:scale-105 
                            focus:outline-none focus:ring-2 focus:ring-offset-2 
-                           ${loading 
-                             ? "bg-gray-400 cursor-not-allowed" 
-                             : "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 active:scale-95"
-                           }`}
+                           ${loading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 active:scale-95"
+                  }`}
               >
                 {loading ? "Updating..." : "Submit Projections"}
               </button>
@@ -129,11 +129,11 @@ const UpdateSalesProjection = () => {
 
             {/* Status Message */}
             {message && (
-              <div 
+              <div
                 className={`mt-4 p-3 rounded-xl text-center font-medium transition-all duration-300 
-                           ${message.includes("successfully") 
-                             ? "bg-green-100 text-green-700" 
-                             : "bg-red-100 text-red-700"}`}
+                           ${message.includes("successfully")
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"}`}
               >
                 {message}
               </div>
