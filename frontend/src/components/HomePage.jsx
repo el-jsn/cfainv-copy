@@ -1,10 +1,10 @@
-// Optimized HomePage.js
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Line } from "react-chartjs-2";
-import Chart from "./Chart"; // Assuming this is your EnhancedChart
+import Chart from "./Chart";
 import LogoutButton from "./LogoutButton";
 import axiosInstance from "./axiosInstance";
+import { useAuth } from "./AuthContext";
 import {
   ChevronRight,
   BarChart2,
@@ -19,7 +19,6 @@ import {
   Inspect,
   LayoutDashboard,
   ShoppingBag,
-  // Removed Bell and User imports
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -31,7 +30,16 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { useAuth } from "./AuthContext";
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  Typography,
+  Button,
+  IconButton,
+  Tooltip as MTTooltip, // To avoid naming conflicts with Chart.js tooltip
+  Progress,
+} from "@material-tailwind/react";
 
 ChartJS.register(
   CategoryScale,
@@ -107,8 +115,8 @@ const HomePage = () => {
         label: "Sales Projection",
         data: salesProjection.map((projection) => projection.sales),
         fill: false,
-        backgroundColor: "#3B82F6",
-        borderColor: "#60A5FA",
+        backgroundColor: "#6366F1",
+        borderColor: "#A5B4FC",
         tension: 0.4,
       },
     ],
@@ -171,24 +179,21 @@ const HomePage = () => {
   };
 
   const getBufferColor = (value) => {
-    if (value > 0) return "text-green-500";
-    if (value < 0) return "text-red-500";
-    return "text-gray-500";
+    if (value > 0) return "green";
+    if (value < 0) return "red";
+    return "gray";
   };
 
   const getBufferArrow = (value) => {
-    if (value > 0) return <ArrowUp className="inline-block w-4 h-4 mr-1" />;
-    if (value < 0) return <ArrowDown className="inline-block w-4 h-4 mr-1" />;
+    if (value > 0) return <ArrowUp className="inline-block w-4 h-4 mr-1 text-green-600" />;
+    if (value < 0) return <ArrowDown className="inline-block w-4 h-4 mr-1 text-red-600" />;
     return null;
   };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex justify-center items-center">
-        <div className="flex items-center space-x-2 text-gray-600">
-          <RefreshCw className="animate-spin" size={20} />
-          <span>Loading dashboard...</span>
-        </div>
+        <Progress color="indigo" size="lg" className="w-64" />
       </div>
     );
   }
@@ -198,109 +203,112 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center">
-            <LayoutDashboard className="mr-2 text-indigo-600" />
-            <h1 className="text-lg font-semibold text-gray-800">
+            <LayoutDashboard className="mr-2 text-indigo-500" />
+            <Typography variant="h5" color="blue-gray">
               {user?.isAdmin ? 'Admin Dashboard' : 'Dashboard'}
-            </h1>
+            </Typography>
           </div>
           <div className="flex items-center space-x-4">
-            {/* Display user role instead of icons */}
             {user?.isAdmin ? (
-              <span className="text-sm font-medium text-gray-700">Admin</span>
+              <Typography variant="small" className="bg-indigo-100 text-indigo-700 rounded-full px-2 py-1 font-medium">
+                Admin
+              </Typography>
             ) : (
-              <span className="text-sm font-medium text-gray-700">User</span>
+              <Typography variant="small" className="bg-gray-100 text-gray-700 rounded-full px-2 py-1 font-medium">
+                User
+              </Typography>
             )}
             <LogoutButton />
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className="container mx-auto py-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* UPTs Data Card */}
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  UPTs by Product
-                </h3>
-                {renderAdminSection(
-                  <Link
-                    to="/update-upt"
-                    className="text-indigo-600 hover:text-indigo-800 text-sm"
-                  >
-                    Update <ChevronRight className="inline-block w-4 h-4" />
+          {/* UPTs Data Card (Hidden for non-admins) */}
+          {user?.isAdmin && (
+            <Card>
+              <CardHeader floated={false} shadow={false} className="rounded-none p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <Typography variant="h6" color="blue-gray">
+                    UPTs by Product
+                  </Typography>
+                  <Link to="/update-upt">
+                    <Button size="sm" color="indigo" className="flex items-center gap-2">
+                      Update
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </Link>
-                )}
-              </div>
-              <Chart data={salesData} isCompact={true} height={300} />
-            </div>
-          </div>
+                </div>
+              </CardHeader>
+              <CardBody className="pt-0">
+                <Chart data={salesData} isCompact={true} height={300} chartColor="#6366F1" />
+              </CardBody>
+            </Card>
+          )}
 
           {/* Sales Projections Card */}
-          <div className="bg-white shadow rounded-lg md:col-span-2 lg:col-span-2">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
+          <Card className="md:col-span-2 lg:col-span-2">
+            <CardHeader floated={false} shadow={false} className="rounded-none p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <Typography variant="h6" color="blue-gray">
                   Weekly Sales Projections
-                </h3>
+                </Typography>
                 {renderAdminSection(
-                  <Link
-                    to="/update-sales-projection"
-                    className="text-indigo-600 hover:text-indigo-800 text-sm"
-                  >
-                    Update <ChevronRight className="inline-block w-4 h-4" />
+                  <Link to="/update-sales-projection">
+                    <Button size="sm" color="indigo" className="flex items-center gap-2">
+                      Update
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </Link>
                 )}
               </div>
+            </CardHeader>
+            <CardBody>
               <div style={{ height: 300 }}>
                 <Line options={chartOptions} data={chartData} />
               </div>
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {salesProjection.length > 0 ? (
                   salesProjection.map((projection) => (
-                    <div
-                      key={projection._id}
-                      className="bg-gray-50 rounded-md p-3 text-center"
-                    >
-                      <dt className="text-sm font-medium text-gray-500">
+                    <div key={projection._id} className="bg-gray-50 rounded-md p-3 text-center">
+                      <Typography variant="small" color="gray" className="font-medium">
                         {projection.day}
-                      </dt>
-                      <dd className="text-lg font-semibold text-indigo-600">
+                      </Typography>
+                      <Typography variant="h6" color="indigo">
                         ${projection.sales}
-                      </dd>
+                      </Typography>
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-500 italic text-sm col-span-3 text-center">
+                  <Typography variant="small" color="gray" className="italic col-span-3 text-center">
                     No sales projections available
-                  </p>
+                  </Typography>
                 )}
               </div>
-            </div>
-          </div>
+            </CardBody>
+          </Card>
         </div>
 
         {/* Buffer Information */}
         {renderAdminSection(
-          <div className="bg-white shadow rounded-lg mt-6">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+          <Card className="mt-6">
+            <CardHeader floated={false} shadow={false} className="rounded-none p-4">
+              <Typography variant="h6" color="blue-gray">
                 Buffer Information
-              </h3>
+              </Typography>
+            </CardHeader>
+            <CardBody>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {bufferData.map((buffer) => (
-                  <div
-                    key={buffer._id}
-                    className="bg-gray-50 rounded-md p-3 shadow-sm"
-                  >
-                    <p className="text-sm font-medium text-gray-600 truncate">
+                  <Card key={buffer._id} className="p-3">
+                    <Typography variant="small" color="blue-gray" className="font-medium truncate">
                       {buffer.productName}
-                    </p>
+                    </Typography>
                     {editingBuffer === buffer._id ? (
                       <input
                         type="number"
@@ -314,78 +322,85 @@ const HomePage = () => {
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     ) : (
-                      <p
-                        className={`text-lg font-bold ${getBufferColor(
-                          buffer.bufferPrcnt
-                        )} flex items-center`}
-                      >
+                      <Typography variant="h6" color={getBufferColor(buffer.bufferPrcnt)} className="flex items-center">
                         {getBufferArrow(buffer.bufferPrcnt)}
                         {buffer.bufferPrcnt}%
-                        <button
-                          onClick={() => handleBufferEdit(buffer._id)}
-                          className="ml-2 text-gray-400 hover:text-gray-600"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                      </p>
+                        <MTTooltip content="Edit Buffer">
+                          <IconButton size="sm" color="gray" onClick={() => handleBufferEdit(buffer._id)} className="ml-2">
+                            <Edit2 className="h-4 w-4" />
+                          </IconButton>
+                        </MTTooltip>
+                      </Typography>
                     )}
-                    <p className="text-xs text-gray-500 mt-1">
+                    <Typography variant="small" color="gray" className="mt-1">
                       Updated: {new Date(buffer.updatedOn).toLocaleDateString()}
-                    </p>
-                  </div>
+                    </Typography>
+                  </Card>
                 ))}
               </div>
-            </div>
-          </div>
+            </CardBody>
+          </Card>
         )}
 
         {/* Quick Actions */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Link
-            to="/thawing-cabinet"
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-4 flex items-center justify-between shadow"
-          >
-            <div>
-              <h3 className="font-semibold">Thawing Cabinet</h3>
-              <p className="text-sm text-blue-100">View allocations</p>
-            </div>
-            <ShoppingBag className="h-5 w-5" />
+          <Link to="/thawing-cabinet">
+            <Card className="bg-indigo-500 hover:bg-indigo-600 text-white p-4 flex items-center justify-between shadow-md">
+              <div>
+                <Typography variant="h6" color="white" className="font-semibold">
+                  Thawing Cabinet
+                </Typography>
+                <Typography variant="small" color="indigo-100">
+                  View allocations
+                </Typography>
+              </div>
+              <ShoppingBag className="h-5 w-5" />
+            </Card>
           </Link>
 
           {renderAdminSection(
-            <Link
-              to="/data/message/all"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg p-4 flex items-center justify-between shadow"
-            >
-              <div>
-                <h3 className="font-semibold">Adjust Allocations</h3>
-                <p className="text-sm text-indigo-100">Manual adjustments</p>
-              </div>
-              <MessageSquare className="h-5 w-5" />
+            <Link to="/data/message/all">
+              <Card className="bg-blue-500 hover:bg-blue-600 text-white p-4 flex items-center justify-between shadow-md">
+                <div>
+                  <Typography variant="h6" color="white" className="font-semibold">
+                    Adjust Allocations
+                  </Typography>
+                  <Typography variant="small" color="blue-100">
+                    Manual adjustments
+                  </Typography>
+                </div>
+                <MessageSquare className="h-5 w-5" />
+              </Card>
             </Link>
           )}
           {renderAdminSection(
-            <Link
-              to="/instructions"
-              className="bg-green-600 hover:bg-green-700 text-white rounded-lg p-4 flex items-center justify-between shadow"
-            >
-              <div>
-                <h3 className="font-semibold">Allocation Instructions</h3>
-                <p className="text-sm text-green-100">Stocking guidance</p>
-              </div>
-              <Inspect className="h-5 w-5" />
+            <Link to="/instructions">
+              <Card className="bg-green-500 hover:bg-green-600 text-white p-4 flex items-center justify-between shadow-md">
+                <div>
+                  <Typography variant="h6" color="white" className="font-semibold">
+                    Allocation Instructions
+                  </Typography>
+                  <Typography variant="small" color="green-100">
+                    Stocking guidance
+                  </Typography>
+                </div>
+                <Inspect className="h-5 w-5" />
+              </Card>
             </Link>
           )}
           {renderAdminSection(
-            <Link
-              to="/closure/plans"
-              className="bg-red-600 hover:bg-red-700 text-white rounded-lg p-4 flex items-center justify-between shadow"
-            >
-              <div>
-                <h3 className="font-semibold">Store Closures</h3>
-                <p className="text-sm text-red-100">Manage closures</p>
-              </div>
-              <Calendar className="h-5 w-5" />
+            <Link to="/closure/plans">
+              <Card className="bg-red-500 hover:bg-red-600 text-white p-4 flex items-center justify-between shadow-md">
+                <div>
+                  <Typography variant="h6" color="white" className="font-semibold">
+                    Store Closures
+                  </Typography>
+                  <Typography variant="small" color="red-100">
+                    Manage closures
+                  </Typography>
+                </div>
+                <Calendar className="h-5 w-5" />
+              </Card>
             </Link>
           )}
         </div>

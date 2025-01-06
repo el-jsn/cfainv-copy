@@ -92,12 +92,12 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
       ) : (
         <div className="flex-1 flex flex-col gap-2 sm:gap-3 p-2 sm:p-4">
           {[
-            { name: "Filets", data: entry.filets, bg: "bg-gradient-to-l from-blue-300 to-blue-400 text-gray-800" },
-            { name: "Spicy Filets", data: entry.spicy, bg: "bg-gradient-to-l from-purple-300 to-purple-400 text-gray-800" },
-            { name: "Grilled Fillets", data: entry.grilledFilets, bg: "bg-gradient-to-l from-amber-200 to-amber-300 text-gray-800" },
-            { name: "Grilled Nuggets", data: entry.grilledNuggets, bg: "bg-gradient-to-l from-gray-200 to-gray-300 text-gray-800" },
-            { name: "Nuggets", data: entry.nuggets, bg: "bg-gradient-to-l from-pink-400 via-pink-300 to-pink-400 text-gray-800" },
-            { name: "Spicy Strips", data: entry.strips, bg: "bg-gradient-to-l from-red-400 to-red-500 text-gray-800" },
+            { name: "Filets", data: entry.filets, bg: "bg-blue-300 text-gray-800" },
+            { name: "Spicy Filets", data: entry.spicy, bg: "bg-purple-200 text-gray-800" },
+            { name: "Grilled Fillets", data: entry.grilledFilets, bg: "bg-amber-200 text-gray-800" },
+            { name: "Grilled Nuggets", data: entry.grilledNuggets, bg: "bg-gray-300 text-gray-800" },
+            { name: "Nuggets", data: entry.nuggets, bg: "bg-pink-200 text-gray-800" },
+            { name: "Spicy Strips", data: entry.strips, bg: "bg-red-500 text-gray-800" },
           ].map((item, index) => (
             <div
               key={index}
