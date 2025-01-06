@@ -395,7 +395,7 @@ const ThawingCabinet = () => {
   const currentDay = getCurrentDay();
 
   return (
-    <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+    <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="h-full w-full bg-white rounded-lg md:rounded-xl shadow-xl p-2 sm:p-4 border border-gray-100 flex flex-col">
         {/* Header Section */}
         <div className="flex items-center justify-between mb-2 sm:mb-3">
