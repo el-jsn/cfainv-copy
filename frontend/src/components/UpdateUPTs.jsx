@@ -413,7 +413,7 @@ const EnhancedUTPUpdate = () => {
     setSuccessMessage("");
     try {
       await axiosInstance.post("/upt/bulk", utpData);
-      setSuccessMessage("Unit Per Transaction data successfully submitted.");
+      setSuccessMessage("UTP data successfully submitted.");
     } catch (error) {
       console.error("Error submitting data:", error);
       setErrorMessage(
@@ -502,7 +502,7 @@ const EnhancedUTPUpdate = () => {
         Sales Data Analytics Suite
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Upload your sales report to analyze Unit Per Transaction (UPT) and gain valuable insights.
+        Upload your sales report to analyze Unit Per Thousand (UPT) and gain valuable insights.
       </Typography>
 
       <Grid container spacing={3}>
@@ -623,7 +623,7 @@ const EnhancedUTPUpdate = () => {
           <Grid item xs={12}>
             <Card elevation={3}>
               <StyledCardHeader
-                title="Unit Per Transaction Analysis"
+                title="Unit Per Thousand Analysis"
                 action={
                   <Button
                     variant="contained"
