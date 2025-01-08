@@ -1,5 +1,102 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "./axiosInstance";
+import {
+  Box,
+  Container,
+  Typography,
+  TextField,
+  Button,
+  CircularProgress,
+  Alert,
+  Paper,
+  Grid,
+} from "@mui/material";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { blueGrey, grey } from "@mui/material/colors";
+
+const theme = createTheme({
+  palette: {
+    primary: blueGrey, // A sophisticated blue-grey
+    secondary: {
+      main: "#8bc34a", // A fresh light green accent
+    },
+    background: {
+      default: "#f8f9fa", // Very light grey
+      paper: "#fff",
+    },
+    text: {
+      primary: grey[800], // Darker grey for good contrast
+      secondary: grey[600],
+    },
+  },
+  typography: {
+    fontFamily: "'Nunito', sans-serif", // Clean and readable sans-serif
+    h5: {
+      fontWeight: 700,
+    },
+    subtitle1: {
+      fontSize: "1rem",
+      color: grey[700],
+    },
+  },
+  shape: {
+    borderRadius: 6,
+  },
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          border: `1px solid ${grey[300]}`, // Subtle border
+        },
+      },
+    },
+    MuiTextField: {
+      defaultProps: {
+        variant: "outlined",
+        fullWidth: true,
+        margin: "normal",
+        size: "small",
+      },
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: blueGrey[500], // Focused border color
+          },
+        },
+      },
+    },
+    MuiButton: {
+      defaultProps: {
+        variant: "contained",
+        size: "large",
+      },
+      styleOverrides: {
+        root: {
+          fontWeight: 600,
+          textTransform: "none",
+          boxShadow: "none",
+          borderRadius: 4,
+          "&:hover": {
+            backgroundColor: blueGrey[700], // Darker hover
+            boxShadow: "0px 2px 4px rgba(0,0,0,0.1)",
+          },
+        },
+      },
+    },
+    MuiAlert: {
+      defaultProps: {
+        variant: "outlined",
+        severity: "info",
+      },
+      styleOverrides: {
+        root: {
+          borderRadius: 4,
+          marginBottom: 16,
+        },
+      },
+    },
+  },
+});
 
 const UpdateSalesProjection = () => {
   const [sales, setSales] = useState({
@@ -13,6 +110,7 @@ const UpdateSalesProjection = () => {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [severity, setSeverity] = useState("success");
 
   useEffect(() => {
     const fetchSalesProjection = async () => {
@@ -31,6 +129,8 @@ const UpdateSalesProjection = () => {
         }));
       } catch (error) {
         console.error("Error fetching sales projections:", error);
+        setMessage("Failed to load initial sales projections.");
+        setSeverity("error");
       }
     };
     fetchSalesProjection();
@@ -51,103 +151,91 @@ const UpdateSalesProjection = () => {
     try {
       await axiosInstance.post("/sales/bulk", sales);
       setMessage("Sales projections updated successfully!");
+      setSeverity("success");
       setTimeout(() => {
         window.location.href = "/";
-      }, 2000);
+      }, 1500);
     } catch (error) {
       console.error("Error updating sales projections:", error);
       setMessage("Failed to update sales projections. Please try again.");
+      setSeverity("error");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-      <div className="w-full max-w-xl">
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden transform transition-all duration-300 hover:scale-[1.01]">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white p-6 md:p-8">
-            <h1 className="text-2xl md:text-3xl font-bold text-center tracking-wide">
-              Sales Projection Update
-            </h1>
-            <p className="text-center text-green-100 mt-2 text-sm md:text-base">
-              Enter your weekly sales projections
-            </p>
-          </div>
+    <ThemeProvider theme={theme}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          bgcolor: "background.default",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          py: 4,
+          px: { xs: 2, sm: 3, lg: 4 },
+        }}
+      >
+        <Container maxWidth="sm">
+          <Paper elevation={0}> {/* Removed elevation for a flatter look */}
+            <Box
+              sx={{
+                px: { xs: 3, md: 4 },
+                pt: { xs: 3, md: 4 },
+                pb: 2,
+              }}
+            >
+              <Typography variant="h5" component="h1" gutterBottom>
+                Sales Projection
+              </Typography>
+              <Typography variant="subtitle1">
+                Enter your estimated sales for the week.
+              </Typography>
+            </Box>
 
-          {/* Form Container */}
-          <form
-            onSubmit={handleSubmit}
-            className="p-6 md:p-10 space-y-6"
-          >
-            {Object.keys(sales).map((day) => (
-              <div key={day} className="relative">
-                <label
-                  htmlFor={day}
-                  className="block text-sm font-semibold text-gray-700 mb-2"
-                >
-                  {day}
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    id={day}
-                    name={day}
-                    value={sales[day]}
-                    onChange={handleChange}
-                    placeholder={`Enter sales for ${day}`}
-                    className="w-full pl-7 pr-4 py-3 border-2 border-gray-300 
-                               rounded-xl focus:outline-none focus:ring-2 
-                               focus:ring-emerald-500 focus:border-transparent 
-                               transition duration-300 
-                               text-gray-900 placeholder-gray-400"
-                  />
-                </div>
-              </div>
-            ))}
+            <Box component="form" onSubmit={handleSubmit} sx={{ px: { xs: 3, md: 4 }, pb: { xs: 3, md: 4 } }}>
+              <Grid container spacing={2}>
+                {Object.keys(sales).map((day) => (
+                  <Grid item xs={12} sm={6} key={day}>
+                    <TextField
+                      label={day}
+                      name={day}
+                      value={sales[day]}
+                      onChange={handleChange}
+                      type="number"
+                      InputProps={{
+                        startAdornment: "$",
+                      }}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
 
-            {/* Submit Button */}
-            <div className="mt-6">
-              <button
+              <Button
                 type="submit"
                 disabled={loading}
-                className={`w-full py-3 px-4 rounded-xl text-white font-bold 
-                           transition duration-300 transform hover:scale-105 
-                           focus:outline-none focus:ring-2 focus:ring-offset-2 
-                           ${loading
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 active:scale-95"
-                  }`}
+                fullWidth
+                sx={{ mt: 3, py: 1.5 }}
+                color="primary"
               >
-                {loading ? "Updating..." : "Submit Projections"}
-              </button>
-            </div>
+                {loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  "Update Projections"
+                )}
+              </Button>
 
-            {/* Status Message */}
-            {message && (
-              <div
-                className={`mt-4 p-3 rounded-xl text-center font-medium transition-all duration-300 
-                           ${message.includes("successfully")
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"}`}
-              >
-                {message}
-              </div>
-            )}
-          </form>
-        </div>
-
-        {/* Optional: Decorative Background Element */}
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
-          <div className="absolute -top-20 -left-20 w-96 h-96 bg-emerald-200 opacity-20 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-green-200 opacity-20 rounded-full blur-3xl"></div>
-        </div>
-      </div>
-    </div>
+              {message && (
+                <Alert severity={severity} sx={{ mt: 2 }}>
+                  {message}
+                </Alert>
+              )}
+            </Box>
+          </Paper>
+        </Container>
+      </Box>
+    </ThemeProvider>
   );
 };
 
