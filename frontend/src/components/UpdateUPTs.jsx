@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import * as xlsx from "xlsx";
 import axiosInstance from "./axiosInstance";
 import {
@@ -25,21 +25,39 @@ import {
   AccordionSummary,
   AccordionDetails,
   Divider,
+  TextField,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
-import { CloudUpload, Close, ExpandMore, CheckCircleOutline, Warning, ErrorOutline, Lightbulb } from "@mui/icons-material";
+import {
+  CloudUpload,
+  Close,
+  ExpandMore,
+  CheckCircleOutline,
+  Warning,
+  ErrorOutline,
+  Lightbulb,
+  Search as SearchIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+} from "@mui/icons-material";
 import { styled, useTheme } from "@mui/material/styles";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as ChartTooltip } from 'recharts';
 
-// Theming and Consistent Styling (Keep these for consistency)
-const primaryColor = "#1976d2";
-const secondaryColor = "#9c27b0";
-const successColor = "#4caf50";
-const warningColor = "#ff9800";
-const errorColor = "#f44336";
-const textColorPrimary = "rgba(0, 0, 0, 0.87)";
-const textColorSecondary = "rgba(0, 0, 0, 0.6)";
-const backgroundColor = "#f8f9fa";
-const tableRowHoverColor = "#f5f5f5"; // Light gray for hover effect
-const tableRowEvenColor = "#fafafa";  // Very light gray for even rows
+// Theming and Consistent Styling (Adapted for White Theme)
+const primaryColor = "#1976d2"; // Standard Material Blue
+const secondaryColor = "#dc004e"; // A vibrant accent
+const successColor = "#2e7d32";
+const warningColor = "#ed6c02";
+const errorColor = "#d32f2f";
+const textColorPrimary = "#212121"; // Dark text for contrast on white
+const textColorSecondary = "#757575";
+const backgroundColor = "#f5f5f5"; // Light gray background
+const tableRowHoverColor = "#e0e0e0"; // Light gray hover
+const tableRowEvenColor = "#f9f9f9"; // Very light gray for even rows
 
 // Styled File Input (Keep this)
 const Input = styled("input")({
@@ -54,7 +72,7 @@ const Input = styled("input")({
   width: 1,
 });
 
-// Styled Card Header (Keep this)
+// Styled Card Header (Adapted for White Theme)
 const StyledCardHeader = styled(CardHeader)(({ theme }) => ({
   backgroundColor: primaryColor,
   color: theme.palette.common.white,
@@ -63,13 +81,13 @@ const StyledCardHeader = styled(CardHeader)(({ theme }) => ({
   },
 }));
 
-// Styled TableCell for better readability
+// Styled TableCell for better readability (Adapted for White Theme)
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   color: textColorPrimary,
   borderBottom: `1px solid ${theme.palette.divider}`, // Subtle divider between cells
 }));
 
-// Styled TableRow for hover and alternating background
+// Styled TableRow for hover and alternating background (Adapted for White Theme)
 const StyledTableRow = styled(TableRow)(({ theme, iseven }) => ({
   '&:hover': {
     backgroundColor: tableRowHoverColor,
@@ -77,7 +95,6 @@ const StyledTableRow = styled(TableRow)(({ theme, iseven }) => ({
   backgroundColor: iseven ? tableRowEvenColor : theme.palette.background.paper,
 }));
 
-// Configuration for item categories and their corresponding search terms
 const ITEM_CATEGORIES = {
   Filets: [
     "CAN Sandwich - CFA Dlx w/ Proc Ched",
@@ -145,18 +162,31 @@ const EnhancedUTPUpdate = () => {
   const [overallSalesMetrics, setOverallSalesMetrics] = useState({});
   const [reportMetadata, setReportMetadata] = useState({});
 
+  // State for filtering and sorting
+  const [negativeSearchTerm, setNegativeSearchTerm] = useState("");
+  const [lowSalesSearchTerm, setLowSalesSearchTerm] = useState("");
+  const [highPromoSearchTerm, setHighPromoSearchTerm] = useState("");
+  const [promoEffectivenessSearchTerm, setPromoEffectivenessSearchTerm] = useState("");
+  const [varianceSearchTerm, setVarianceSearchTerm] = useState("");
+
+  const [negativeSortConfig, setNegativeSortConfig] = useState({});
+  const [lowSalesSortConfig, setLowSalesSortConfig] = useState({});
+  const [highPromoSortConfig, setHighPromoSortConfig] = useState({});
+  const [promoEffectivenessSortConfig, setPromoEffectivenessSortConfig] = useState({});
+  const [varianceSortConfig, setVarianceSortConfig] = useState({});
+
   const parseExcelData = useCallback((jsonData) => {
     // 1. Extract Metadata (Store, Date, Time)
-    const store_name = jsonData[2]["Sales Mix Report - Item Summary"]?.replace("Store: ", "")?.split(",")[0] || "Unknown";
-    const report_time = jsonData[1]["__EMPTY_1"] || "Unknown";
-    const report_start_date = jsonData[0]["Sales Mix Report - Item Summary"]?.split("through")[0]?.replace("From", "")?.trim() || "Unknown";
-    const report_end_date = jsonData[0]["Sales Mix Report - Item Summary"]?.split("through")[1]?.trim() || "Unknown";
+    const storeName = jsonData[2]["Sales Mix Report - Item Summary"]?.replace("Store: ", "")?.split(",")[0] || "Unknown";
+    const reportTime = jsonData[1]["__EMPTY_1"] || "Unknown";
+    const reportStartDate = jsonData[0]["Sales Mix Report - Item Summary"]?.split("through")[0]?.replace("From", "")?.trim() || "Unknown";
+    const reportEndDate = jsonData[0]["Sales Mix Report - Item Summary"]?.split("through")[1]?.trim() || "Unknown";
 
     setReportMetadata({
-      storeName: store_name,
-      reportTime: report_time,
-      reportStartDate: report_start_date,
-      reportEndDate: report_end_date
+      storeName: storeName,
+      reportTime: reportTime,
+      reportStartDate: reportStartDate,
+      reportEndDate: reportEndDate
     });
 
     // 2. Extract and Clean Headers
@@ -187,16 +217,16 @@ const EnhancedUTPUpdate = () => {
       if (row_index < 7 || [41, 42, 43, 44, 45, 553, 554, 555, 556, 557, 772, 773, 774, 775, 776, 961, 962, 963, 964, 965, 1074, 1075, 1076, 1077, 1078, 1363, 1364].includes(parseInt(row_index))) {
         continue;
       }
-      let item_name = row['__EMPTY'];
+      let itemName = row['__EMPTY'];
       const row_data = [];
       for (const header_key in header_map) {
         if (header_key in row) {
           row_data.push(row[header_key]);
         }
       }
-      if (item_name !== undefined && item_name !== null) {
+      if (itemName !== undefined && itemName !== null) {
         data_rows.push({
-          'Item Name': item_name,
+          'Item Name': itemName,
           'Total Count': row_data[0],
           'Promo Count': row_data[1],
           'Digital Count': row_data[2],
@@ -332,7 +362,7 @@ const EnhancedUTPUpdate = () => {
       } catch (error) {
         console.error("Error parsing Excel file:", error);
         setErrorMessage(
-          "Error parsing the Excel file. Please ensure it's a valid .xlsx or .xls file."
+          "Error processing the Excel file. Ensure it is a valid .xlsx or .xls format."
         );
       } finally {
         setDragActive(false);
@@ -383,24 +413,96 @@ const EnhancedUTPUpdate = () => {
     setSuccessMessage("");
     try {
       await axiosInstance.post("/upt/bulk", utpData);
-      setSuccessMessage("UPTs submitted successfully!");
+      setSuccessMessage("Unit Per Transaction data successfully submitted.");
     } catch (error) {
       console.error("Error submitting data:", error);
       setErrorMessage(
-        error.response?.data?.message || "Failed to submit UPTs. Please try again."
+        error.response?.data?.message || "Failed to submit UPT data. Please verify the information and try again."
       );
     } finally {
       setIsLoading(false);
     }
   };
 
+  // --- Filtering and Sorting Logic ---
+  const filterSortData = useCallback((data, searchTerm, sortConfig) => {
+    let filteredData = data;
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      filteredData = filteredData.filter(item =>
+        Object.values(item).some(value =>
+          typeof value === 'string' && value.toLowerCase().includes(lowerSearchTerm)
+        )
+      );
+    }
+
+    if (sortConfig.key) {
+      const sortKey = sortConfig.key;
+      const direction = sortConfig.direction === 'ascending' ? 1 : -1;
+      filteredData = [...filteredData].sort((a, b) => {
+        if (a[sortKey] < b[sortKey]) {
+          return direction * -1;
+        }
+        if (a[sortKey] > b[sortKey]) {
+          return direction * 1;
+        }
+        return 0;
+      });
+    }
+    return filteredData;
+  }, []);
+
+  const handleSort = useCallback((key, sortConfigSetter) => {
+    sortConfigSetter(currentConfig => {
+      let direction = 'ascending';
+      if (currentConfig.key === key && currentConfig.direction === 'ascending') {
+        direction = 'descending';
+      }
+      return { key, direction };
+    });
+  }, []);
+
+  const sortedNegativeItems = useMemo(() =>
+    filterSortData(analysisResults?.negativeCountItems || [], negativeSearchTerm, negativeSortConfig),
+    [analysisResults?.negativeCountItems, negativeSearchTerm, negativeSortConfig]
+  );
+
+  const sortedLowSalesItems = useMemo(() =>
+    filterSortData(analysisResults?.lowSoldCountItems || [], lowSalesSearchTerm, lowSalesSortConfig),
+    [analysisResults?.lowSoldCountItems, lowSalesSearchTerm, lowSalesSortConfig]
+  );
+
+  const sortedHighPromoItems = useMemo(() =>
+    filterSortData(analysisResults?.highPromoCountItems || [], highPromoSearchTerm, highPromoSortConfig),
+    [analysisResults?.highPromoCountItems, highPromoSearchTerm, highPromoSortConfig]
+  );
+
+  const sortedPromoEffectiveness = useMemo(() =>
+    filterSortData(analysisResults?.promoEffectiveness || [], promoEffectivenessSearchTerm, promoEffectivenessSortConfig),
+    [analysisResults?.promoEffectiveness, promoEffectivenessSearchTerm, promoEffectivenessSortConfig]
+  );
+
+  const sortedVariance = useMemo(() =>
+    filterSortData(salesVariance || [], varianceSearchTerm, varianceSortConfig),
+    [salesVariance, varianceSearchTerm, varianceSortConfig]
+  );
+
+  const utpChartData = useMemo(
+    () =>
+      Object.entries(utpData).map(([category, value]) => ({
+        name: category,
+        UPT: parseFloat(value.toFixed(2)),
+      })),
+    [utpData]
+  );
+
   return (
-    <Box sx={{ p: 4, backgroundColor }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ color: textColorPrimary, fontWeight: 500 }}>
-        Your Sales Analysis
+    <Box sx={{ p: 4, backgroundColor, color: textColorPrimary }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 500 }}>
+        Sales Data Analytics Suite
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Upload your sales report to calculate Unit Per Transaction (UPT) and gain valuable insights.
+        Upload your sales report to analyze Unit Per Transaction (UPT) and gain valuable insights.
       </Typography>
 
       <Grid container spacing={3}>
@@ -414,9 +516,9 @@ const EnhancedUTPUpdate = () => {
                   borderRadius: 2,
                   textAlign: "center",
                   cursor: "pointer",
-                  backgroundColor: dragActive ? "#e8f0fe" : theme.palette.background.default,
+                  backgroundColor: dragActive ? "#e3f2fd" : theme.palette.background.paper,
                   transition: 'background-color 0.3s ease',
-                  '&:hover': { backgroundColor: '#e8f0fe' },
+                  '&:hover': { backgroundColor: '#e3f2fd' },
                 }}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
@@ -425,21 +527,21 @@ const EnhancedUTPUpdate = () => {
                 <label htmlFor="file-upload">
                   <Box>
                     <CloudUpload color="primary" sx={{ fontSize: 50, display: "block", margin: "0 auto 15px" }} />
-                    <Typography variant="h6" color="text.primary">
-                      Drop your sales report here
+                    <Typography variant="h6" color={textColorPrimary}>
+                      Drag and drop your sales matrix
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      (.xlsx or .xls)
+                    <Typography variant="body2" color={textColorSecondary}>
+                      (Accepts .xlsx and .xls formats)
                     </Typography>
                     <Button component="span" variant="contained" color="primary" size="large" sx={{ mt: 2 }}>
-                      Browse Files
+                      Select File
                     </Button>
                   </Box>
                 </label>
                 <Input accept=".xlsx, .xls" id="file-upload" type="file" onChange={handleFileChange} />
                 {selectedFile && (
                   <Box mt={2} display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="subtitle2" color="text.secondary" noWrap style={{ overflowX: 'hidden', marginRight: theme.spacing(1) }}>
+                    <Typography variant="subtitle2" color={textColorSecondary} noWrap style={{ overflowX: 'hidden', marginRight: theme.spacing(1) }}>
                       {selectedFile.name}
                     </Typography>
                     <Tooltip title="Remove">
@@ -479,19 +581,19 @@ const EnhancedUTPUpdate = () => {
         <Grid item xs={12} md={6}>
           {reportMetadata && (
             <Card elevation={3}>
-              <StyledCardHeader title="Report Information" />
+              <StyledCardHeader title="Report Summary" />
               <CardContent>
                 <Typography variant="subtitle1" color={textColorPrimary}>
-                  <Box fontWeight="bold" display="inline">Store:</Box> {reportMetadata.storeName}
+                  <Box fontWeight="bold" display="inline">Store Location:</Box> {reportMetadata.storeName}
                 </Typography>
                 <Typography variant="subtitle1" color={textColorPrimary}>
-                  <Box fontWeight="bold" display="inline">Report Time:</Box> {reportMetadata.reportTime}
+                  <Box fontWeight="bold" display="inline">Generation Time:</Box> {reportMetadata.reportTime}
                 </Typography>
                 <Typography variant="subtitle1" color={textColorPrimary}>
-                  <Box fontWeight="bold" display="inline">Start Date:</Box> {reportMetadata.reportStartDate}
+                  <Box fontWeight="bold" display="inline">Reporting Period Start:</Box> {reportMetadata.reportStartDate}
                 </Typography>
                 <Typography variant="subtitle1" color={textColorPrimary}>
-                  <Box fontWeight="bold" display="inline">End Date:</Box> {reportMetadata.reportEndDate}
+                  <Box fontWeight="bold" display="inline">Reporting Period End:</Box> {reportMetadata.reportEndDate}
                 </Typography>
               </CardContent>
             </Card>
@@ -499,18 +601,18 @@ const EnhancedUTPUpdate = () => {
 
           {overallSalesMetrics && (
             <Card elevation={3} sx={{ mt: 3 }}>
-              <StyledCardHeader title="Overall Sales Metrics" />
+              <StyledCardHeader title="Aggregate Sales Metrics" />
               <CardContent>
-                <Typography variant="h6" color={textColorPrimary} gutterBottom>Key Highlights</Typography>
+                <Typography variant="h6" color={textColorPrimary} gutterBottom>Key Performance Indicators</Typography>
                 <Divider sx={{ mb: 1 }} />
                 <Typography variant="body1" color={textColorPrimary}>
                   Total Items Sold: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalSold}</Box>
                 </Typography>
                 <Typography variant="body1" color={textColorPrimary}>
-                  Total Promo Items: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalPromo}</Box>
+                  Total Promotional Engagements: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalPromo}</Box>
                 </Typography>
                 <Typography variant="body1" color={textColorPrimary}>
-                  Total Digital Offers: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalDigital}</Box>
+                  Total Digital Transactions: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalDigital}</Box>
                 </Typography>
               </CardContent>
             </Card>
@@ -521,7 +623,7 @@ const EnhancedUTPUpdate = () => {
           <Grid item xs={12}>
             <Card elevation={3}>
               <StyledCardHeader
-                title="Calculated UPTs"
+                title="Unit Per Transaction Analysis"
                 action={
                   <Button
                     variant="contained"
@@ -531,14 +633,23 @@ const EnhancedUTPUpdate = () => {
                     startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : <CheckCircleOutline />}
                     sx={{ ml: 2 }}
                   >
-                    {isLoading ? "Submitting..." : "Submit UPTs"}
+                    {isLoading ? "Submitting..." : "Submit UPT Data"}
                   </Button>
                 }
               />
               <CardContent>
-                <TableContainer component={Paper} elevation={1}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={utpChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <ChartTooltip />
+                    <Bar dataKey="UPT" fill={primaryColor} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <TableContainer component={Paper} elevation={1} sx={{ mt: 2 }}>
                   <Table aria-label="calculated upts table">
-                    <TableHead sx={{ backgroundColor: '#f0f0f0' }}>
+                    <TableHead>
                       <TableRow>
                         <StyledTableCell sx={{ fontWeight: 'bold' }}>Item Category</StyledTableCell>
                         <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>UPT</StyledTableCell>
@@ -564,26 +675,46 @@ const EnhancedUTPUpdate = () => {
         {analysisResults && (
           <Grid item xs={12}>
             <Card elevation={3}>
-              <StyledCardHeader title="Sales Analysis Insights" />
+              <StyledCardHeader title="Data Insights and Recommendations" />
               <CardContent>
                 {analysisResults.negativeCountItems.length > 0 && (
                   <Box mb={3}>
                     <Typography variant="h6" color={errorColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Warning sx={{ mr: 1 }} /> Potential Overstock/Waste
-                      <Tooltip title="Items with a negative '# Sold Per 1000' count might indicate overstock or potential waste. Investigate these items for possible adjustments.">
+                      <Warning sx={{ mr: 1 }} /> Potential Inventory Discrepancies
+                      <Tooltip title="Items with a negative '# Sold Per 1000' count may indicate overstock or potential waste. Investigate these items for possible adjustments.">
                         <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
                       </Tooltip>
                     </Typography>
+                    <TextField
+                      label="Filter Items"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      margin="dense"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon color="inherit" />
+                          </InputAdornment>
+                        ),
+                      }}
+                      value={negativeSearchTerm}
+                      onChange={(e) => setNegativeSearchTerm(e.target.value)}
+                    />
                     <TableContainer component={Paper} elevation={1}>
                       <Table size="small" aria-label="overstock items">
-                        <TableHead sx={{ backgroundColor: '#ffebee' }}>
+                        <TableHead sx={{ backgroundColor: errorColor }}>
                           <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: errorColor }}>Item</StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: errorColor }}>Count (# per 1000 Sold)</StyledTableCell>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.error.contrastText }}>
+                              Item
+                            </StyledTableCell>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.error.contrastText }}>
+                              Count (# per 1000 Sold)
+                            </StyledTableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {analysisResults.negativeCountItems.map((item, index) => (
+                          {sortedNegativeItems.map((item, index) => (
                             <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
                               <StyledTableCell component="th" scope="row">{item['Item Name']}</StyledTableCell>
                               <StyledTableCell align="right">{item['# Sold Per 1000']}</StyledTableCell>
@@ -598,21 +729,41 @@ const EnhancedUTPUpdate = () => {
                 {analysisResults.lowSoldCountItems.length > 0 && (
                   <Box mb={3}>
                     <Typography variant="h6" color={warningColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Warning sx={{ mr: 1 }} /> Potentially Low Performing Items
-                      <Tooltip title="Items with low 'Sold Count' might need attention. Consider promotional activities or menu adjustments.">
+                      <Warning sx={{ mr: 1 }} /> Items with Lower Sales Volume
+                      <Tooltip title="Items with low 'Sold Count' may require attention. Consider promotional activities or menu adjustments.">
                         <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
                       </Tooltip>
                     </Typography>
+                    <TextField
+                      label="Filter Items"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      margin="dense"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon color="inherit" />
+                          </InputAdornment>
+                        ),
+                      }}
+                      value={lowSalesSearchTerm}
+                      onChange={(e) => setLowSalesSearchTerm(e.target.value)}
+                    />
                     <TableContainer component={Paper} elevation={1}>
                       <Table size="small" aria-label="low sold count items">
-                        <TableHead sx={{ backgroundColor: '#fff3e0' }}>
+                        <TableHead sx={{ backgroundColor: warningColor }}>
                           <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: warningColor }}>Item</StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: warningColor }}>Sold Count</StyledTableCell>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>
+                              Item
+                            </StyledTableCell>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>
+                              Sold Count
+                            </StyledTableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {analysisResults.lowSoldCountItems.map((item, index) => (
+                          {sortedLowSalesItems.map((item, index) => (
                             <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
                               <StyledTableCell component="th" scope="row">{item['Item Name']}</StyledTableCell>
                               <StyledTableCell align="right">{item['Sold Count']}</StyledTableCell>
@@ -627,21 +778,41 @@ const EnhancedUTPUpdate = () => {
                 {analysisResults.highPromoCountItems.length > 0 && (
                   <Box mb={3}>
                     <Typography variant="h6" color={primaryColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Lightbulb sx={{ mr: 1 }} /> Items with High Promo Count
+                      <Lightbulb sx={{ mr: 1 }} /> High Promotional Redemption Items
                       <Tooltip title="Review items with a high 'Promo Count'. Understand the reasons behind the high promotion usage.">
                         <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
                       </Tooltip>
                     </Typography>
+                    <TextField
+                      label="Filter Items"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      margin="dense"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon color="inherit" />
+                          </InputAdornment>
+                        ),
+                      }}
+                      value={highPromoSearchTerm}
+                      onChange={(e) => setHighPromoSearchTerm(e.target.value)}
+                    />
                     <TableContainer component={Paper} elevation={1}>
                       <Table size="small" aria-label="high promo count items">
-                        <TableHead sx={{ backgroundColor: '#e3f2fd' }}>
+                        <TableHead sx={{ backgroundColor: primaryColor }}>
                           <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: primaryColor }}>Item</StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: primaryColor }}>Promo Count</StyledTableCell>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.primary.contrastText }}>
+                              Item
+                            </StyledTableCell>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.primary.contrastText }}>
+                              Promo Count
+                            </StyledTableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {analysisResults.highPromoCountItems.map((item, index) => (
+                          {sortedHighPromoItems.map((item, index) => (
                             <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
                               <StyledTableCell component="th" scope="row">{item['Item Name']}</StyledTableCell>
                               <StyledTableCell align="right">{item['Promo Count']}</StyledTableCell>
@@ -654,35 +825,62 @@ const EnhancedUTPUpdate = () => {
                 )}
 
                 {analysisResults.promoEffectiveness.length > 0 && (
-                  <Accordion elevation={1}>
-                    <AccordionSummary expandIcon={<ExpandMore />} aria-controls="promo-effectiveness-content" id="promo-effectiveness-header">
-                      <Typography variant="subtitle1" sx={{ fontWeight: 500, color: textColorPrimary }}>Promotion Effectiveness Details</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <TableContainer component={Paper} elevation={0}>
-                        <Table size="small" aria-label="promotion effectiveness">
-                          <TableHead>
-                            <TableRow>
-                              <StyledTableCell sx={{ fontWeight: 'bold' }}>Item</StyledTableCell>
-                              <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Sold</StyledTableCell>
-                              <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Free (Promo)</StyledTableCell>
-                              <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Digital Offers</StyledTableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {analysisResults.promoEffectiveness.map((item, index) => (
-                              <StyledTableRow key={item.item} iseven={index % 2 === 0}>
-                                <StyledTableCell component="th" scope="row">{item.item}</StyledTableCell>
-                                <StyledTableCell align="right">{item.totalSold}</StyledTableCell>
-                                <StyledTableCell align="right">{item.promoFree}</StyledTableCell>
-                                <StyledTableCell align="right">{item.digitalOffer}</StyledTableCell>
-                              </StyledTableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </AccordionDetails>
-                  </Accordion>
+                  <Box mb={3}>
+                    <Accordion>
+                      <AccordionSummary
+                        expandIcon={<ExpandMore />}
+                        aria-controls="promo-effectiveness-content"
+                        id="promo-effectiveness-header"
+                      >
+                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Lightbulb sx={{ mr: 1 }} /> Promotion Effectiveness
+                        </Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Typography color={textColorSecondary} variant="body2" gutterBottom>
+                          Analyze the effectiveness of promotions by reviewing items frequently offered with discounts.
+                        </Typography>
+                        <TextField
+                          label="Filter Items"
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          margin="dense"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <SearchIcon color="inherit" />
+                              </InputAdornment>
+                            ),
+                          }}
+                          value={promoEffectivenessSearchTerm}
+                          onChange={(e) => setPromoEffectivenessSearchTerm(e.target.value)}
+                        />
+                        <TableContainer component={Paper} elevation={1}>
+                          <Table size="small" aria-label="promotion effectiveness">
+                            <TableHead>
+                              <TableRow>
+                                <StyledTableCell sx={{ fontWeight: 'bold' }}>Item</StyledTableCell>
+                                <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Total Sold</StyledTableCell>
+                                <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Promo Count</StyledTableCell>
+                                <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Digital Offer</StyledTableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {sortedPromoEffectiveness.map((item, index) => (
+                                <StyledTableRow key={item.item} iseven={index % 2 === 0}>
+                                  <StyledTableCell component="th" scope="row">{item.item}</StyledTableCell>
+                                  <StyledTableCell align="right">{item.totalSold}</StyledTableCell>
+                                  <StyledTableCell align="right">{item.promoFree}</StyledTableCell>
+                                  <StyledTableCell align="right">{item.digitalOffer}</StyledTableCell>
+                                </StyledTableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </AccordionDetails>
+                    </Accordion>
+                  </Box>
                 )}
               </CardContent>
             </Card>
@@ -694,25 +892,47 @@ const EnhancedUTPUpdate = () => {
             <Card elevation={3}>
               <StyledCardHeader title="Sales Variance Analysis" />
               <CardContent>
+                <Typography variant="h6" color={warningColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Warning sx={{ mr: 1 }} /> Significant Sales Variances
+                  <Tooltip title="Items with notable differences between 'Total Count' and 'Sold Count'. Investigate potential issues in inventory management or sales tracking.">
+                    <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
+                  </Tooltip>
+                </Typography>
+                <TextField
+                  label="Filter Items"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  margin="dense"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon color="inherit" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  value={varianceSearchTerm}
+                  onChange={(e) => setVarianceSearchTerm(e.target.value)}
+                />
                 <TableContainer component={Paper} elevation={1}>
-                  <Table aria-label="sales variance table">
-                    <TableHead sx={{ backgroundColor: '#f0f0f0' }}>
+                  <Table size="small" aria-label="sales variance table">
+                    <TableHead sx={{ backgroundColor: warningColor }}>
                       <TableRow>
-                        <StyledTableCell sx={{ fontWeight: 'bold' }}>Item</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Variance</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Variance %</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Total Count</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Sold Count</StyledTableCell>
+                        <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Item</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Total Count</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Sold Count</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Variance</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Variance (%)</StyledTableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {salesVariance.map((item, index) => (
+                      {sortedVariance.map((item, index) => (
                         <StyledTableRow key={item.name} iseven={index % 2 === 0}>
                           <StyledTableCell component="th" scope="row">{item.name}</StyledTableCell>
-                          <StyledTableCell align="right">{item.variance}</StyledTableCell>
-                          <StyledTableCell align="right">{item.variancePercentage.toFixed(2)}%</StyledTableCell>
                           <StyledTableCell align="right">{item.totalCount}</StyledTableCell>
                           <StyledTableCell align="right">{item.soldCount}</StyledTableCell>
+                          <StyledTableCell align="right">{item.variance}</StyledTableCell>
+                          <StyledTableCell align="right">{item.variancePercentage.toFixed(2)}%</StyledTableCell>
                         </StyledTableRow>
                       ))}
                     </TableBody>
