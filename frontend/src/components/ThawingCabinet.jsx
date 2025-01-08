@@ -68,7 +68,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
       </div>
 
       {closure ? (
-        <div className="flex-1 flex flex-col justify-center items-center p-2 sm:p-3 bg-gradient-to-br from-red-50 via-red-100 to-red-50 relative overflow-hidden">
+        <div className="flex-1 flex flex-col justify-center items-center p-2 sm:p-3 bg-gradient-to-br from-red-50 via-red-100 to-red-50 relative">
           <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
             {[...Array(15)].map((_, i) => (
               <circle

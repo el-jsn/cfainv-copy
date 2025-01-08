@@ -1,6 +1,81 @@
 import React, { useState, useCallback } from "react";
 import * as xlsx from "xlsx";
 import axiosInstance from "./axiosInstance";
+import {
+  Grid,
+  Box,
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  Button,
+  IconButton,
+  CircularProgress,
+  Alert,
+  Collapse,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Divider,
+} from "@mui/material";
+import { CloudUpload, Close, ExpandMore, CheckCircleOutline, Warning, ErrorOutline, Lightbulb } from "@mui/icons-material";
+import { styled, useTheme } from "@mui/material/styles";
+
+// Theming and Consistent Styling (Keep these for consistency)
+const primaryColor = "#1976d2";
+const secondaryColor = "#9c27b0";
+const successColor = "#4caf50";
+const warningColor = "#ff9800";
+const errorColor = "#f44336";
+const textColorPrimary = "rgba(0, 0, 0, 0.87)";
+const textColorSecondary = "rgba(0, 0, 0, 0.6)";
+const backgroundColor = "#f8f9fa";
+const tableRowHoverColor = "#f5f5f5"; // Light gray for hover effect
+const tableRowEvenColor = "#fafafa";  // Very light gray for even rows
+
+// Styled File Input (Keep this)
+const Input = styled("input")({
+  clip: "rect(0, 0, 0, 0)",
+  clipPath: "inset(50%)",
+  height: 1,
+  overflow: "hidden",
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  whiteSpace: "nowrap",
+  width: 1,
+});
+
+// Styled Card Header (Keep this)
+const StyledCardHeader = styled(CardHeader)(({ theme }) => ({
+  backgroundColor: primaryColor,
+  color: theme.palette.common.white,
+  '& .MuiCardHeader-title': {
+    fontWeight: 600,
+  },
+}));
+
+// Styled TableCell for better readability
+const StyledTableCell = styled(TableCell)(({ theme }) => ({
+  color: textColorPrimary,
+  borderBottom: `1px solid ${theme.palette.divider}`, // Subtle divider between cells
+}));
+
+// Styled TableRow for hover and alternating background
+const StyledTableRow = styled(TableRow)(({ theme, iseven }) => ({
+  '&:hover': {
+    backgroundColor: tableRowHoverColor,
+  },
+  backgroundColor: iseven ? tableRowEvenColor : theme.palette.background.paper,
+}));
 
 // Configuration for item categories and their corresponding search terms
 const ITEM_CATEGORIES = {
@@ -21,6 +96,7 @@ const ITEM_CATEGORIES = {
     "Sandwich - Spicy Dlx No Cheese",
     "Salad - Signature Cobb w/ Spicy Filet",
     "Salad - Spicy SW w/ Spicy Filet",
+    "Filet - Spicy Chicken",
   ],
   "Grilled Filets": [
     "CAN Sandwich - Grilled Club w/ Cheddar",
@@ -31,6 +107,7 @@ const ITEM_CATEGORIES = {
     "Salad - Signature Cobb w/ Hot Grilled Filet",
     "Salad - Spicy SW w/ Hot Grld Filet",
     "Test - Salad - Signature Cobb w/Spicy",
+    "Filet - Grilled",
   ],
   "Grilled Nuggets": {
     "Nuggets Grilled, 12 Count": 12,
@@ -55,28 +132,129 @@ const ITEM_CATEGORIES = {
 };
 
 const EnhancedUTPUpdate = () => {
+  const theme = useTheme();
   const [utpData, setUtpData] = useState({});
   const [analysisResults, setAnalysisResults] = useState(null);
   const [salesVariance, setSalesVariance] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [isDragActive, setIsDragActive] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [rawSalesData, setRawSalesData] = useState([]);
+  const [overallSalesMetrics, setOverallSalesMetrics] = useState({});
+  const [reportMetadata, setReportMetadata] = useState({});
+
+  const parseExcelData = useCallback((jsonData) => {
+    // 1. Extract Metadata (Store, Date, Time)
+    const store_name = jsonData[2]["Sales Mix Report - Item Summary"]?.replace("Store: ", "")?.split(",")[0] || "Unknown";
+    const report_time = jsonData[1]["__EMPTY_1"] || "Unknown";
+    const report_start_date = jsonData[0]["Sales Mix Report - Item Summary"]?.split("through")[0]?.replace("From", "")?.trim() || "Unknown";
+    const report_end_date = jsonData[0]["Sales Mix Report - Item Summary"]?.split("through")[1]?.trim() || "Unknown";
+
+    setReportMetadata({
+      storeName: store_name,
+      reportTime: report_time,
+      reportStartDate: report_start_date,
+      reportEndDate: report_end_date
+    });
+
+    // 2. Extract and Clean Headers
+    const header_row1 = jsonData[4] || {};
+    const header_row2 = jsonData[5] || {};
+    const header_row3 = jsonData[6] || {};
+
+    const header_map = {
+      '__EMPTY_4': 'Total Count',
+      '__EMPTY_8': 'Promo Count',
+      '__EMPTY_10': 'Digital Count',
+      '__EMPTY_13': 'Sold Count',
+      '__EMPTY_17': '# Sold Per 1000'
+    };
+
+    const headers = [header_row1, header_row2, header_row3]
+      .flatMap(row => Object.keys(row)
+        .map(key => header_map[key] || key)
+        .filter(Boolean)
+      );
+
+    const all_headers = ['Item Name'] + headers;
+
+    // 3. Clean and Structure Data
+    const data_rows = [];
+    for (const row_index in jsonData) {
+      const row = jsonData[row_index];
+      if (row_index < 7 || [41, 42, 43, 44, 45, 553, 554, 555, 556, 557, 772, 773, 774, 775, 776, 961, 962, 963, 964, 965, 1074, 1075, 1076, 1077, 1078, 1363, 1364].includes(parseInt(row_index))) {
+        continue;
+      }
+      let item_name = row['__EMPTY'];
+      const row_data = [];
+      for (const header_key in header_map) {
+        if (header_key in row) {
+          row_data.push(row[header_key]);
+        }
+      }
+      if (item_name !== undefined && item_name !== null) {
+        data_rows.push({
+          'Item Name': item_name,
+          'Total Count': row_data[0],
+          'Promo Count': row_data[1],
+          'Digital Count': row_data[2],
+          'Sold Count': row_data[3],
+          '# Sold Per 1000': row_data[4]
+        });
+      }
+    }
+
+    // 4. Data Type Conversion
+    const numeric_columns = ['Total Count', 'Promo Count', 'Digital Count', 'Sold Count'];
+
+    const cleaned_data = data_rows.map(item => {
+      const convertedItem = { ...item };
+      for (const col of numeric_columns) {
+        convertedItem[col] = parseInt(item[col], 10) || 0;
+      }
+      convertedItem['# Sold Per 1000'] = parseFloat(item['# Sold Per 1000']) || 0;
+      return convertedItem;
+    })
+
+    setRawSalesData(cleaned_data);
+    return cleaned_data;
+  }, []);
+
+  const calculateOverallMetrics = useCallback((jsonData) => {
+    let totalSoldCount = 0;
+    let totalPromoCount = 0;
+    let totalDigitalCount = 0;
+
+    jsonData.forEach((item) => {
+      totalSoldCount += item["Sold Count"];
+      totalPromoCount += item["Promo Count"];
+      totalDigitalCount += item["Digital Count"];
+    });
+
+    setOverallSalesMetrics({
+      totalSold: totalSoldCount,
+      totalPromo: totalPromoCount,
+      totalDigital: totalDigitalCount,
+    })
+  }, []);
 
   const calculateUtps = useCallback((jsonData) => {
-    let updatedUtpData = {};
+    const updatedUtpData = {};
     for (const category in ITEM_CATEGORIES) {
       updatedUtpData[category] = 0;
+      const categoryConfig = ITEM_CATEGORIES[category];
       for (const item of jsonData) {
-        const itemName = item.__EMPTY;
-        const itemCount = item.__EMPTY_17;
-        if (Array.isArray(ITEM_CATEGORIES[category])) {
-          if (ITEM_CATEGORIES[category].includes(itemName)) {
+        const itemName = item['Item Name'];
+        const itemCount = item['# Sold Per 1000'];
+        if (Array.isArray(categoryConfig)) {
+          if (categoryConfig.includes(itemName)) {
             updatedUtpData[category] += itemCount;
           }
-        } else {
-          if (ITEM_CATEGORIES[category][itemName]) {
-            updatedUtpData[category] += itemCount * ITEM_CATEGORIES[category][itemName];
+        } else if (typeof categoryConfig === "object" && categoryConfig !== null) {
+          if (categoryConfig[itemName]) {
+            updatedUtpData[category] += itemCount * categoryConfig[itemName];
           }
         }
       }
@@ -85,16 +263,21 @@ const EnhancedUTPUpdate = () => {
   }, []);
 
   const analyzeSalesReport = useCallback((jsonData) => {
-    const negativeCountItems = jsonData.filter((item) => item.__EMPTY_17 < 0);
+    const negativeCountItems = jsonData.filter(item => item['# Sold Per 1000'] < 0);
     const lowSoldCountItems = jsonData.filter(
-      (item) => item.__EMPTY_18 < 10 && item.__EMPTY_18 >= 0
+      (item) => item['Sold Count'] < 10 && item['Sold Count'] >= 0
     );
+
+    const highPromoCountItems = jsonData.filter(
+      (item) => item['Promo Count'] > 100
+    );
+
     const promoEffectiveness = jsonData
       .map((item) => ({
-        item: item.__EMPTY,
-        totalSold: item.__EMPTY_18,
-        promoFree: item.__EMPTY_15,
-        digitalOffer: item.__EMPTY_16,
+        item: item['Item Name'],
+        totalSold: item['Sold Count'],
+        promoFree: item['Promo Count'],
+        digitalOffer: item['Digital Count'],
       }))
       .filter((item) => item.promoFree > 0 || item.digitalOffer > 0);
 
@@ -102,24 +285,25 @@ const EnhancedUTPUpdate = () => {
       negativeCountItems,
       lowSoldCountItems,
       promoEffectiveness,
+      highPromoCountItems
     };
   }, []);
 
   const calculateSalesVariance = useCallback((jsonData) => {
     const varianceThreshold = 5;
-
-    return jsonData
-      .map((item) => ({
-        name: item.__EMPTY,
-        variance: item.__EMPTY_17 - item.__EMPTY_18,
-        totalCount: item.__EMPTY_17,
-        soldCount: item.__EMPTY_18,
-      }))
+    return jsonData.map(item => ({
+      name: item['Item Name'],
+      variance: item['Total Count'] - item['Sold Count'],
+      totalCount: item['Total Count'],
+      soldCount: item['Sold Count'],
+      variancePercentage: item['Total Count'] > 0 ? ((item['Total Count'] - item['Sold Count']) / item['Total Count']) * 100 : 0
+    }))
       .filter((item) => Math.abs(item.variance) > varianceThreshold);
   }, []);
 
-  const handleFileUpload = (file) => {
+  const handleFileUpload = useCallback((file) => {
     setErrorMessage("");
+    setSelectedFile(file);
     const reader = new FileReader();
 
     reader.onload = (e) => {
@@ -130,39 +314,48 @@ const EnhancedUTPUpdate = () => {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = xlsx.utils.sheet_to_json(worksheet);
 
-        const updatedUtpData = calculateUtps(jsonData);
-        setUtpData(updatedUtpData);
+        const parsedData = parseExcelData(jsonData);
 
-        const analysis = analyzeSalesReport(jsonData);
-        setAnalysisResults(analysis);
+        if (parsedData) {
+          const updatedUtpData = calculateUtps(parsedData);
+          setUtpData(updatedUtpData);
 
-        const variance = calculateSalesVariance(jsonData);
-        setSalesVariance(variance);
+          calculateOverallMetrics(parsedData);
+
+          const analysis = analyzeSalesReport(parsedData);
+          setAnalysisResults(analysis);
+
+          const variance = calculateSalesVariance(parsedData);
+          setSalesVariance(variance);
+        }
+
       } catch (error) {
         console.error("Error parsing Excel file:", error);
-        setErrorMessage("Error parsing the Excel file. Please ensure it's a valid .xlsx file.");
+        setErrorMessage(
+          "Error parsing the Excel file. Please ensure it's a valid .xlsx or .xls file."
+        );
       } finally {
-        setIsDragActive(false);
+        setDragActive(false);
       }
     };
 
     reader.onerror = () => {
       setErrorMessage("Error reading the file.");
-      setIsDragActive(false);
+      setDragActive(false);
     };
 
     reader.readAsArrayBuffer(file);
-  };
+  }, [calculateUtps, analyzeSalesReport, calculateSalesVariance, parseExcelData, calculateOverallMetrics]);
 
   const handleDrop = useCallback(
     (event) => {
       event.preventDefault();
-      setIsDragActive(false);
+      setDragActive(false);
       const file = event.dataTransfer.files[0];
-      if (file && file.name.endsWith(".xlsx")) {
+      if (file && (file.name.endsWith(".xlsx") || file.name.endsWith(".xls"))) {
         handleFileUpload(file);
       } else {
-        setErrorMessage("Please upload a valid .xlsx file.");
+        setErrorMessage("Please upload a valid .xlsx or .xls file.");
       }
     },
     [handleFileUpload]
@@ -170,14 +363,14 @@ const EnhancedUTPUpdate = () => {
 
   const handleDragOver = useCallback((event) => {
     event.preventDefault();
-    setIsDragActive(true);
+    setDragActive(true);
   }, []);
 
   const handleDragLeave = useCallback(() => {
-    setIsDragActive(false);
+    setDragActive(false);
   }, []);
 
-  const handleBrowse = (event) => {
+  const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
       handleFileUpload(file);
@@ -191,8 +384,6 @@ const EnhancedUTPUpdate = () => {
     try {
       await axiosInstance.post("/upt/bulk", utpData);
       setSuccessMessage("UPTs submitted successfully!");
-      // Consider more user-friendly feedback instead of immediate redirection
-      // You might want to clear the data or offer to upload another file
     } catch (error) {
       console.error("Error submitting data:", error);
       setErrorMessage(
@@ -204,238 +395,335 @@ const EnhancedUTPUpdate = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
-      <div className="relative py-3 sm:max-w-xl sm:mx-auto">
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl"></div>
-        <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-          <div className="max-w-md mx-auto">
-            <div>
-              <h1 className="text-2xl font-semibold text-center">
-                Enhanced UPT Update
-              </h1>
-            </div>
-            <div className="divide-y divide-gray-200">
-              <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-                <div
-                  className={`border-dashed border-2 p-6 mt-6 rounded-md text-center cursor-pointer ${isDragActive
-                      ? "bg-gray-50 border-indigo-400"
-                      : "border-gray-300"
-                    }`}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
+    <Box sx={{ p: 4, backgroundColor }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ color: textColorPrimary, fontWeight: 500 }}>
+        Your Sales Analysis
+      </Typography>
+      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+        Upload your sales report to calculate Unit Per Transaction (UPT) and gain valuable insights.
+      </Typography>
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <Card elevation={3}>
+            <CardContent>
+              <Box
+                sx={{
+                  p: 4,
+                  border: `2px dashed ${primaryColor}`,
+                  borderRadius: 2,
+                  textAlign: "center",
+                  cursor: "pointer",
+                  backgroundColor: dragActive ? "#e8f0fe" : theme.palette.background.default,
+                  transition: 'background-color 0.3s ease',
+                  '&:hover': { backgroundColor: '#e8f0fe' },
+                }}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+              >
+                <label htmlFor="file-upload">
+                  <Box>
+                    <CloudUpload color="primary" sx={{ fontSize: 50, display: "block", margin: "0 auto 15px" }} />
+                    <Typography variant="h6" color="text.primary">
+                      Drop your sales report here
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      (.xlsx or .xls)
+                    </Typography>
+                    <Button component="span" variant="contained" color="primary" size="large" sx={{ mt: 2 }}>
+                      Browse Files
+                    </Button>
+                  </Box>
+                </label>
+                <Input accept=".xlsx, .xls" id="file-upload" type="file" onChange={handleFileChange} />
+                {selectedFile && (
+                  <Box mt={2} display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="subtitle2" color="text.secondary" noWrap style={{ overflowX: 'hidden', marginRight: theme.spacing(1) }}>
+                      {selectedFile.name}
+                    </Typography>
+                    <Tooltip title="Remove">
+                      <IconButton size="small" onClick={() => setSelectedFile(null)}>
+                        <Close fontSize="small" color="error" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                )}
+              </Box>
+
+              <Collapse in={!!errorMessage}>
+                <Alert
+                  icon={<ErrorOutline />}
+                  severity="error"
+                  onClose={() => setErrorMessage("")}
+                  sx={{ mt: 2 }}
                 >
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    stroke="currentColor"
-                    fill="none"
-                    viewBox="0 0 48 48"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m-20 4h32"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <div className="mt-2 flex justify-center text-sm text-gray-600">
-                    <label
-                      htmlFor="file-upload"
-                      className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
-                    >
-                      <span>Upload a file</span>
-                      <input
-                        id="file-upload"
-                        name="file-upload"
-                        type="file"
-                        className="sr-only"
-                        accept=".xlsx, .xls"
-                        onChange={handleBrowse}
-                      />
-                    </label>
-                    <p className="pl-1">or drag and drop</p>
-                  </div>
-                  <p className="text-xs text-gray-500">.xlsx files only</p>
-                </div>
+                  {errorMessage}
+                </Alert>
+              </Collapse>
 
-                {errorMessage && (
-                  <div
-                    className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-                    role="alert"
-                  >
-                    <strong className="font-bold">Error!</strong>
-                    <span className="block sm:inline"> {errorMessage}</span>
-                  </div>
-                )}
+              <Collapse in={!!successMessage}>
+                <Alert
+                  icon={<CheckCircleOutline />}
+                  severity="success"
+                  onClose={() => setSuccessMessage("")}
+                  sx={{ mt: 2 }}
+                >
+                  {successMessage}
+                </Alert>
+              </Collapse>
+            </CardContent>
+          </Card>
+        </Grid>
 
-                {isLoading && (
-                  <div className="text-center">Processing your data...</div>
-                )}
+        <Grid item xs={12} md={6}>
+          {reportMetadata && (
+            <Card elevation={3}>
+              <StyledCardHeader title="Report Information" />
+              <CardContent>
+                <Typography variant="subtitle1" color={textColorPrimary}>
+                  <Box fontWeight="bold" display="inline">Store:</Box> {reportMetadata.storeName}
+                </Typography>
+                <Typography variant="subtitle1" color={textColorPrimary}>
+                  <Box fontWeight="bold" display="inline">Report Time:</Box> {reportMetadata.reportTime}
+                </Typography>
+                <Typography variant="subtitle1" color={textColorPrimary}>
+                  <Box fontWeight="bold" display="inline">Start Date:</Box> {reportMetadata.reportStartDate}
+                </Typography>
+                <Typography variant="subtitle1" color={textColorPrimary}>
+                  <Box fontWeight="bold" display="inline">End Date:</Box> {reportMetadata.reportEndDate}
+                </Typography>
+              </CardContent>
+            </Card>
+          )}
 
-                {successMessage && (
-                  <div
-                    className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative"
-                    role="alert"
-                  >
-                    <strong className="font-bold">Success!</strong>
-                    <span className="block sm:inline"> {successMessage}</span>
-                  </div>
-                )}
+          {overallSalesMetrics && (
+            <Card elevation={3} sx={{ mt: 3 }}>
+              <StyledCardHeader title="Overall Sales Metrics" />
+              <CardContent>
+                <Typography variant="h6" color={textColorPrimary} gutterBottom>Key Highlights</Typography>
+                <Divider sx={{ mb: 1 }} />
+                <Typography variant="body1" color={textColorPrimary}>
+                  Total Items Sold: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalSold}</Box>
+                </Typography>
+                <Typography variant="body1" color={textColorPrimary}>
+                  Total Promo Items: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalPromo}</Box>
+                </Typography>
+                <Typography variant="body1" color={textColorPrimary}>
+                  Total Digital Offers: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalDigital}</Box>
+                </Typography>
+              </CardContent>
+            </Card>
+          )}
+        </Grid>
 
-                {salesVariance && salesVariance.length > 0 && (
-                  <div>
-                    <h2 className="text-lg font-semibold mt-6">
-                      Sales Variance Analysis
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      Items with significant variance between total count and
-                      sold count.
-                    </p>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Item
-                            </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Variance
-                            </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Total Count
-                            </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Sold Count
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {salesVariance.map((item) => (
-                            <tr key={item.name}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {item.name}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                {item.variance}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                {item.totalCount}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                {item.soldCount}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {analysisResults && (
-                  <div className="mt-6">
-                    {analysisResults.negativeCountItems.length > 0 && (
-                      <div>
-                        <h3 className="text-md font-semibold mt-4 text-red-600">
-                          Potential Overstock/Waste:
-                        </h3>
-                        <ul>
-                          {analysisResults.negativeCountItems.map((item) => (
-                            <li key={item.__EMPTY} className="text-sm mb-1">
-                              <span className="font-semibold">
-                                {" "}
-                                {item.__EMPTY}
-                              </span>
-                              : {item.__EMPTY_17} (Count / $1000)
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {analysisResults.lowSoldCountItems.length > 0 && (
-                      <div>
-                        <h3 className="text-md font-semibold mt-4 text-yellow-600">
-                          Potentially Low Performing Items:
-                        </h3>
-                        <ul>
-                          {analysisResults.lowSoldCountItems.map((item) => (
-                            <li key={item.__EMPTY} className="text-sm">
-                              {item.__EMPTY}: {item.__EMPTY_18} (Sold)
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {analysisResults.promoEffectiveness.length > 0 && (
-                      <div>
-                        <h3 className="text-md font-semibold mt-4 text-green-600">
-                          Promotion Effectiveness:
-                        </h3>
-                        <ul>
-                          {analysisResults.promoEffectiveness.map((item) => (
-                            <li key={item.item} className="text-sm">
-                              {item.item}: Sold - {item.totalSold}, Free -{" "}
-                              {item.promoFree}, Digital Offers -{" "}
-                              {item.digitalOffer}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {Object.keys(utpData).length > 0 && (
-                  <div className="mt-6">
-                    <h2 className="text-lg font-semibold">Calculated UPTs:</h2>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Item
-                            </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              UPT
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {Object.entries(utpData).map(([key, value]) => (
-                            <tr key={key}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {key}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                {value}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                <div className="pt-6 text-center">
-                  <button
-                    type="button"
-                    className="w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        {Object.keys(utpData).length > 0 && (
+          <Grid item xs={12}>
+            <Card elevation={3}>
+              <StyledCardHeader
+                title="Calculated UPTs"
+                action={
+                  <Button
+                    variant="contained"
+                    color="primary"
                     onClick={handleSubmit}
-                    disabled={isLoading || Object.keys(utpData).length === 0}
+                    disabled={isLoading}
+                    startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : <CheckCircleOutline />}
+                    sx={{ ml: 2 }}
                   >
                     {isLoading ? "Submitting..." : "Submit UPTs"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+                  </Button>
+                }
+              />
+              <CardContent>
+                <TableContainer component={Paper} elevation={1}>
+                  <Table aria-label="calculated upts table">
+                    <TableHead sx={{ backgroundColor: '#f0f0f0' }}>
+                      <TableRow>
+                        <StyledTableCell sx={{ fontWeight: 'bold' }}>Item Category</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>UPT</StyledTableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {Object.entries(utpData).map(([key, value], index) => (
+                        <StyledTableRow key={key} iseven={index % 2 === 0}>
+                          <StyledTableCell component="th" scope="row">
+                            {key}
+                          </StyledTableCell>
+                          <StyledTableCell align="right">{value.toFixed(2)}</StyledTableCell>
+                        </StyledTableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+
+        {analysisResults && (
+          <Grid item xs={12}>
+            <Card elevation={3}>
+              <StyledCardHeader title="Sales Analysis Insights" />
+              <CardContent>
+                {analysisResults.negativeCountItems.length > 0 && (
+                  <Box mb={3}>
+                    <Typography variant="h6" color={errorColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Warning sx={{ mr: 1 }} /> Potential Overstock/Waste
+                      <Tooltip title="Items with a negative '# Sold Per 1000' count might indicate overstock or potential waste. Investigate these items for possible adjustments.">
+                        <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
+                      </Tooltip>
+                    </Typography>
+                    <TableContainer component={Paper} elevation={1}>
+                      <Table size="small" aria-label="overstock items">
+                        <TableHead sx={{ backgroundColor: '#ffebee' }}>
+                          <TableRow>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: errorColor }}>Item</StyledTableCell>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: errorColor }}>Count (# per 1000 Sold)</StyledTableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {analysisResults.negativeCountItems.map((item, index) => (
+                            <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
+                              <StyledTableCell component="th" scope="row">{item['Item Name']}</StyledTableCell>
+                              <StyledTableCell align="right">{item['# Sold Per 1000']}</StyledTableCell>
+                            </StyledTableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                )}
+
+                {analysisResults.lowSoldCountItems.length > 0 && (
+                  <Box mb={3}>
+                    <Typography variant="h6" color={warningColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Warning sx={{ mr: 1 }} /> Potentially Low Performing Items
+                      <Tooltip title="Items with low 'Sold Count' might need attention. Consider promotional activities or menu adjustments.">
+                        <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
+                      </Tooltip>
+                    </Typography>
+                    <TableContainer component={Paper} elevation={1}>
+                      <Table size="small" aria-label="low sold count items">
+                        <TableHead sx={{ backgroundColor: '#fff3e0' }}>
+                          <TableRow>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: warningColor }}>Item</StyledTableCell>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: warningColor }}>Sold Count</StyledTableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {analysisResults.lowSoldCountItems.map((item, index) => (
+                            <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
+                              <StyledTableCell component="th" scope="row">{item['Item Name']}</StyledTableCell>
+                              <StyledTableCell align="right">{item['Sold Count']}</StyledTableCell>
+                            </StyledTableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                )}
+
+                {analysisResults.highPromoCountItems.length > 0 && (
+                  <Box mb={3}>
+                    <Typography variant="h6" color={primaryColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Lightbulb sx={{ mr: 1 }} /> Items with High Promo Count
+                      <Tooltip title="Review items with a high 'Promo Count'. Understand the reasons behind the high promotion usage.">
+                        <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
+                      </Tooltip>
+                    </Typography>
+                    <TableContainer component={Paper} elevation={1}>
+                      <Table size="small" aria-label="high promo count items">
+                        <TableHead sx={{ backgroundColor: '#e3f2fd' }}>
+                          <TableRow>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: primaryColor }}>Item</StyledTableCell>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: primaryColor }}>Promo Count</StyledTableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {analysisResults.highPromoCountItems.map((item, index) => (
+                            <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
+                              <StyledTableCell component="th" scope="row">{item['Item Name']}</StyledTableCell>
+                              <StyledTableCell align="right">{item['Promo Count']}</StyledTableCell>
+                            </StyledTableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                )}
+
+                {analysisResults.promoEffectiveness.length > 0 && (
+                  <Accordion elevation={1}>
+                    <AccordionSummary expandIcon={<ExpandMore />} aria-controls="promo-effectiveness-content" id="promo-effectiveness-header">
+                      <Typography variant="subtitle1" sx={{ fontWeight: 500, color: textColorPrimary }}>Promotion Effectiveness Details</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <TableContainer component={Paper} elevation={0}>
+                        <Table size="small" aria-label="promotion effectiveness">
+                          <TableHead>
+                            <TableRow>
+                              <StyledTableCell sx={{ fontWeight: 'bold' }}>Item</StyledTableCell>
+                              <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Sold</StyledTableCell>
+                              <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Free (Promo)</StyledTableCell>
+                              <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Digital Offers</StyledTableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {analysisResults.promoEffectiveness.map((item, index) => (
+                              <StyledTableRow key={item.item} iseven={index % 2 === 0}>
+                                <StyledTableCell component="th" scope="row">{item.item}</StyledTableCell>
+                                <StyledTableCell align="right">{item.totalSold}</StyledTableCell>
+                                <StyledTableCell align="right">{item.promoFree}</StyledTableCell>
+                                <StyledTableCell align="right">{item.digitalOffer}</StyledTableCell>
+                              </StyledTableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </AccordionDetails>
+                  </Accordion>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+
+        {salesVariance && salesVariance.length > 0 && (
+          <Grid item xs={12}>
+            <Card elevation={3}>
+              <StyledCardHeader title="Sales Variance Analysis" />
+              <CardContent>
+                <TableContainer component={Paper} elevation={1}>
+                  <Table aria-label="sales variance table">
+                    <TableHead sx={{ backgroundColor: '#f0f0f0' }}>
+                      <TableRow>
+                        <StyledTableCell sx={{ fontWeight: 'bold' }}>Item</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Variance</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Variance %</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Total Count</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Sold Count</StyledTableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {salesVariance.map((item, index) => (
+                        <StyledTableRow key={item.name} iseven={index % 2 === 0}>
+                          <StyledTableCell component="th" scope="row">{item.name}</StyledTableCell>
+                          <StyledTableCell align="right">{item.variance}</StyledTableCell>
+                          <StyledTableCell align="right">{item.variancePercentage.toFixed(2)}%</StyledTableCell>
+                          <StyledTableCell align="right">{item.totalCount}</StyledTableCell>
+                          <StyledTableCell align="right">{item.soldCount}</StyledTableCell>
+                        </StyledTableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+      </Grid>
+    </Box>
   );
 };
 
