@@ -345,6 +345,7 @@ const EnhancedUTPUpdate = () => {
         const jsonData = xlsx.utils.sheet_to_json(worksheet);
 
         const parsedData = parseExcelData(jsonData);
+        console.log("Parsed Data:", parsedData);
 
         if (parsedData) {
           const updatedUtpData = calculateUtps(parsedData);
@@ -497,7 +498,7 @@ const EnhancedUTPUpdate = () => {
   );
 
   const topPerformingItems = useMemo(() => {
-    const excludedItems = ["Report Totals", "Condiments", "Entrees", "Side Items"];
+    const excludedItems = ["Report Totals", "Condiments", "Entrees", "Side Items", "Soft Drinks"];
     return [...rawSalesData]
       .filter(item => !excludedItems.includes(item['Item Name']))
       .sort((a, b) => b['# Sold Per 1000'] - a['# Sold Per 1000'])
@@ -505,9 +506,14 @@ const EnhancedUTPUpdate = () => {
   }, [rawSalesData]);
 
   const bottomPerformingItems = useMemo(() => {
-    return [...rawSalesData]
+    const excludedItems = ["Miscellaneous Sale", "Salad - Extra Nuggets", "Salad Bowl", "Sep Bags", "Red Flag", "Non-Food", "No Condiment", "Soda Water", "Water, Large", "OS - Bag of Ice", "Outside Sales"
+    ];
+    const nonNegativeData = rawSalesData
+      .filter(item => item['# Sold Per 1000'] > 0)
+      .filter(item => !excludedItems.includes(item['Item Name']));
+    return nonNegativeData
       .sort((a, b) => a['# Sold Per 1000'] - b['# Sold Per 1000'])
-      .slice(0, 5); // Get bottom 5
+      .slice(0, 5);
   }, [rawSalesData]);
 
   return (
