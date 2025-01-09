@@ -413,7 +413,7 @@ const EnhancedUTPUpdate = () => {
     setSuccessMessage("");
     try {
       await axiosInstance.post("/upt/bulk", utpData);
-      setSuccessMessage("UTP data successfully submitted.");
+      setSuccessMessage("UPT data successfully submitted.");
     } catch (error) {
       console.error("Error submitting data:", error);
       setErrorMessage(
@@ -495,6 +495,20 @@ const EnhancedUTPUpdate = () => {
       })),
     [utpData]
   );
+
+  const topPerformingItems = useMemo(() => {
+    const excludedItems = ["Report Totals", "Condiments", "Entrees", "Side Items"];
+    return [...rawSalesData]
+      .filter(item => !excludedItems.includes(item['Item Name']))
+      .sort((a, b) => b['# Sold Per 1000'] - a['# Sold Per 1000'])
+      .slice(0, 5); // Get top 5
+  }, [rawSalesData]);
+
+  const bottomPerformingItems = useMemo(() => {
+    return [...rawSalesData]
+      .sort((a, b) => a['# Sold Per 1000'] - b['# Sold Per 1000'])
+      .slice(0, 5); // Get bottom 5
+  }, [rawSalesData]);
 
   return (
     <Box sx={{ p: 4, backgroundColor, color: textColorPrimary }}>
@@ -675,8 +689,60 @@ const EnhancedUTPUpdate = () => {
         {analysisResults && (
           <Grid item xs={12}>
             <Card elevation={3}>
-              <StyledCardHeader title="Data Insights and Recommendations" />
+              <StyledCardHeader title="Key Insights and Recommendations" />
               <CardContent>
+
+                <Typography variant="h6" gutterBottom>Menu Item Performance</Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Grid container spacing={2} mb={3}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" color={successColor} gutterBottom sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                      <ArrowUpwardIcon sx={{ mr: 0.5 }} /> Top Performing Items
+                    </Typography>
+                    <TableContainer component={Paper} elevation={1}>
+                      <Table size="small">
+                        <TableHead sx={{ backgroundColor: successColor }}>
+                          <TableRow>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.success.contrastText }}>Item</StyledTableCell>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.success.contrastText }}># Sold Per 1000</StyledTableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {topPerformingItems.map((item, index) => (
+                            <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
+                              <StyledTableCell>{item['Item Name']}</StyledTableCell>
+                              <StyledTableCell align="right">{item['# Sold Per 1000']}</StyledTableCell>
+                            </StyledTableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" color={warningColor} gutterBottom sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                      <ArrowDownwardIcon sx={{ mr: 0.5 }} /> Bottom Performing Items
+                    </Typography>
+                    <TableContainer component={Paper} elevation={1}>
+                      <Table size="small">
+                        <TableHead sx={{ backgroundColor: warningColor }}>
+                          <TableRow>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Item</StyledTableCell>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}># Sold Per 1000</StyledTableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {bottomPerformingItems.map((item, index) => (
+                            <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
+                              <StyledTableCell>{item['Item Name']}</StyledTableCell>
+                              <StyledTableCell align="right">{item['# Sold Per 1000']}</StyledTableCell>
+                            </StyledTableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Grid>
+                </Grid>
+
                 {analysisResults.negativeCountItems.length > 0 && (
                   <Box mb={3}>
                     <Typography variant="h6" color={errorColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
