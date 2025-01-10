@@ -36,10 +36,10 @@ export const loginUser = async (req, res) => {
 
     res.cookie('token', token, {
       httpOnly: true,
-      secure: false, // for development
-      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production', // Set to true in production
+      sameSite: 'Lax', // Or 'Strict' depending on your needs
       path: '/',
-      domain: 'localhost',
+      domain: process.env.NODE_ENV === 'production' ? 'cfanbinv.onrender.com' : 'localhost',
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days in milliseconds
     });
 

@@ -1,47 +1,145 @@
-import React, { useState, useEffect, useCallback, useRef, memo } from "react";
+import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from "react";
 import { Clock, Maximize, Minimize } from "lucide-react";
 import axiosInstance from "./axiosInstance";
 import playbackVid from "../assets/videoplayback.mp4";
 
-const DayCard = memo(({ entry, currentDay, closures, messages }) => {
-  const isToday = entry.day === currentDay;
-  const closure = closures.find(c => {
-    const closureStartDate = new Date(c.date);
-    const closureEndDate = new Date(closureStartDate);
+const useCalculateThawingData = (salesData, utpData, bufferData, adjustments) => {
+  return useMemo(() => {
+    if (!salesData || !utpData || !bufferData) return [];
 
-    if (c.duration) {
-      const { value: durationValue, unit: durationUnit } = c.duration;
-      const daysToAdd = durationUnit === "weeks" ? (7 * durationValue) - 1 : durationValue - 1;
-      closureEndDate.setUTCDate(closureStartDate.getUTCDate() + daysToAdd);
-    }
+    const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    const calculateBufferMultiplier = (bufferPrcnt) => (100 + bufferPrcnt) / 100;
+
+    const bufferMultipliers = {
+      Filets: calculateBufferMultiplier(bufferData.find(item => item.productName === "Filets")?.bufferPrcnt || 1),
+      "Spicy Filets": calculateBufferMultiplier(bufferData.find(item => item.productName === "Spicy Filets")?.bufferPrcnt || 1),
+      "Grilled Filets": calculateBufferMultiplier(bufferData.find(item => item.productName === "Grilled Filets")?.bufferPrcnt || 1),
+      "Grilled Nuggets": calculateBufferMultiplier(bufferData.find(item => item.productName === "Grilled Nuggets")?.bufferPrcnt || 1),
+      Nuggets: calculateBufferMultiplier(bufferData.find(item => item.productName === "Nuggets")?.bufferPrcnt || 1),
+      "Spicy Strips": calculateBufferMultiplier(bufferData.find(item => item.productName === "Spicy Strips")?.bufferPrcnt || 1),
+    };
+
+    const utpValues = {
+      Filets: utpData.find(item => item.productName === "Filets")?.utp || 1.0,
+      "Spicy Filets": utpData.find(item => item.productName === "Spicy Filets")?.utp || 1.0,
+      "Grilled Filets": utpData.find(item => item.productName === "Grilled Filets")?.utp || 1.0,
+      "Grilled Nuggets": utpData.find(item => item.productName === "Grilled Nuggets")?.utp || 1.0,
+      Nuggets: utpData.find(item => item.productName === "Nuggets")?.utp || 1.0,
+      "Spicy Strips": utpData.find(item => item.productName === "Spicy Strips")?.utp || 1.0,
+    };
+
+    return daysOrder.map((day, index) => {
+      const entry = salesData.find(e => e.day === day) || { day, sales: 0 };
+      const nextDaySales = salesData[(index + 1) % salesData.length]?.sales || 0;
+      const dayAdjustments = adjustments.filter(msg => msg.day === day);
+
+      const applyMessage = (product, cases, bags = 0) => {
+        const message = dayAdjustments.find(msg => msg.product === product);
+        let finalCases = cases;
+        let finalBags = bags;
+
+        if (message) {
+          const parts = message.message.split(' and ');
+          parts.forEach(part => {
+            const [change, unit] = part.trim().split(' ');
+            const value = parseInt(change);
+            if (!isNaN(value)) {
+              if (unit === 'cases') {
+                finalCases += value;
+              } else if (unit === 'bags') {
+                finalBags += value;
+              }
+            }
+          });
+        }
+        return { cases: Math.max(0, finalCases), bags: Math.max(0, finalBags), modified: !!message };
+      };
+
+      const calculateCases = (utp, bufferMultiplier, divisor) => Math.ceil(((utp * (nextDaySales / 1000)) / divisor) * bufferMultiplier);
+
+      const filetsCases = calculateCases(utpValues.Filets, bufferMultipliers.Filets, 158);
+      const spicyCases = calculateCases(utpValues["Spicy Filets"], bufferMultipliers["Spicy Filets"], 141);
+      const grilledFiletsBags = calculateCases(utpValues["Grilled Filets"], bufferMultipliers["Grilled Filets"], 26);
+      const grilledFiletsCalculatedCases = Math.floor(grilledFiletsBags / 6);
+      const remainingGrilledFiletsBags = grilledFiletsBags % 6;
+      const grilledNuggetsBags = calculateCases(utpValues["Grilled Nuggets"], bufferMultipliers["Grilled Nuggets"], 189);
+      const grilledNuggetsCalculatedCases = Math.floor(grilledNuggetsBags / 6);
+      const remainingGrilledNuggetsBags = grilledNuggetsBags % 6;
+      const nuggetsCases = calculateCases(utpValues.Nuggets, bufferMultipliers.Nuggets, 1132);
+      const stripsBags = calculateCases(utpValues["Spicy Strips"], bufferMultipliers["Spicy Strips"], 53);
+      const stripsCalculatedCases = Math.floor(stripsBags / 6);
+      const remainingStripsBags = stripsBags % 6;
+
+      return {
+        day: entry.day,
+        filets: applyMessage("Filets", filetsCases),
+        spicy: applyMessage("Spicy Filets", spicyCases),
+        grilledFilets: applyMessage("Grilled Filets", grilledFiletsCalculatedCases, remainingGrilledFiletsBags),
+        grilledNuggets: applyMessage("Grilled Nuggets", grilledNuggetsCalculatedCases, remainingGrilledNuggetsBags),
+        nuggets: applyMessage("Nuggets", nuggetsCases),
+        strips: applyMessage("Spicy Strips", stripsCalculatedCases, remainingStripsBags)
+      };
+    });
+  }, [salesData, utpData, bufferData, adjustments]);
+};
+
+const useFilteredClosures = (closures) => {
+  return useMemo(() => {
+    if (!closures) return [];
 
     const today = new Date();
     const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
     const currentWeekStart = new Date(todayUTC);
-    currentWeekStart.setUTCDate(todayUTC.getUTCDate() - (todayUTC.getUTCDay() === 0 ? 6 : todayUTC.getUTCDay() - 1)); // Adjusted for Monday as start
+    currentWeekStart.setUTCDate(todayUTC.getUTCDate() - (todayUTC.getUTCDay() === 0 ? 6 : todayUTC.getUTCDay() - 1));
     const currentWeekEnd = new Date(currentWeekStart);
-    currentWeekEnd.setUTCDate(currentWeekStart.getUTCDate() + 5); // Adjusted for 6-day week
+    currentWeekEnd.setUTCDate(currentWeekStart.getUTCDate() + 5);
 
-    if (!(closureStartDate <= currentWeekEnd && closureEndDate >= currentWeekStart)) {
-      return false;
-    }
+    return closures.filter((closure) => {
+      const closureStartDateUTC = new Date(closure.date);
+      const closureEndDateUTC = new Date(closureStartDateUTC);
 
-    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const todayDayIndex = todayUTC.getUTCDay(); // 0 for Sunday, 1 for Monday, etc.
-    const currentDayIndex = daysOfWeek.indexOf(entry.day);
+      if (closure.duration) {
+        const { value: durationValue, unit: durationUnit } = closure.duration;
+        const daysToAdd = durationUnit === "weeks" ? (7 * durationValue) - 1 : durationValue - 1;
+        closureEndDateUTC.setUTCDate(closureStartDateUTC.getUTCDate() + daysToAdd);
+      }
+      return closureStartDateUTC <= currentWeekEnd && closureEndDateUTC >= currentWeekStart;
+    });
+  }, [closures]);
+};
 
-    // Calculate the date of the current entry within the current week
-    let daysToAddForEntry = currentDayIndex - (todayDayIndex === 0 ? 6 : todayDayIndex - 1);
-    if (daysToAddForEntry < 0) {
-      daysToAddForEntry += 7;
-    }
+const DayCard = memo(({ entry, currentDay, closures, messages }) => {
+  const isToday = entry.day === currentDay;
 
-    const entryDate = new Date(currentWeekStart);
-    entryDate.setUTCDate(currentWeekStart.getUTCDate() + daysToAddForEntry);
+  const closure = useMemo(() => {
+    return closures.find(c => {
+      const closureStartDate = new Date(c.date);
+      const closureEndDate = new Date(closureStartDate);
 
-    return entryDate >= closureStartDate && entryDate <= closureEndDate;
-  });
+      if (c.duration) {
+        const { value: durationValue, unit: durationUnit } = c.duration;
+        const daysToAdd = durationUnit === "weeks" ? (7 * durationValue) - 1 : durationValue - 1;
+        closureEndDate.setUTCDate(closureStartDate.getUTCDate() + daysToAdd);
+      }
 
+      const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const currentDayIndex = daysOfWeek.indexOf(entry.day);
+
+      // Calculate the date of the current entry within the closure's week
+      const entryDate = new Date(closureStartDate);
+      const startDayIndex = closureStartDate.getUTCDay();
+      let daysToAddForEntry = (currentDayIndex + 1) - (startDayIndex === 0 ? 7 : startDayIndex);
+
+      if (daysToAddForEntry < 0) {
+        daysToAddForEntry += 7;
+      }
+
+      entryDate.setUTCDate(closureStartDate.getUTCDate() + daysToAddForEntry);
+
+      return entryDate >= closureStartDate && entryDate <= closureEndDate;
+    });
+  }, [closures, entry.day]);
   return (
     <div
       key={entry.day}
@@ -127,28 +225,21 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
 });
 
 const ThawingCabinet = () => {
-  const [salesData, setSalesData] = useState([]);
-  const [filetsUtp, setFiletsUtp] = useState(0);
-  const [spicyUtp, setSpicyUtp] = useState(0);
-  const [grilledFiletsUtp, setGrilledFiletsUtp] = useState(0);
-  const [grilledNuggetsUtp, setGrilledNuggetsUtp] = useState(0);
-  const [nuggetsUtp, setNuggetsUtp] = useState(0);
-  const [stripsUtp, setStripsUtp] = useState(0);
-  const [calculatedData, setCalculatedData] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [adjustments, setAdjustments] = useState([]);
   const [closures, setClosures] = useState([]);
-  const [wakeLock, setWakeLock] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [wakeLock, setWakeLock] = useState(null);
   const adjustmentsRef = useRef(adjustments);
 
   useEffect(() => {
     adjustmentsRef.current = adjustments;
   }, [adjustments]);
 
-  const requestWakeLock = async () => {
+  const requestWakeLock = useCallback(async () => {
     if ('wakeLock' in navigator) {
       try {
         const lock = await navigator.wakeLock.request('screen');
@@ -169,7 +260,7 @@ const ThawingCabinet = () => {
       document.body.appendChild(video);
       video.play().catch(err => console.error('Video playback failed:', err));
     }
-  };
+  }, []);
 
   useEffect(() => {
     requestWakeLock();
@@ -178,26 +269,25 @@ const ThawingCabinet = () => {
       if (wakeLock) {
         wakeLock.release();
       }
-      // Cleanup for fallback video
-      const video = document.querySelector('video[src="' + playbackVid + '"]');
+      const video = document.querySelector(`video[src="${playbackVid}"]`);
       if (video) {
         document.body.removeChild(video);
       }
     };
-  }, []);
+  }, [requestWakeLock]);
 
   useEffect(() => {
     if (!wakeLock) {
       requestWakeLock();
     }
-  }, [wakeLock]);
+  }, [wakeLock, requestWakeLock]);
 
-  const getCurrentDay = () => {
+  const getCurrentDay = useCallback(() => {
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const now = new Date();
-    const dayIndex = now.getDay(); // 0 for Sunday, 1 for Monday, etc.
-    return days[(dayIndex + 6) % 7]; // Adjust to start from Monday
-  };
+    const dayIndex = now.getDay();
+    return days[(dayIndex + 6) % 7];
+  }, []);
 
   const toggleFullScreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -213,50 +303,9 @@ const ThawingCabinet = () => {
     }
   }, []);
 
-  const fetchAdjustments = useCallback(async () => {
-    try {
-      const adjustmentsResponse = await axiosInstance.get("/adjustment/data");
-      setAdjustments(Array.isArray(adjustmentsResponse.data) ? adjustmentsResponse.data : []);
-    } catch (error) {
-      console.error("Error fetching adjustments:", error);
-      setAdjustments([]);
-    }
-  }, []);
-
-  const fetchClosures = useCallback(async () => {
-    try {
-      const closuresResponse = await axiosInstance.get("/closure/plans");
-      const closuresData = Array.isArray(closuresResponse.data) ? closuresResponse.data : [];
-
-      const today = new Date();
-      const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-      const currentWeekStart = new Date(todayUTC);
-      currentWeekStart.setUTCDate(todayUTC.getUTCDate() - (todayUTC.getUTCDay() === 0 ? 6 : todayUTC.getUTCDay() - 1)); // Adjusted for Monday as start
-      const currentWeekEnd = new Date(currentWeekStart);
-      currentWeekEnd.setUTCDate(currentWeekStart.getUTCDate() + 5); // Adjusted for 6-day week
-
-      const filteredClosures = closuresData.filter((closure) => {
-        const closureStartDateUTC = new Date(closure.date);
-        const closureEndDateUTC = new Date(closureStartDateUTC);
-
-        if (closure.duration) {
-          const { value: durationValue, unit: durationUnit } = closure.duration;
-          const daysToAdd = durationUnit === "weeks" ? (7 * durationValue) - 1 : durationValue - 1;
-          closureEndDateUTC.setUTCDate(closureStartDateUTC.getUTCDate() + daysToAdd);
-        }
-        return closureStartDateUTC <= currentWeekEnd && closureEndDateUTC >= currentWeekStart;
-      });
-
-      setClosures(filteredClosures);
-    } catch (error) {
-      console.error("Error fetching closures:", error);
-      setClosures([]);
-    }
-  }, []);
-
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const [
         adjustmentsResponse,
         closuresResponse,
@@ -273,104 +322,35 @@ const ThawingCabinet = () => {
         axiosInstance.get("/buffer"),
       ]);
 
-      setAdjustments(Array.isArray(adjustmentsResponse.data) ? adjustmentsResponse.data : []);
-      setClosures(Array.isArray(closuresResponse.data) ? closuresResponse.data : []);
-      setMessages(messagesResponse.data);
-
-      const fetchedSales = salesResponse.data;
+      const salesData = salesResponse.data;
       const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const sortedSales = daysOrder.map((day) => fetchedSales.find((entry) => entry.day === day) || { day, sales: 0 });
-      setSalesData(sortedSales);
+      const sortedSales = daysOrder.map((day) => salesData.find((entry) => entry.day === day) || { day, sales: 0 });
 
-      const filetsUtpValue = utpResponse.data.find((item) => item.productName === "Filets")?.utp || 1.0;
-      const spicyUtpValue = utpResponse.data.find((item) => item.productName === "Spicy Filets")?.utp || 1.0;
-      const grilledFiletsUtpValue = utpResponse.data.find((item) => item.productName === "Grilled Filets")?.utp || 1.0;
-      const grilledNuggetsUtpValue = utpResponse.data.find((item) => item.productName === "Grilled Nuggets")?.utp || 1.0;
-      const nuggetsUtpValue = utpResponse.data.find((item) => item.productName === "Nuggets")?.utp || 1.0;
-      const stripsUtpValue = utpResponse.data.find((item) => item.productName === "Spicy Strips")?.utp || 1.0;
-
-      const calculateBufferMultiplier = (bufferPrcnt) => (100 + bufferPrcnt) / 100;
-
-      const filetsBuffer = calculateBufferMultiplier(bufferResponse.data.find((item) => item.productName === "Filets")?.bufferPrcnt || 1);
-      const spicyBuffer = calculateBufferMultiplier(bufferResponse.data.find((item) => item.productName === "Spicy Filets")?.bufferPrcnt || 1);
-      const grilledFiletsBuffer = calculateBufferMultiplier(bufferResponse.data.find((item) => item.productName === "Grilled Filets")?.bufferPrcnt || 1);
-      const grilledNuggetsBuffer = calculateBufferMultiplier(bufferResponse.data.find((item) => item.productName === "Grilled Nuggets")?.bufferPrcnt || 1);
-      const nuggetsBuffer = calculateBufferMultiplier(bufferResponse.data.find((item) => item.productName === "Nuggets")?.bufferPrcnt || 1);
-      const stripsBuffer = calculateBufferMultiplier(bufferResponse.data.find((item) => item.productName === "Spicy Strips")?.bufferPrcnt || 1);
-
-      setFiletsUtp(filetsUtpValue);
-      setSpicyUtp(spicyUtpValue);
-      setGrilledFiletsUtp(grilledFiletsUtpValue);
-      setGrilledNuggetsUtp(grilledNuggetsUtpValue);
-      setNuggetsUtp(nuggetsUtpValue);
-      setStripsUtp(stripsUtpValue);
-
-      const calculatedCases = sortedSales.map((entry, index) => {
-        const nextDaySales = sortedSales[(index + 1) % sortedSales.length]?.sales || 0;
-        const dayAdjustments = adjustmentsRef.current.filter(msg => msg.day === entry.day);
-
-        const applyMessage = (product, cases, bags = 0) => {
-          const message = dayAdjustments.find(msg => msg.product === product);
-          let finalCases = cases;
-          let finalBags = bags;
-
-          if (message) {
-            const parts = message.message.split(' and ');
-            parts.forEach(part => {
-              const [change, unit] = part.trim().split(' ');
-              const value = parseInt(change);
-              if (!isNaN(value)) {
-                if (unit === 'cases') {
-                  finalCases += value;
-                } else if (unit === 'bags') {
-                  finalBags += value;
-                }
-              }
-            });
-          }
-          return { cases: Math.max(0, finalCases), bags: Math.max(0, finalBags), modified: !!message };
-        };
-
-        const filetsCases = Math.ceil(((filetsUtpValue * (nextDaySales / 1000)) / 158) * filetsBuffer);
-        const spicyCases = Math.ceil(((spicyUtpValue * (nextDaySales / 1000)) / 141) * spicyBuffer);
-        const grilledFiletsBags = Math.ceil(((grilledFiletsUtpValue * (nextDaySales / 1000)) / 26) * grilledFiletsBuffer);
-        const grilledFiletsCases = Math.floor(grilledFiletsBags / 6);
-        const remainingGrilledFiletsBags = grilledFiletsBags % 6;
-        const grilledNuggetsBags = Math.ceil(((grilledNuggetsUtpValue * (nextDaySales / 1000)) / 189) * grilledNuggetsBuffer);
-        const grilledNuggetsCases = Math.floor(grilledNuggetsBags / 6);
-        const remainingGrilledNuggetsBags = grilledNuggetsBags % 6;
-        const nuggetsCases = Math.ceil(((nuggetsUtpValue * (nextDaySales / 1000)) / 1132) * nuggetsBuffer);
-        const stripsBags = Math.ceil(((stripsUtpValue * (nextDaySales / 1000)) / 53) * stripsBuffer);
-        const stripsCases = Math.floor(stripsBags / 6);
-        const remainingStripsBags = stripsBags % 6;
-
-        return {
-          day: entry.day,
-          filets: applyMessage("Filets", filetsCases),
-          spicy: applyMessage("Spicy Filets", spicyCases),
-          grilledFilets: applyMessage("Grilled Filets", grilledFiletsCases, remainingGrilledFiletsBags),
-          grilledNuggets: applyMessage("Grilled Nuggets", grilledNuggetsCases, remainingGrilledNuggetsBags),
-          nuggets: applyMessage("Nuggets", nuggetsCases),
-          strips: applyMessage("Spicy Strips", stripsCases, remainingStripsBags)
-        };
+      setData({
+        sales: sortedSales,
+        utp: utpResponse.data,
+        buffer: bufferResponse.data,
       });
-
-      setCalculatedData(calculatedCases);
+      setAdjustments(adjustmentsResponse.data);
+      setClosures(closuresResponse.data);
+      setMessages(messagesResponse.data);
       setLastUpdated(new Date());
     } catch (error) {
       console.error("Error fetching data:", error);
+      // Consider setting an error state to display an error message to the user
     } finally {
       setLoading(false);
     }
-  }, [adjustmentsRef]);
+  }, []);
 
   useEffect(() => {
     fetchData();
     requestWakeLock();
 
-    const intervalId = setInterval(fetchData, 10 * 60 * 1000);
-    const messageIntervalId = setInterval(fetchAdjustments, 5 * 60 * 1000);
-    const closuresIntervalId = setInterval(fetchClosures, 10 * 60 * 1000);
+    const fetchInterval = setInterval(fetchData, 10 * 60 * 1000);
+    const adjustmentsInterval = setInterval(() => axiosInstance.get("/adjustment/data").then(res => setAdjustments(res.data)).catch(err => console.error("Error fetching adjustments:", err)), 5 * 60 * 1000);
+    const closuresInterval = setInterval(() => axiosInstance.get("/closure/plans").then(res => setClosures(res.data)).catch(err => console.error("Error fetching closures:", err)), 10 * 60 * 1000);
+    const messagesInterval = setInterval(() => axiosInstance.get("/messages").then(res => setMessages(res.data)).catch(err => console.error("Error fetching messages:", err)), 5 * 60 * 1000);
 
     const storedFullScreenPreference = localStorage.getItem('isFullScreen');
     if (storedFullScreenPreference === 'true' && !document.fullscreenElement) {
@@ -385,24 +365,33 @@ const ThawingCabinet = () => {
     document.addEventListener('fullscreenchange', handleFullScreenChange);
 
     return () => {
-      clearInterval(intervalId);
-      clearInterval(messageIntervalId);
-      clearInterval(closuresIntervalId);
+      clearInterval(fetchInterval);
+      clearInterval(adjustmentsInterval);
+      clearInterval(closuresInterval);
+      clearInterval(messagesInterval);
       document.removeEventListener('fullscreenchange', handleFullScreenChange);
     };
-  }, [fetchData, fetchAdjustments, fetchClosures]);
+  }, [fetchData, requestWakeLock]);
 
   const currentDay = getCurrentDay();
+  const calculatedData = useCalculateThawingData(data?.sales, data?.utp, data?.buffer, adjustments);
+  const filteredClosures = useFilteredClosures(closures);
+
+  if (loading) {
+    return (
+      <div className="fixed top-0 left-0 w-full h-full bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-b-4 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="h-full w-full bg-white rounded-lg md:rounded-xl shadow-xl p-2 sm:p-4 border border-gray-100 flex flex-col">
-        {/* Header Section */}
         <div className="flex items-center justify-between mb-2 sm:mb-3">
           <div>
             <h2 className="text-lg sm:text-xl font-bold text-gray-800">Thawing Cabinet</h2>
           </div>
-
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-1 sm:gap-2 bg-gray-50 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm">
               <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
@@ -423,23 +412,17 @@ const ThawingCabinet = () => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-4 border-blue-500 border-t-transparent"></div>
-          </div>
-        ) : (
-          <div className="flex-1 grid grid-cols-6 gap-1 sm:gap-2" style={{ maxHeight: 'calc(100% - 50px)' }}>
-            {calculatedData.map((entry) => (
-              <DayCard
-                key={entry.day}
-                entry={entry}
-                currentDay={currentDay}
-                closures={closures}
-                messages={messages}
-              />
-            ))}
-          </div>
-        )}
+        <div className="flex-1 grid grid-cols-6 gap-1 sm:gap-2" style={{ maxHeight: 'calc(100% - 50px)' }}>
+          {calculatedData.map((entry) => (
+            <DayCard
+              key={entry.day}
+              entry={entry}
+              currentDay={currentDay}
+              closures={filteredClosures}
+              messages={messages}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
