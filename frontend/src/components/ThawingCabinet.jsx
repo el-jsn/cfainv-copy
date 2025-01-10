@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from "react";
 import { Clock, Maximize, Minimize } from "lucide-react";
 import axiosInstance from "./axiosInstance";
-import playbackVid from "../assets/videoplayback.mp4";
+import playbackVid from "../assets/background.mp4";
+console.log(playbackVid);
 
 const useCalculateThawingData = (salesData, utpData, bufferData, adjustments) => {
   return useMemo(() => {
@@ -234,6 +235,7 @@ const ThawingCabinet = () => {
   const [messages, setMessages] = useState([]);
   const [wakeLock, setWakeLock] = useState(null);
   const adjustmentsRef = useRef(adjustments);
+  const videoRef = useRef(null); // Ref for the video element
 
   useEffect(() => {
     adjustmentsRef.current = adjustments;
@@ -251,33 +253,36 @@ const ThawingCabinet = () => {
         console.error(`Wake Lock error: ${err.name}, ${err.message}`);
       }
     } else {
-      console.warn('Wake Lock API not supported. Using fallback for iOS devices.');
-      const video = document.createElement('video');
-      video.src = playbackVid;
-      video.loop = true;
-      video.muted = true;
-      video.style.display = 'none';
-      document.body.appendChild(video);
-      video.play().catch(err => console.error('Video playback failed:', err));
+      console.warn('Wake Lock API not supported.');
     }
   }, []);
 
   useEffect(() => {
     requestWakeLock();
 
+    // Always start the video playback
+    const video = document.createElement('video');
+    video.src = playbackVid;
+    video.loop = true;
+    video.muted = true;
+    video.style.display = 'none';
+    document.body.appendChild(video);
+    videoRef.current = video; // Store the video element in the ref
+    video.play().catch(err => console.error('Video playback failed:', err));
+
     return () => {
       if (wakeLock) {
         wakeLock.release();
       }
-      const video = document.querySelector(`video[src="${playbackVid}"]`);
-      if (video) {
-        document.body.removeChild(video);
+      // Ensure the video is removed when the component unmounts
+      if (videoRef.current) {
+        document.body.removeChild(videoRef.current);
       }
     };
   }, [requestWakeLock]);
 
   useEffect(() => {
-    if (!wakeLock) {
+    if (!wakeLock && 'wakeLock' in navigator) {
       requestWakeLock();
     }
   }, [wakeLock, requestWakeLock]);
