@@ -10,6 +10,6 @@ router.post('/data', createDayData);
 router.get('/data', getAllDayData);
 
 // Route to delete a specific record by ID (optional for testing)
-router.delete('/data/:id',isAdmin, deleteDayData);
+router.delete('/data/:id', deleteDayData);
 
 export default router;
