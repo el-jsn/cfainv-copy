@@ -93,6 +93,16 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+app.use(express.static('frontend/dist', {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  },
+}));
+
 // Schedule cleanup task using cron jobs
 cron.schedule('0 * * * *', () => {
   cleanupExpiredRecords();
