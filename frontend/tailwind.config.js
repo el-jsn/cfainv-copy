@@ -6,6 +6,16 @@ export default withMT({
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        'sfpro': ['SF Pro Text', 'Helvetica Neue', 'sans-serif'],
+        'sfprodisplay': ['SF Pro Display', 'Helvetica Neue', 'sans-serif'],
+      },
+        colors: {
+            primary: '#007AFF', // Example primary color, replace with your brand color
+            textPrimary: '#37474f',
+            textSecondary: '#78909c',
+            background: '#f5f5f5',
+        },
       animation: {
         'float': 'float 30s infinite',
       },

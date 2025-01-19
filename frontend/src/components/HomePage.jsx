@@ -111,8 +111,8 @@ const HomePage = () => {
         label: "Sales Projection",
         data: salesProjection.map((projection) => projection.sales),
         fill: false,
-        backgroundColor: "#434343", // Muted blueish-gray
-        borderColor: "#6366F1", // Keep this as it's good contrast color
+        backgroundColor: "#6366F1",
+        borderColor: "#6366F1",
         tension: 0.4,
       },
     ],
@@ -170,6 +170,7 @@ const HomePage = () => {
     },
   };
 
+
   const handleBufferEdit = (bufferId) => {
     setEditingBuffer(bufferId);
   };
@@ -201,6 +202,7 @@ const HomePage = () => {
     return null;
   };
 
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex justify-center items-center">
@@ -208,7 +210,6 @@ const HomePage = () => {
       </div>
     );
   }
-
   const renderAdminSection = (children) => {
     return user && user.isAdmin ? children : null;
   };
@@ -238,7 +239,6 @@ const HomePage = () => {
           </div>
         </div>
       </header>
-
       {/* Main Content */}
       <main className="container mx-auto px-6 py-6">
         {/* Section for UPTs and Sales Projections */}
@@ -246,36 +246,44 @@ const HomePage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* UPTs Data Card (Hidden for non-admins) */}
             {user?.isAdmin && (
-              <Card className="bg-white shadow rounded">
-                <CardHeader floated={false} shadow={false} className="px-4 py-3 border-b border-gray-200">
+              <Card className="bg-white shadow-md rounded-lg overflow-hidden">
+                <CardHeader
+                  floated={false}
+                  shadow={false}
+                  className="px-6 py-4 border-b border-gray-200"
+                >
                   <div className="flex justify-between items-center">
-                    <Typography variant="h6" color="gray" className="font-semibold">
+                    <Typography variant="h6" className="text-gray-700 font-semibold">
                       UPTs by Product
                     </Typography>
                     <Link to="/update-upt">
-                      <Button size="sm" color="indigo" className="flex items-center gap-2 rounded">
+                      <Button size="sm" className="bg-indigo-500 hover:bg-indigo-600 text-white flex items-center gap-2 rounded">
                         Update
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </Link>
                   </div>
                 </CardHeader>
-                <CardBody className="p-4">
-                  <Chart data={salesData} isCompact={true} height={300} chartColor="#434343" />
+                <CardBody className="p-6">
+                  <Chart data={salesData} isCompact={true} height={300} chartColor="#6366F1" />
                 </CardBody>
               </Card>
             )}
 
             {/* Sales Projections Card */}
-            <Card className="bg-white shadow rounded md:col-span-2 lg:col-span-2">
-              <CardHeader floated={false} shadow={false} className="px-4 py-3 border-b border-gray-200">
+            <Card className="bg-white shadow-md rounded-lg overflow-hidden md:col-span-2 lg:col-span-2">
+              <CardHeader
+                floated={false}
+                shadow={false}
+                className="px-6 py-4 border-b border-gray-200"
+              >
                 <div className="flex justify-between items-center">
-                  <Typography variant="h6" color="gray" className="font-semibold">
+                  <Typography variant="h6" className="text-gray-700 font-semibold">
                     Weekly Sales Projections
                   </Typography>
                   {renderAdminSection(
                     <Link to="/update-sales-projection">
-                      <Button size="sm" color="indigo" className="flex items-center gap-2 rounded">
+                      <Button size="sm" className="bg-indigo-500 hover:bg-indigo-600 text-white flex items-center gap-2 rounded">
                         Update
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -283,7 +291,7 @@ const HomePage = () => {
                   )}
                 </div>
               </CardHeader>
-              <CardBody className="p-4">
+              <CardBody className="p-6">
                 <div style={{ height: 300 }}>
                   <Line options={chartOptions} data={chartData} />
                 </div>
@@ -294,7 +302,7 @@ const HomePage = () => {
                         <Typography variant="small" color="gray" className="font-medium">
                           {projection.day}
                         </Typography>
-                        <Typography variant="h6" color="gray" className="font-semibold">
+                        <Typography variant="h6" className="text-gray-700 font-semibold">
                           ${projection.sales}
                         </Typography>
                       </div>
@@ -310,19 +318,24 @@ const HomePage = () => {
           </div>
         </section>
 
+
         {/* Buffer Information */}
         {renderAdminSection(
           <section className="mb-8">
-            <Card className="bg-white shadow rounded">
-              <CardHeader floated={false} shadow={false} className="px-4 py-3 border-b border-gray-200">
-                <Typography variant="h6" color="gray" className="font-semibold">
+            <Card className="bg-white shadow-md rounded-lg overflow-hidden">
+              <CardHeader
+                floated={false}
+                shadow={false}
+                className="px-6 py-4 border-b border-gray-200"
+              >
+                <Typography variant="h6" className="text-gray-700 font-semibold">
                   Buffer Information
                 </Typography>
               </CardHeader>
-              <CardBody className="p-4">
+              <CardBody className="p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {bufferData.map((buffer) => (
-                    <Card key={buffer._id} className="p-3 bg-gray-50 rounded">
+                    <Card key={buffer._id} className="p-3 bg-gray-50 rounded-lg">
                       <Typography variant="small" color="gray" className="font-medium truncate">
                         {buffer.productName}
                       </Typography>
@@ -343,7 +356,7 @@ const HomePage = () => {
                           {getBufferArrow(buffer.bufferPrcnt)}
                           {buffer.bufferPrcnt}%
                           <MTTooltip content="Edit Buffer">
-                            <IconButton size="sm" color="gray" onClick={() => handleBufferEdit(buffer._id)} className="ml-2">
+                            <IconButton size="sm" className="ml-2 text-gray-500 hover:text-gray-700 focus:outline-none" onClick={() => handleBufferEdit(buffer._id)}>
                               <Edit2 className="h-4 w-4" />
                             </IconButton>
                           </MTTooltip>
@@ -364,7 +377,7 @@ const HomePage = () => {
         <section className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link to="/thawing-cabinet">
-              <Card className="bg-indigo-500 hover:bg-indigo-600 text-white p-4 flex items-center justify-between shadow-md rounded">
+              <Card className="bg-indigo-500 hover:bg-indigo-600 text-white p-4 flex items-center justify-between shadow-md rounded-lg">
                 <div>
                   <Typography variant="h6" color="white" className="font-semibold">
                     Thawing Cabinet
@@ -378,7 +391,7 @@ const HomePage = () => {
             </Link>
             {renderAdminSection(
               <Link to="/data/message/all">
-                <Card className="bg-indigo-500 hover:bg-indigo-600 text-white p-4 flex items-center justify-between shadow-md rounded">
+                <Card className="bg-indigo-500 hover:bg-indigo-600 text-white p-4 flex items-center justify-between shadow-md rounded-lg">
                   <div>
                     <Typography variant="h6" color="white" className="font-semibold">
                       Adjust Allocations
@@ -393,7 +406,7 @@ const HomePage = () => {
             )}
             {renderAdminSection(
               <Link to="/instructions">
-                <Card className="bg-green-500 hover:bg-green-600 text-white p-4 flex items-center justify-between shadow-md rounded">
+                <Card className="bg-green-500 hover:bg-green-600 text-white p-4 flex items-center justify-between shadow-md rounded-lg">
                   <div>
                     <Typography variant="h6" color="white" className="font-semibold">
                       Allocation Instructions
@@ -408,7 +421,7 @@ const HomePage = () => {
             )}
             {renderAdminSection(
               <Link to="/closure/plans">
-                <Card className="bg-red-500 hover:bg-red-600 text-white p-4 flex items-center justify-between shadow-md rounded">
+                <Card className="bg-red-500 hover:bg-red-600 text-white p-4 flex items-center justify-between shadow-md rounded-lg">
                   <div>
                     <Typography variant="h6" color="white" className="font-semibold">
                       Store Closures
