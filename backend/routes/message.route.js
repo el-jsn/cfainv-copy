@@ -4,47 +4,68 @@ import Message from '../models/message.model.js';
 
 const router = express.Router();
 
-// Get messages for all weekdays
-router.get('/', async (req, res) => {
-  try {
-    const messages = await Message.find();
-    res.json(messages);
-  } catch (error) {
-    res.status(500).json({ error: 'Error fetching messages' });
-  }
-});
 
-// Add or update a message for a specific weekday
-router.post('/', async (req, res) => {
-  const { day, message } = req.body;
+    // Get all messages
+    router.get('/', async (req, res) => {
+      try {
+        const messages = await Message.find();
+        res.json(messages);
+      } catch (error) {
+        res.status(500).json({ error: 'Error fetching messages' });
+      }
+    });
 
-  if (!day || !message) {
-    return res.status(400).json({ error: 'Day and message are required' });
-  }
+    // Create a new message
+    router.post('/', async (req, res) => {
+        const { day, message, products } = req.body;
 
-  try {
-    let existingMessage = await Message.findOne({ day });
-    if (existingMessage) {
-      existingMessage.message = message;
-      await existingMessage.save();
-    } else {
-      const newMessage = new Message({ day, message });
-      await newMessage.save();
-    }
-    res.json({ message: 'Message added/updated successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Error adding/updating message' });
-  }
-});
+        if (!day || !message) {
+            return res.status(400).json({ error: "day and message are required" });
+        }
 
-// Delete a message for a specific weekday
-router.delete('/:day', async (req, res) => {
-  try {
-    await Message.deleteOne({ day: req.params.day });
-    res.json({ message: 'Message deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Error deleting message' });
-  }
-});
+      try {
+        const newMessage = new Message({ day, message, products });
+        const savedMessage = await newMessage.save();
+        res.status(201).json(savedMessage);
+      } catch (error) {
+        res.status(500).json({ error: 'Error creating message', details: error });
+      }
+    });
+
+    // Update a message
+    router.put('/:day', async (req, res) => {
+      const { day } = req.params;
+      const { message, products } = req.body;
+      if (!day || !message) {
+          return res.status(400).json({ error: 'Day and message are required for update' });
+      }
+
+      try {
+          const updatedMessage = await Message.findOneAndUpdate({day}, { message, products }, {new: true});
+          if (!updatedMessage){
+              return res.status(404).json({ message: 'Message not found' })
+          }
+          res.json(updatedMessage);
+      } catch (error) {
+        res.status(500).json({ error: 'Error updating message' });
+      }
+    });
+
+
+    // Delete a message using _id
+    router.delete('/:id', async (req, res) => {
+        const { id } = req.params;
+        try {
+        const deletedMessage = await Message.findByIdAndDelete(id);
+            if (!deletedMessage){
+                return res.status(404).json({ message: 'Message not found' });
+            }
+          res.json({ message: 'Message deleted successfully' });
+        } catch (error) {
+          res.status(500).json({ error: 'Error deleting message' });
+        }
+      });
+
+
 
 export default router;

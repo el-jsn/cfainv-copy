@@ -1,4 +1,3 @@
-// Optimized EnhancedChart.js
 import React, { useState, useMemo, useRef } from "react";
 import {
   Bar,
@@ -24,6 +23,9 @@ import {
 } from "chart.js";
 import { RefreshCw } from "lucide-react";
 
+import { styled } from '@mui/material/styles';
+import { Box, Select, MenuItem, FormControl, InputLabel, Typography, Divider, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+
 ChartJS.register(
   BarElement,
   CategoryScale,
@@ -46,20 +48,64 @@ const CHART_TYPES = {
   scatter: Scatter,
 };
 
+const StyledSelect = styled(Select)(({ theme }) => ({
+  fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif',
+  '& .MuiOutlinedInput-notchedOutline': {
+    borderColor: theme.palette.grey[400], // Subtle border color
+  },
+  '&:hover .MuiOutlinedInput-notchedOutline': {
+    borderColor: theme.palette.grey[500], // Slightly darker on hover
+  },
+  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    borderColor: theme.palette.primary.main, // Highlight on focus
+    borderWidth: 1,
+  },
+}));
+
+const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+  borderRadius: theme.shape.borderRadius,
+  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+  overflowX: 'auto',
+  fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif'
+}));
+
+const StyledTable = styled(Table)(({ theme }) => ({
+  minWidth: '100%',
+  borderCollapse: 'collapse',
+  fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif'
+}));
+
+const StyledTableHead = styled(TableHead)(({ theme }) => ({
+  backgroundColor: theme.palette.grey[100],
+}));
+
+const StyledTableCell = styled(TableCell)(({ theme }) => ({
+  padding: theme.spacing(1.2, 1.5),
+  borderBottom: `1px solid ${theme.palette.grey[200]}`,
+  fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif',
+  whiteSpace: 'nowrap'
+}));
+
+const StyledTypography = styled(Typography)(({ theme }) => ({
+  fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif',
+}));
+
+
+
 const EnhancedChart = ({
   data,
   title = "Data Visualization",
   subtitle = "Interactive Insights",
   yAxisLabel = "Value",
-  primaryColor = "rgba(59, 130, 246, 0.8)",
+  primaryColor = "#4A90E2", // A muted blue
   gridColor = "rgba(229, 231, 235, 0.5)",
   defaultChartType = "bar",
   showDataTable = false,
   enableInteractions = true,
   pointRadius = 3,
   loading = false,
-  isCompact = false, // Keep the prop for context-specific usage
-  height = 400, // Add a height prop for direct control
+  isCompact = false,
+  height = 400,
 }) => {
   const [chartType, setChartType] = useState(defaultChartType);
   const [sortColumn, setSortColumn] = useState(null);
@@ -112,11 +158,12 @@ const EnhancedChart = ({
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: "top" },
+        legend: { position: "top", labels: { fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif' } },
         title: {
           display: true,
           text: title,
-          font: { size: isCompact ? 14 : 16, weight: "bold" },
+          font: { size: isCompact ? 14 : 16, weight: "bold", fontFamily: 'SF Pro Display, Helvetica Neue, sans-serif' },
+
         },
       },
       scales: {
@@ -127,6 +174,7 @@ const EnhancedChart = ({
               autoSkip: true,
               maxRotation: 0,
               maxTicksLimit: 7,
+              font: { size: 12, fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif' }
             },
           }),
         },
@@ -134,7 +182,7 @@ const EnhancedChart = ({
           title: {
             display: true,
             text: yAxisLabel,
-            font: { weight: "bold", size: isCompact ? 12 : 14 },
+            font: { weight: "bold", size: isCompact ? 12 : 14, fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif' },
           },
           grid: { color: gridColor },
           beginAtZero: true,
@@ -142,6 +190,7 @@ const EnhancedChart = ({
             ticks: {
               autoSkip: true,
               maxTicksLimit: 5,
+              font: { size: 12, fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif' }
             },
           }),
         },
@@ -161,6 +210,8 @@ const EnhancedChart = ({
               label: (context) =>
                 `${context.dataset.label}: ${context.formattedValue}`,
             },
+            titleFont: { fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif' },
+            bodyFont: { fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif' },
           },
         },
       }
@@ -202,39 +253,59 @@ const EnhancedChart = ({
   const ChartComponent = CHART_TYPES[chartType];
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
-      <div className="px-4 py-5 sm:p-6">
+    <Paper elevation={2} className="rounded-lg overflow-hidden">
+      <Box p={3}>
         {!isCompact && (
-          <div className="text-center mb-4">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
+          <Box textAlign="center" mb={2}>
+            <StyledTypography variant="h6" component="h3" fontWeight="medium" color="textPrimary" mb={0.5}>
               {title}
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
-          </div>
+            </StyledTypography>
+            <StyledTypography variant="body2" color="textSecondary">
+              {subtitle}
+            </StyledTypography>
+          </Box>
         )}
 
-        <div className="flex flex-wrap justify-start gap-2 mb-4">
-          <select
-            className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:max-w-xs border-gray-300 rounded-md text-sm"
-            value={chartType}
-            onChange={(e) => setChartType(e.target.value)}
-          >
-            {Object.keys(CHART_TYPES).map((type) => (
-              <option key={type} value={type}>
-                {type.charAt(0).toUpperCase() + type.slice(1)} Chart
-              </option>
-            ))}
-          </select>
-        </div>
+        <Box display="flex" flexWrap="wrap" justifyContent="flex-start" gap={1} mb={2}>
+          <FormControl variant="outlined" size="small" sx={{ minWidth: 180 }}>
+            <InputLabel id="chart-type-label"
+              sx={{
+                fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif',
+              }}
+            >Chart Type</InputLabel>
+            <StyledSelect
+              labelId="chart-type-label"
+              id="chart-type-select"
+              value={chartType}
+              onChange={(e) => setChartType(e.target.value)}
+              label="Chart Type"
+            >
+              {Object.keys(CHART_TYPES).map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)} Chart
+                </MenuItem>
+              ))}
+            </StyledSelect>
+          </FormControl>
+        </Box>
 
-        <div style={{ height: height }} className="relative">
+        <Box position="relative" style={{ height: height }}>
           {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex items-center space-x-2 text-gray-600">
+            <Box
+              position="absolute"
+              top={0}
+              left={0}
+              right={0}
+              bottom={0}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Box display="flex" alignItems="center" gap={1} color="text.secondary">
                 <RefreshCw className="animate-spin" size={20} />
-                <span>Loading data...</span>
-              </div>
-            </div>
+                <StyledTypography variant="body2">Loading data...</StyledTypography>
+              </Box>
+            </Box>
           ) : ChartComponent ? (
             <ChartComponent
               ref={chartRef}
@@ -243,83 +314,82 @@ const EnhancedChart = ({
               onClick={enableInteractions ? handleChartClick : undefined}
             />
           ) : (
-            <p className="text-gray-500 italic text-sm">
+            <StyledTypography variant="body2" color="textSecondary" fontStyle="italic">
               Chart type not available.
-            </p>
+            </StyledTypography>
           )}
-        </div>
+        </Box>
 
         {enableInteractions && clickedDataPoint && (
-          <div className="mt-4">
-            <h4 className="text-md font-medium text-gray-900">
+          <Box mt={3}>
+            <StyledTypography variant="h6" fontWeight="medium" color="textPrimary" mb={1}>
               Details for {clickedDataPoint.productName}
-            </h4>
-            <dl className="mt-2 border-t border-gray-200 divide-y divide-gray-200">
+            </StyledTypography>
+            <Box mt={1} borderTop="1px solid #e0e0e0" >
+              <Divider sx={{ my: 0.5 }} />
               {Object.entries(clickedDataPoint)
                 .filter(
                   ([key, value]) =>
                     key !== "productName" && key !== "__v" && key !== "_id"
                 )
                 .map(([key, value]) => (
-                  <div key={key} className="py-1 sm:grid sm:grid-cols-3 sm:gap-4">
-                    <dt className="text-sm font-medium text-gray-500">
+                  <Box key={key} display="grid" gridTemplateColumns="1fr 2fr" gap={1} py={0.5}>
+                    <StyledTypography variant="body2" color="textSecondary">
                       {key}
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    </StyledTypography>
+                    <StyledTypography variant="body2" color="textPrimary">
                       {typeof value === "number" ? value.toFixed(2) : value}
-                    </dd>
-                  </div>
+                    </StyledTypography>
+                  </Box>
                 ))}
-            </dl>
-          </div>
+            </Box>
+          </Box>
         )}
 
         {showDataTable && sortedData.length > 0 && (
-          <div className="mt-6 overflow-x-auto">
-            <h4 className="text-md font-medium text-gray-900 mb-2">Data</h4>
-            <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
+          <Box mt={3}>
+            <StyledTypography variant="h6" fontWeight="medium" color="textPrimary" mb={1}>Data</StyledTypography>
+            <StyledTableContainer>
+              <StyledTable size="small">
+                <StyledTableHead>
+                  <TableRow>
                     {Object.keys(sortedData[0]).map((key) => (
-                      <th
+                      <StyledTableCell
                         key={key}
-                        scope="col"
-                        className="px-3 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                         onClick={() => handleSort(key)}
+                        sx={{ cursor: 'pointer', userSelect: 'none' }}
                       >
-                        {key}
-                        {sortColumn === key && (
-                          <span className="ml-1">
-                            {sortDirection === "asc" ? "▲" : "▼"}
-                          </span>
-                        )}
-                      </th>
+                        <Box display="flex" alignItems="center">
+                          {key}
+                          {sortColumn === key && (
+                            <Box ml={0.5}>
+                              {sortDirection === "asc" ? "▲" : "▼"}
+                            </Box>
+                          )}
+                        </Box>
+                      </StyledTableCell>
                     ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                  </TableRow>
+                </StyledTableHead>
+                <TableBody>
                   {sortedData.map((item) => (
-                    <tr key={item.productName}>
+                    <TableRow key={item.productName}>
                       {Object.entries(item).map(([key, value]) => (
-                        <td
-                          key={key}
-                          className="px-3 py-2 whitespace-nowrap text-xs text-gray-500"
-                        >
+                        <StyledTableCell key={key}>
                           {typeof value === "number"
                             ? value.toFixed(2)
                             : value}
-                        </td>
+                        </StyledTableCell>
                       ))}
-                    </tr>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                </TableBody>
+              </StyledTable>
+            </StyledTableContainer>
+          </Box>
         )}
-      </div>
-    </div>
+      </Box>
+    </Paper>
   );
 };
 

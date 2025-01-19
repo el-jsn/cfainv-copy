@@ -60,3 +60,17 @@
   .animate-fade-scale {
     animation: fade-scale 0.2s ease-out;
   }
+
+  /* styles.css */
+  .fullscreen {
+    max-height: 100% !important;
+}
+.fullscreen > *{
+    flex: 1;
+    width: 16.66% !important;
+    max-width: none !important;
+}
+
+.shrink {
+    flex-shrink: 1;
+}

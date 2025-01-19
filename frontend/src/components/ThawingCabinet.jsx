@@ -1,3 +1,5 @@
+// src/components/ThawingCabinet.js
+
 import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from "react";
 import { Clock, Maximize, Minimize } from "lucide-react";
 import axiosInstance from "./axiosInstance";
@@ -141,11 +143,68 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
       return entryDate >= closureStartDate && entryDate <= closureEndDate;
     });
   }, [closures, entry.day]);
+
+  const dayMessages = useMemo(() => {
+    return messages.filter(msg => msg.day === entry.day);
+  }, [messages, entry.day]);
+
+  const productMessages = useMemo(() => {
+    return dayMessages.filter(msg => msg.products);
+  }, [dayMessages])
+
+  const noProductMessages = useMemo(() => {
+    return dayMessages.filter(msg => !msg.products || msg.products === "");
+  }, [dayMessages])
+
+  const productsMap = useMemo(() => {
+    return {
+      "Filets": { name: "Filets", data: entry.filets, bg: "bg-blue-300 text-gray-800", index: 0 },
+      "Spicy Filets": { name: "Spicy Filets", data: entry.spicy, bg: "bg-purple-200 text-gray-800", index: 1 },
+      "Grilled Filets": { name: "Grilled Fillets", data: entry.grilledFilets, bg: "bg-amber-200 text-gray-800", index: 2 },
+      "Grilled Nuggets": { name: "Grilled Nuggets", data: entry.grilledNuggets, bg: "bg-gray-300 text-gray-800", index: 3 },
+      "Nuggets": { name: "Nuggets", data: entry.nuggets, bg: "bg-pink-200 text-gray-800", index: 4 },
+      "Spicy Strips": { name: "Spicy Strips", data: entry.strips, bg: "bg-red-400 text-gray-800", index: 5 },
+    }
+  }, [entry]);
+
+
+
+  const renderProductBox = (productName) => {
+    const productData = productsMap[productName];
+
+    const relevantMessages = productMessages.filter(msg => {
+      const products = msg.products ? msg.products.split(',') : [];
+      return products.includes(productName)
+    })
+
+    if (!productData) return null;
+    return (
+      <div
+        key={productData.index}
+        className={`flex-1 ${productData.bg} p-2 m-1 rounded-md transition-all duration-200
+                    hover:shadow-sm flex flex-col justify-center items-center`}
+      >
+        <div className="font-semibold text-center mb-0.5 text-l sm:text-base">{productData.name}</div>
+        <div className={`text-center text-l sm:text-base ${productData.data.modified ? "text-red-700 font-bold" : ""}`}>
+          {productData.data.cases > 0 && <div>{productData.data.cases} cases</div>}
+          {productData.data.bags > 0 && <div>{productData.data.bags} bags</div>}
+        </div>
+        {relevantMessages.map((msg, index) => (
+          <div key={index} className="mt-1 text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200">
+            {msg.message}
+          </div>
+        ))}
+
+      </div>
+    );
+  };
+
+
   return (
     <div
       key={entry.day}
       className={`flex flex-col transition-all duration-200
-        ${isToday
+            ${isToday
           ? 'ring-2 ring-blue-500 shadow-lg border-transparent'
           : 'border border-gray-200 hover:shadow-md'
         } rounded-lg md:rounded-xl`}
@@ -153,17 +212,17 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
     >
       <div
         className={`p-2 sm:p-2 rounded-t-lg md:rounded-t-xl font-bold text-center text-sm sm:text-base
-          ${isToday
+              ${isToday
             ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
             : 'bg-gradient-to-r from-gray-100 to-gray-200'
           }`}
       >
         <div className="p-1">{entry.day}</div>
-        {messages.find(msg => msg.day === entry.day) && (
-          <div className="mt-1 text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200">
-            {messages.find(msg => msg.day === entry.day).message}
+        {noProductMessages.map((msg, index) => (
+          <div key={index} className="mt-1 text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200">
+            {msg.message}
           </div>
-        )}
+        ))}
       </div>
 
       {closure ? (
@@ -198,27 +257,8 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
           <div className="absolute bottom-0 right-0 w-12 h-12 bg-red-200 rounded-tl-full opacity-50"></div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col gap-1 p-1 sm:p-2">
-          {[
-            { name: "Filets", data: entry.filets, bg: "bg-blue-300 text-gray-800" },
-            { name: "Spicy Filets", data: entry.spicy, bg: "bg-purple-200 text-gray-800" },
-            { name: "Grilled Fillets", data: entry.grilledFilets, bg: "bg-amber-200 text-gray-800" },
-            { name: "Grilled Nuggets", data: entry.grilledNuggets, bg: "bg-gray-300 text-gray-800" },
-            { name: "Nuggets", data: entry.nuggets, bg: "bg-pink-200 text-gray-800" },
-            { name: "Spicy Strips", data: entry.strips, bg: "bg-red-400 text-gray-800" },
-          ].map((item, index) => (
-            <div
-              key={index}
-              className={`flex-1 ${item.bg} p-2 m-1 rounded-md transition-all duration-200
-                hover:shadow-sm flex flex-col justify-center items-center`}
-            >
-              <div className="font-semibold text-center mb-0.5 text-l sm:text-base">{item.name}</div>
-              <div className={`text-center text-l sm:text-base ${item.data.modified ? "text-red-700 font-bold" : ""}`}>
-                {item.data.cases > 0 && <div>{item.data.cases} cases</div>}
-                {item.data.bags > 0 && <div>{item.data.bags} bags</div>}
-              </div>
-            </div>
-          ))}
+        <div className="flex-1 flex flex-col gap-1 p-1 sm:p-2 relative">
+          {Object.keys(productsMap).map(productName => renderProductBox(productName))}
         </div>
       )}
     </div>
@@ -236,6 +276,8 @@ const ThawingCabinet = () => {
   const [wakeLock, setWakeLock] = useState(null);
   const adjustmentsRef = useRef(adjustments);
   const videoRef = useRef(null); // Ref for the video element
+  const containerRef = useRef(null)
+
 
   useEffect(() => {
     adjustmentsRef.current = adjustments;
@@ -299,11 +341,18 @@ const ThawingCabinet = () => {
       document.documentElement.requestFullscreen();
       setIsFullScreen(true);
       localStorage.setItem('isFullScreen', 'true');
+      if (containerRef.current) {
+        containerRef.current.classList.add('fullscreen');
+      }
+
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
         setIsFullScreen(false);
         localStorage.setItem('isFullScreen', 'false');
+        if (containerRef.current) {
+          containerRef.current.classList.remove('fullscreen');
+        }
       }
     }
   }, []);
@@ -417,7 +466,7 @@ const ThawingCabinet = () => {
           </div>
         </div>
 
-        <div className="flex-1 grid grid-cols-6 gap-1 sm:gap-2" style={{ maxHeight: 'calc(100% - 50px)' }}>
+        <div ref={containerRef} className={`flex-1 flex gap-1 sm:gap-2 ${isFullScreen ? 'fullscreen' : ''} `} style={{ maxHeight: 'calc(100% - 50px)' }}>
           {calculatedData.map((entry) => (
             <DayCard
               key={entry.day}

@@ -27,10 +27,7 @@ import {
   Divider,
   TextField,
   InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Snackbar
 } from "@mui/material";
 import {
   CloudUpload,
@@ -44,20 +41,20 @@ import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon,
 } from "@mui/icons-material";
-import { styled, useTheme } from "@mui/material/styles";
+import { styled } from "@mui/material/styles";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as ChartTooltip } from 'recharts';
 
+
 // Theming and Consistent Styling (Adapted for White Theme)
-const primaryColor = "#1976d2"; // Standard Material Blue
+const primaryColor = "#90a4ae"; // Light Gray
 const secondaryColor = "#dc004e"; // A vibrant accent
-const successColor = "#2e7d32";
-const warningColor = "#ed6c02";
-const errorColor = "#d32f2f";
-const textColorPrimary = "#212121"; // Dark text for contrast on white
-const textColorSecondary = "#757575";
-const backgroundColor = "#f5f5f5"; // Light gray background
-const tableRowHoverColor = "#e0e0e0"; // Light gray hover
-const tableRowEvenColor = "#f9f9f9"; // Very light gray for even rows
+const successColor = "#4caf50";
+const warningColor = "#ff9800";
+const errorColor = "#f44336";
+const textColorPrimary = "#37474f"; // Dark gray text
+const textColorSecondary = "#78909c"; // Gray for supporting text
+const backgroundColor = "#fafafa"; // Very light gray background
+const tableRowEvenColor = "#f2f2f2"; // Light Gray for Even Rows
 
 // Styled File Input (Keep this)
 const Input = styled("input")({
@@ -74,10 +71,12 @@ const Input = styled("input")({
 
 // Styled Card Header (Adapted for White Theme)
 const StyledCardHeader = styled(CardHeader)(({ theme }) => ({
-  backgroundColor: primaryColor,
-  color: theme.palette.common.white,
+  backgroundColor: "#f0f0f0",
+  color: textColorPrimary,
+  padding: theme.spacing(2, 2),
   '& .MuiCardHeader-title': {
-    fontWeight: 600,
+    fontSize: '1.2rem',
+    fontWeight: 500,
   },
 }));
 
@@ -85,15 +84,14 @@ const StyledCardHeader = styled(CardHeader)(({ theme }) => ({
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   color: textColorPrimary,
   borderBottom: `1px solid ${theme.palette.divider}`, // Subtle divider between cells
+  padding: theme.spacing(1, 2),
 }));
 
-// Styled TableRow for hover and alternating background (Adapted for White Theme)
+// Styled TableRow for alternating background (Adapted for White Theme)
 const StyledTableRow = styled(TableRow)(({ theme, iseven }) => ({
-  '&:hover': {
-    backgroundColor: tableRowHoverColor,
-  },
-  backgroundColor: iseven ? tableRowEvenColor : theme.palette.background.paper,
+  backgroundColor: iseven ? tableRowEvenColor : 'inherit',
 }));
+
 
 const ITEM_CATEGORIES = {
   Filets: [
@@ -148,13 +146,91 @@ const ITEM_CATEGORIES = {
   },
 };
 
+const PREP_ITEM_CATEGORIES = {
+  "Lettuce": [
+    "CAN Sandwich - Grilled Club w/ Cheddar",
+    "CAN Sandwich - Grilled Club w/ Jack",
+    "CAN Sandwich - Grilled Club w/ Proc Ched",
+    "Sandwich - Grilled Club w/No Cheese",
+    "Lettuce",
+    "Lettuce Wrap Condiment",
+    "CAN Sandwich - CFA Dlx w/ Ched",
+    "CAN Sandwich - CFA Dlx w/ Jack",
+    "CAN Sandwich - CFA Dlx w/ Proc Ched",
+    "CAN Sandwich - Grilled Club w/ Cheddar",
+    "CAN Sandwich - Grilled Club w/ Jack",
+    "CAN Sandwich - Grilled Club w/ Proc Ched",
+    "CAN Sandwich - Spicy Dlx w/ Ched",
+    "CAN Sandwich - Spicy Dlx w/ Jack",
+    "CAN Sandwich - Spicy Dlx w/ Proc Ched",
+    "Sandwich - CFA Dlx No Cheese",
+    "Sandwich - Spicy Dlx No Cheese"
+  ],
+  "Tomato": [
+    "CAN Sandwich - Grilled Club w/ Cheddar",
+    "CAN Sandwich - Grilled Club w/ Jack",
+    "CAN Sandwich - Grilled Club w/ Proc Ched",
+    "Sandwich - Grilled Club w/No Cheese",
+    "Tomato",
+    "CAN Sandwich - CFA Dlx w/ Ched",
+    "CAN Sandwich - CFA Dlx w/ Jack",
+    "CAN Sandwich - CFA Dlx w/ Proc Ched",
+    "CAN Sandwich - Grilled Club w/ Cheddar",
+    "CAN Sandwich - Grilled Club w/ Jack",
+    "CAN Sandwich - Grilled Club w/ Proc Ched",
+    "CAN Sandwich - Spicy Dlx w/ Ched",
+    "CAN Sandwich - Spicy Dlx w/ Jack",
+    "CAN Sandwich - Spicy Dlx w/ Proc Ched",
+    "Sandwich - CFA Dlx No Cheese",
+    "Sandwich - Spicy Dlx No Cheese"
+  ],
+  "Lemonade": {
+    "Lemonade - Regular, Small": 12,
+    "Lemonade - Regular, Medium": 16,
+    "Lemonade - Regular, Large": 20,
+    "Lemonade - Regular, Kids": 12,
+    "Lemonade - Gallon Regular": 128,
+    "Frosted Lemonade, Small": 6,
+    "Lemonade/Diet Lemonade, Large": 10,
+    "Lemonade/Diet Lemonade, Medium": 8,
+    "Lemonade/Diet Lemonade, Small": 6,
+  },
+  "Diet Lemonade": {
+    "Lemonade - Diet, Small": 12,
+    "Lemonade - Diet, Medium": 16,
+    "Lemonade - Diet, Large": 20,
+    "Lemonade - Diet, Kids": 12,
+    "Lemonade - Gallon Diet": 128,
+    "Frosted Lemonade - Diet, Small": 8,
+    "Lemonade/Diet Lemonade, Large": 10,
+    "Lemonade/Diet Lemonade, Medium": 8,
+    "Lemonade/Diet Lemonade, Small": 6,
+  },
+  "Sunjoy Lemonade": {
+    "Sweet Tea/Lemonade, Kids": 12,
+    "Sweet Tea/Lemonade, Small": 12,
+    "Sweet Tea/Lemonade, Medium": 16,
+    "Sweet Tea/Lemonade, Large": 20,
+    "Sweet Tea/Diet Lemonade, Kids": 12,
+    "Sweet Tea/Diet Lemonade, Small": 12,
+    "Sweet Tea/Diet Lemonade, Medium": 16,
+    "Sweet Tea/Diet Lemonade, Large": 20,
+    "Unsweet Tea/Lemonade, Small": 12,
+    "Unsweet Tea/Lemonade, Medium": 16,
+    "Unsweet Tea/Lemonade, Large": 20,
+    "Unsweet Tea/Diet Lemonade, Medium": 16,
+    "Unsweet Tea/Diet Lemonade, Large": 20
+  }
+}
+
 const EnhancedUTPUpdate = () => {
-  const theme = useTheme();
   const [utpData, setUtpData] = useState({});
+  const [prepUtpData, setPrepUtpData] = useState({}); // New state for Prep UTP
   const [analysisResults, setAnalysisResults] = useState(null);
   const [salesVariance, setSalesVariance] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [isSnackbarOpen, setIsSnackbarOpen] = useState(false); // State for Snackbar visibility
   const [errorMessage, setErrorMessage] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -292,6 +368,31 @@ const EnhancedUTPUpdate = () => {
     return updatedUtpData;
   }, []);
 
+  const calculatePrepUtps = useCallback((jsonData) => {
+    const updatedPrepUtpData = {};
+    for (const category in PREP_ITEM_CATEGORIES) {
+      updatedPrepUtpData[category] = 0;
+      const categoryConfig = PREP_ITEM_CATEGORIES[category];
+      for (const item of jsonData) {
+        const itemName = item['Item Name'];
+        const itemCount = item['# Sold Per 1000'];
+        if (Array.isArray(categoryConfig)) {
+          if (categoryConfig.includes(itemName)) {
+            updatedPrepUtpData[category] += itemCount;
+          }
+        } else if (typeof categoryConfig === "object" && categoryConfig !== null) {
+          if (categoryConfig[itemName]) {
+            updatedPrepUtpData[category] += itemCount * categoryConfig[itemName];
+          }
+        }
+      }
+      if (category === "Lettuce" || category === "Tomato") {
+        updatedPrepUtpData[category] = updatedPrepUtpData[category] * 2;
+      }
+    }
+    return updatedPrepUtpData;
+  }, []);
+
   const analyzeSalesReport = useCallback((jsonData) => {
     const negativeCountItems = jsonData.filter(item => item['# Sold Per 1000'] < 0);
     const lowSoldCountItems = jsonData.filter(
@@ -349,7 +450,9 @@ const EnhancedUTPUpdate = () => {
 
         if (parsedData) {
           const updatedUtpData = calculateUtps(parsedData);
+          const updatedPrepUtpData = calculatePrepUtps(parsedData)
           setUtpData(updatedUtpData);
+          setPrepUtpData(updatedPrepUtpData);
 
           calculateOverallMetrics(parsedData);
 
@@ -376,7 +479,7 @@ const EnhancedUTPUpdate = () => {
     };
 
     reader.readAsArrayBuffer(file);
-  }, [calculateUtps, analyzeSalesReport, calculateSalesVariance, parseExcelData, calculateOverallMetrics]);
+  }, [calculateUtps, analyzeSalesReport, calculateSalesVariance, parseExcelData, calculateOverallMetrics, calculatePrepUtps]);
 
   const handleDrop = useCallback(
     (event) => {
@@ -408,13 +511,30 @@ const EnhancedUTPUpdate = () => {
     }
   };
 
+  const handlePrepSubmit = async () => {
+    setIsLoading(true);
+    setErrorMessage("");
+    setSuccessMessage("Prep UPT data successfully submitted.");
+    try {
+      await axiosInstance.post("/upt/bulk", prepUtpData);
+      setIsSnackbarOpen(true); // Open the Snackbar on success
+    } catch (error) {
+      console.error("Error submitting data:", error);
+      setErrorMessage(
+        error.response?.data?.message || "Failed to submit Prep UPT data. Please verify the information and try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setIsLoading(true);
     setErrorMessage("");
-    setSuccessMessage("");
+    setSuccessMessage("UPT data successfully submitted.");
     try {
       await axiosInstance.post("/upt/bulk", utpData);
-      setSuccessMessage("UPT data successfully submitted.");
+      setIsSnackbarOpen(true);
     } catch (error) {
       console.error("Error submitting data:", error);
       setErrorMessage(
@@ -424,6 +544,7 @@ const EnhancedUTPUpdate = () => {
       setIsLoading(false);
     }
   };
+
 
   // --- Filtering and Sorting Logic ---
   const filterSortData = useCallback((data, searchTerm, sortConfig) => {
@@ -497,6 +618,22 @@ const EnhancedUTPUpdate = () => {
     [utpData]
   );
 
+  const prepUtpChartData = useMemo(
+    () =>
+      Object.entries(prepUtpData).map(([category, value]) => ({
+        name: category,
+        UPT: parseFloat(value.toFixed(2)),
+      })),
+    [prepUtpData]
+  );
+
+  const formatPrepUtpDisplay = (category, value) => {
+    if (["Lemonade", "Diet Lemonade", "Sunjoy Lemonade"].includes(category)) {
+      return `${value.toFixed(2)} oz`;
+    }
+    return value.toFixed(2);
+  };
+
   const topPerformingItems = useMemo(() => {
     const excludedItems = ["Report Totals", "Condiments", "Entrees", "Side Items", "Soft Drinks"];
     return [...rawSalesData]
@@ -516,18 +653,31 @@ const EnhancedUTPUpdate = () => {
       .slice(0, 5);
   }, [rawSalesData]);
 
+
+  const handleSnackbarClose = () => {
+    setIsSnackbarOpen(false);
+  };
+
   return (
     <Box sx={{ p: 4, backgroundColor, color: textColorPrimary }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 500 }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 500, textAlign: 'left' }}>
         Sales Data Analytics Suite
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
         Upload your sales report to analyze Unit Per Thousand (UPT) and gain valuable insights.
       </Typography>
 
+      <Snackbar
+        open={isSnackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={successMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
+
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
-          <Card elevation={3}>
+          <Card elevation={1}>
             <CardContent>
               <Box
                 sx={{
@@ -536,9 +686,9 @@ const EnhancedUTPUpdate = () => {
                   borderRadius: 2,
                   textAlign: "center",
                   cursor: "pointer",
-                  backgroundColor: dragActive ? "#e3f2fd" : theme.palette.background.paper,
+                  backgroundColor: dragActive ? "#f5f5f5" : 'transparent',
                   transition: 'background-color 0.3s ease',
-                  '&:hover': { backgroundColor: '#e3f2fd' },
+                  '&:hover': { backgroundColor: '#f5f5f5' },
                 }}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
@@ -561,7 +711,7 @@ const EnhancedUTPUpdate = () => {
                 <Input accept=".xlsx, .xls" id="file-upload" type="file" onChange={handleFileChange} />
                 {selectedFile && (
                   <Box mt={2} display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="subtitle2" color={textColorSecondary} noWrap style={{ overflowX: 'hidden', marginRight: theme.spacing(1) }}>
+                    <Typography variant="subtitle2" color={textColorSecondary} noWrap style={{ overflowX: 'hidden', marginRight: 8 }}>
                       {selectedFile.name}
                     </Typography>
                     <Tooltip title="Remove">
@@ -584,23 +734,14 @@ const EnhancedUTPUpdate = () => {
                 </Alert>
               </Collapse>
 
-              <Collapse in={!!successMessage}>
-                <Alert
-                  icon={<CheckCircleOutline />}
-                  severity="success"
-                  onClose={() => setSuccessMessage("")}
-                  sx={{ mt: 2 }}
-                >
-                  {successMessage}
-                </Alert>
-              </Collapse>
+
             </CardContent>
           </Card>
         </Grid>
 
         <Grid item xs={12} md={6}>
           {reportMetadata && (
-            <Card elevation={3}>
+            <Card elevation={1}>
               <StyledCardHeader title="Report Summary" />
               <CardContent>
                 <Typography variant="subtitle1" color={textColorPrimary}>
@@ -620,10 +761,10 @@ const EnhancedUTPUpdate = () => {
           )}
 
           {overallSalesMetrics && (
-            <Card elevation={3} sx={{ mt: 3 }}>
+            <Card elevation={1} sx={{ mt: 3 }}>
               <StyledCardHeader title="Aggregate Sales Metrics" />
               <CardContent>
-                <Typography variant="h6" color={textColorPrimary} gutterBottom>Key Performance Indicators</Typography>
+                <Typography variant="h6" color={textColorPrimary} gutterBottom sx={{ fontWeight: 500 }}>Key Performance Indicators</Typography>
                 <Divider sx={{ mb: 1 }} />
                 <Typography variant="body1" color={textColorPrimary}>
                   Total Items Sold: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalSold}</Box>
@@ -641,7 +782,7 @@ const EnhancedUTPUpdate = () => {
 
         {Object.keys(utpData).length > 0 && (
           <Grid item xs={12}>
-            <Card elevation={3}>
+            <Card elevation={1}>
               <StyledCardHeader
                 title="Unit Per Thousand Analysis"
                 action={
@@ -688,17 +829,69 @@ const EnhancedUTPUpdate = () => {
                   </Table>
                 </TableContainer>
               </CardContent>
+            </Card>          </Grid>
+        )}
+
+        {Object.keys(prepUtpData).length > 0 && (
+          <Grid item xs={12}>
+            <Card elevation={1}>
+              <StyledCardHeader
+                title="Prep Unit Per Thousand Analysis"
+                action={
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handlePrepSubmit}
+                    disabled={isLoading}
+                    startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : <CheckCircleOutline />}
+                    sx={{ ml: 2 }}
+                  >
+                    {isLoading ? "Submitting..." : "Submit Prep UPT Data"}
+                  </Button>
+                }
+              />
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={prepUtpChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <ChartTooltip />
+                    <Bar dataKey="UPT" fill={primaryColor} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <TableContainer component={Paper} elevation={1} sx={{ mt: 2 }}>
+                  <Table aria-label="calculated prep upts table">
+                    <TableHead>
+                      <TableRow>
+                        <StyledTableCell sx={{ fontWeight: 'bold' }}>Item Category</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>UPT</StyledTableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {Object.entries(prepUtpData).map(([key, value], index) => (
+                        <StyledTableRow key={key} iseven={index % 2 === 0}>
+                          <StyledTableCell component="th" scope="row">
+                            {key}
+                          </StyledTableCell>
+                          <StyledTableCell align="right">{formatPrepUtpDisplay(key, value)}</StyledTableCell>
+                        </StyledTableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
             </Card>
           </Grid>
         )}
 
         {analysisResults && (
           <Grid item xs={12}>
-            <Card elevation={3}>
+            <Card elevation={1}>
               <StyledCardHeader title="Key Insights and Recommendations" />
               <CardContent>
 
-                <Typography variant="h6" gutterBottom>Menu Item Performance</Typography>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 500 }}>Menu Item Performance</Typography>
                 <Divider sx={{ mb: 2 }} />
                 <Grid container spacing={2} mb={3}>
                   <Grid item xs={12} md={6}>
@@ -709,8 +902,8 @@ const EnhancedUTPUpdate = () => {
                       <Table size="small">
                         <TableHead sx={{ backgroundColor: successColor }}>
                           <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.success.contrastText }}>Item</StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.success.contrastText }}># Sold Per 1000</StyledTableCell>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>Item</StyledTableCell>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}># Sold Per 1000</StyledTableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -732,8 +925,8 @@ const EnhancedUTPUpdate = () => {
                       <Table size="small">
                         <TableHead sx={{ backgroundColor: warningColor }}>
                           <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Item</StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}># Sold Per 1000</StyledTableCell>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>Item</StyledTableCell>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}># Sold Per 1000</StyledTableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -751,7 +944,7 @@ const EnhancedUTPUpdate = () => {
 
                 {analysisResults.negativeCountItems.length > 0 && (
                   <Box mb={3}>
-                    <Typography variant="h6" color={errorColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="h6" color={errorColor} gutterBottom sx={{ display: 'flex', alignItems: 'center', fontWeight: 500 }}>
                       <Warning sx={{ mr: 1 }} /> Potential Inventory Discrepancies
                       <Tooltip title="Items with a negative '# Sold Per 1000' count may indicate overstock or potential waste. Investigate these items for possible adjustments.">
                         <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
@@ -763,6 +956,19 @@ const EnhancedUTPUpdate = () => {
                       size="small"
                       fullWidth
                       margin="dense"
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": {
+                            borderColor: textColorSecondary,
+                          },
+                          "&:hover fieldset": {
+                            borderColor: textColorPrimary,
+                          },
+                          "&.Mui-focused fieldset": {
+                            borderColor: primaryColor,
+                          },
+                        },
+                      }}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -777,10 +983,10 @@ const EnhancedUTPUpdate = () => {
                       <Table size="small" aria-label="overstock items">
                         <TableHead sx={{ backgroundColor: errorColor }}>
                           <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.error.contrastText }}>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>
                               Item
                             </StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.error.contrastText }}>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>
                               Count (# per 1000 Sold)
                             </StyledTableCell>
                           </TableRow>
@@ -800,7 +1006,7 @@ const EnhancedUTPUpdate = () => {
 
                 {analysisResults.lowSoldCountItems.length > 0 && (
                   <Box mb={3}>
-                    <Typography variant="h6" color={warningColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="h6" color={warningColor} gutterBottom sx={{ display: 'flex', alignItems: 'center', fontWeight: 500 }}>
                       <Warning sx={{ mr: 1 }} /> Items with Lower Sales Volume
                       <Tooltip title="Items with low 'Sold Count' may require attention. Consider promotional activities or menu adjustments.">
                         <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
@@ -812,6 +1018,19 @@ const EnhancedUTPUpdate = () => {
                       size="small"
                       fullWidth
                       margin="dense"
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": {
+                            borderColor: textColorSecondary,
+                          },
+                          "&:hover fieldset": {
+                            borderColor: textColorPrimary,
+                          },
+                          "&.Mui-focused fieldset": {
+                            borderColor: primaryColor,
+                          },
+                        },
+                      }}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -826,10 +1045,10 @@ const EnhancedUTPUpdate = () => {
                       <Table size="small" aria-label="low sold count items">
                         <TableHead sx={{ backgroundColor: warningColor }}>
                           <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>
                               Item
                             </StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>
                               Sold Count
                             </StyledTableCell>
                           </TableRow>
@@ -849,7 +1068,7 @@ const EnhancedUTPUpdate = () => {
 
                 {analysisResults.highPromoCountItems.length > 0 && (
                   <Box mb={3}>
-                    <Typography variant="h6" color={primaryColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="h6" color={primaryColor} gutterBottom sx={{ display: 'flex', alignItems: 'center', fontWeight: 500 }}>
                       <Lightbulb sx={{ mr: 1 }} /> High Promotional Redemption Items
                       <Tooltip title="Review items with a high 'Promo Count'. Understand the reasons behind the high promotion usage.">
                         <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
@@ -861,6 +1080,19 @@ const EnhancedUTPUpdate = () => {
                       size="small"
                       fullWidth
                       margin="dense"
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": {
+                            borderColor: textColorSecondary,
+                          },
+                          "&:hover fieldset": {
+                            borderColor: textColorPrimary,
+                          },
+                          "&.Mui-focused fieldset": {
+                            borderColor: primaryColor,
+                          },
+                        },
+                      }}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -875,10 +1107,10 @@ const EnhancedUTPUpdate = () => {
                       <Table size="small" aria-label="high promo count items">
                         <TableHead sx={{ backgroundColor: primaryColor }}>
                           <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.primary.contrastText }}>
+                            <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>
                               Item
                             </StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.primary.contrastText }}>
+                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>
                               Promo Count
                             </StyledTableCell>
                           </TableRow>
@@ -904,7 +1136,7 @@ const EnhancedUTPUpdate = () => {
                         aria-controls="promo-effectiveness-content"
                         id="promo-effectiveness-header"
                       >
-                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', fontWeight: 500 }}>
                           <Lightbulb sx={{ mr: 1 }} /> Promotion Effectiveness
                         </Typography>
                       </AccordionSummary>
@@ -918,6 +1150,19 @@ const EnhancedUTPUpdate = () => {
                           size="small"
                           fullWidth
                           margin="dense"
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              "& fieldset": {
+                                borderColor: textColorSecondary,
+                              },
+                              "&:hover fieldset": {
+                                borderColor: textColorPrimary,
+                              },
+                              "&.Mui-focused fieldset": {
+                                borderColor: primaryColor,
+                              },
+                            },
+                          }}
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
@@ -961,10 +1206,10 @@ const EnhancedUTPUpdate = () => {
 
         {salesVariance && salesVariance.length > 0 && (
           <Grid item xs={12}>
-            <Card elevation={3}>
+            <Card elevation={1}>
               <StyledCardHeader title="Sales Variance Analysis" />
               <CardContent>
-                <Typography variant="h6" color={warningColor} gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="h6" color={warningColor} gutterBottom sx={{ display: 'flex', alignItems: 'center', fontWeight: 500 }}>
                   <Warning sx={{ mr: 1 }} /> Significant Sales Variances
                   <Tooltip title="Items with notable differences between 'Total Count' and 'Sold Count'. Investigate potential issues in inventory management or sales tracking.">
                     <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
@@ -976,6 +1221,19 @@ const EnhancedUTPUpdate = () => {
                   size="small"
                   fullWidth
                   margin="dense"
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: textColorSecondary,
+                      },
+                      "&:hover fieldset": {
+                        borderColor: textColorPrimary,
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: primaryColor,
+                      },
+                    },
+                  }}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -990,11 +1248,11 @@ const EnhancedUTPUpdate = () => {
                   <Table size="small" aria-label="sales variance table">
                     <TableHead sx={{ backgroundColor: warningColor }}>
                       <TableRow>
-                        <StyledTableCell sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Item</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Total Count</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Sold Count</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Variance</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: theme.palette.warning.contrastText }}>Variance (%)</StyledTableCell>
+                        <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>Item</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>Total Count</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>Sold Count</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>Variance</StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>Variance (%)</StyledTableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>

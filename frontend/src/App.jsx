@@ -14,6 +14,7 @@ import ClosurePlanList from "./components/ClosurePlanList";
 import Instructions from "./components/InstructionsComponent";
 import { useEffect } from "react";
 import { AuthProvider, useAuth } from "./components/AuthContext";
+import HowToUse from "./components/HowToUse";
 import { Navigate } from "react-router-dom";
 
 const App = () => {
@@ -94,6 +95,11 @@ const App = () => {
             <Route path="/update-upt" element={
               <ProtectedRoute adminOnly>
                 <UpdateUPTs />
+              </ProtectedRoute>
+            } />
+            <Route path="/how-to" element={
+              <ProtectedRoute adminOnly>
+                <HowToUse />
               </ProtectedRoute>
             } />
             <Route path="/update-sales-projection" element={

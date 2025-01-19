@@ -4,11 +4,12 @@ import {
   Home,
   Menu,
   X,
-  Upload, // For Update UPT
-  Hammer, // For Adjust Allocations
-  CalendarClock, // For Store Closures
-  HelpCircle, // For Allocations Instructions
-  Calendar, // For Thawing Cabinet
+  Upload,
+  Hammer,
+  CalendarClock,
+  BrainCog,
+  Calendar,
+  LucideFileQuestion
 } from "lucide-react";
 import { useAuth } from "./AuthContext";
 import {
@@ -23,40 +24,51 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
-  Divider, // Import Divider
+  Divider,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-const drawerWidth = 240;
+const drawerWidth = 280; // Increased drawer width for more breathing space
 
 const NavItem = styled(ListItemButton)(({ theme, active }) => ({
-  borderRadius: theme.shape.borderRadius, // Rounded corners for list items
-  marginBottom: theme.spacing(0.5), // Add a little spacing between items
+  borderRadius: theme.shape.borderRadius,
+  padding: theme.spacing(1.2, 2), // Increased padding for touch targets
+  marginBottom: theme.spacing(0.5),
+  transition: theme.transitions.create(['background-color', 'color'], {
+    duration: theme.transitions.duration.shortest,
+  }),
+  fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif',
   '&:hover': {
     backgroundColor: theme.palette.action.hover, // Keep the standard hover
     '& .MuiListItemIcon-root': {
-      color: theme.palette.primary.main, // Change icon color on hover
+      color: theme.palette.primary.main,
     },
   },
   ...(active && {
-    backgroundColor: theme.palette.primary.light, // Highlight for active item
+    backgroundColor: theme.palette.primary.light,
     '& .MuiListItemIcon-root': {
-      color: theme.palette.primary.contrastText, // Adjust active icon color
+      color: theme.palette.primary.contrastText,
     },
     '& .MuiListItemText-primary': {
-      fontWeight: theme.typography.fontWeightMedium, // Make active text bolder
+      fontWeight: theme.typography.fontWeightMedium,
     },
   }),
-  transition: theme.transitions.create('background-color', { // Smooth transition
+  transition: theme.transitions.create('background-color', {
     duration: theme.transitions.duration.shortest,
   }),
 }));
 
+
 const NavLink = memo(({ to, icon, label, onClick, active }) => {
   return (
     <NavItem component={RouterLink} to={to} onClick={onClick} active={active}>
-      <ListItemIcon sx={{ minWidth: 36 }}>{icon}</ListItemIcon> {/* Adjust icon spacing */}
-      <ListItemText primary={label} />
+      <ListItemIcon sx={{ minWidth: 36 }}>{icon}</ListItemIcon>
+      <ListItemText
+        primary={label}
+        primaryTypographyProps={{
+          fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif'
+        }}
+      />
     </NavItem>
   );
 });
@@ -67,14 +79,16 @@ const Sidebar = memo(({ open, onClose, quickAccessLinks, location }) => (
     open={open}
     onClose={onClose}
     ModalProps={{
-      keepMounted: true, // Better open performance on mobile.
+      keepMounted: true,
     }}
     sx={{
       '& .MuiDrawer-paper': {
         width: drawerWidth,
         boxSizing: 'border-box',
-        backgroundColor: '#f8f9fa', // Subtle background color
+        backgroundColor: 'rgba(255, 255, 255, 0.95)', // Slightly transparent white
+        backdropFilter: 'blur(5px)', // Add a light blur effect
         borderRadius: 2, // Rounded corners for the sidebar
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', // Subtle shadow
       },
     }}
   >
@@ -83,11 +97,11 @@ const Sidebar = memo(({ open, onClose, quickAccessLinks, location }) => (
         <X />
       </IconButton>
     </Box>
-    <Box sx={{ overflow: 'auto', px: 1, py: 1 }}> {/* Add padding to the content */}
-      <Typography variant="subtitle1" gutterBottom sx={{ px: 1, mt: 1, fontWeight: 'bold' }}>
+    <Box sx={{ overflow: 'auto', px: 1, py: 1 }}>
+      <Typography variant="subtitle1" gutterBottom sx={{ px: 1, mt: 1, mb: 0.5, fontWeight: 'bold', fontFamily: 'SF Pro Display, Helvetica Neue, sans-serif' }}>
         Quick Access
       </Typography>
-      <Divider sx={{ my: 0.5 }} /> {/* Subtle divider */}
+      <Divider sx={{ my: 0.5 }} />
       <List>
         {quickAccessLinks.map((link) => (
           <NavLink
@@ -95,8 +109,8 @@ const Sidebar = memo(({ open, onClose, quickAccessLinks, location }) => (
             to={link.to}
             icon={link.icon}
             label={link.label}
-            onClick={onClose} // Pass onClose here to close on navigation
-            active={location.pathname === link.to} // Check if the route is active
+            onClick={onClose}
+            active={location.pathname === link.to}
           />
         ))}
       </List>
@@ -113,6 +127,7 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })(
       duration: theme.transitions.duration.leavingScreen,
     }),
     marginLeft: 0,
+    backgroundColor: '#f5f5f5', // Light gray background for main content
     ...(open && {
       transition: theme.transitions.create('margin', {
         easing: theme.transitions.easing.easeOut,
@@ -120,6 +135,8 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })(
       }),
       marginLeft: drawerWidth,
     }),
+    fontFamily: 'SF Pro Text, Helvetica Neue, sans-serif',
+
   }),
 );
 
@@ -137,15 +154,18 @@ const Layout = memo(({ children }) => {
 
   const handleNavigation = useCallback((to) => {
     if (isMobile) {
-      handleDrawerToggle(); // Close the drawer only on mobile
+      handleDrawerToggle();
     }
     navigate(to);
   }, [isMobile, handleDrawerToggle, navigate]);
+
 
   const quickAccessLinks = React.useMemo(() => {
     const links = [
       { to: "/", icon: <Home />, label: "Home" },
       { to: "/thawing-cabinet", icon: <Calendar />, label: "Thawing Cabinet" },
+      { to: "/how-to", icon: <LucideFileQuestion />, label: "How to Use" }
+
     ];
 
     if (user && user.isAdmin) {
@@ -153,16 +173,16 @@ const Layout = memo(({ children }) => {
         { to: "/update-upt", icon: <Upload />, label: "Update UPT" },
         { to: "/data/message/all", icon: <Hammer />, label: "Adjust Allocations" },
         { to: "/closure/plans", icon: <CalendarClock />, label: "Store Closures" },
-        { to: "/instructions", icon: <HelpCircle />, label: "Allocations Instructions" }
-      ); // Insert after Home
+        { to: "/instructions", icon: <BrainCog />, label: "Instructions Board" }
+      );
     }
 
     return links;
-  }, [user]); // Depend on user to re-evaluate when user changes
+  }, [user]);
+
 
   const shouldRenderMenu = location.pathname !== "/thawing-cabinet" && location.pathname !== "/login";
 
-  // Scroll to top on route change
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
@@ -177,10 +197,10 @@ const Layout = memo(({ children }) => {
               position: 'fixed',
               top: 16,
               left: 16,
-              zIndex: 1201, // Ensure it's above the drawer
-              display: { sm: 'none' }, // Hide on larger screens where the permanent drawer is visible
+              zIndex: 1201,
+              display: { sm: 'none' },
               bgcolor: 'background.paper',
-              borderRadius: '50%', // Make the menu button round
+              borderRadius: '50%',
               boxShadow: 1,
               '&:hover': {
                 boxShadow: 2,
@@ -195,12 +215,11 @@ const Layout = memo(({ children }) => {
             sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
             aria-label="mailbox folders"
           >
-            {/* The implementation can be swapped with js to avoid SEO duplication of links. */}
             <Sidebar
               open={mobileOpen}
               onClose={handleDrawerToggle}
               quickAccessLinks={quickAccessLinks}
-              location={location} // Pass the location to the Sidebar
+              location={location}
             />
             <Drawer
               variant="permanent"
@@ -210,11 +229,11 @@ const Layout = memo(({ children }) => {
               }}
               open
             >
-              <Box sx={{ overflow: 'auto', px: 1, py: 1 }}> {/* Add padding to the content */}
-                <Typography variant="subtitle1" gutterBottom sx={{ px: 1, mt: 1, fontWeight: 'bold' }}>
+              <Box sx={{ overflow: 'auto', px: 1, py: 1 }}>
+                <Typography variant="subtitle1" gutterBottom sx={{ px: 1, mt: 1, mb: 0.5, fontWeight: 'bold', fontFamily: 'SF Pro Display, Helvetica Neue, sans-serif' }}>
                   Quick Access
                 </Typography>
-                <Divider sx={{ my: 0.5 }} /> {/* Subtle divider */}
+                <Divider sx={{ my: 0.5 }} />
                 <List>
                   {quickAccessLinks.map((link) => (
                     <NavLink
@@ -222,8 +241,8 @@ const Layout = memo(({ children }) => {
                       to={link.to}
                       icon={link.icon}
                       label={link.label}
-                      onClick={() => handleNavigation(link.to)} // Close and navigate conditionally
-                      active={location.pathname === link.to} // Check if the route is active
+                      onClick={() => handleNavigation(link.to)}
+                      active={location.pathname === link.to}
                     />
                   ))}
                 </List>
