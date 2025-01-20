@@ -184,6 +184,31 @@ const PREP_ITEM_CATEGORIES = {
     "Sandwich - CFA Dlx No Cheese",
     "Sandwich - Spicy Dlx No Cheese"
   ],
+  // Romaine portions in grams
+  "Romaine": {
+    "CAN - Salad - Extra Spicy Strips": 104,
+    "Salad - Extra Chick-fil-A Filet": 104,
+    "Salad - Extra Grilled Nuggets": 104,
+    "Salad - Extra Nuggets": 104,
+    "Salad - Extra Spicy Grilled Filet (Cold)": 104,
+    "Salad - Side": 49,
+    "Salad - Signature Cobb w/ CFA Filet": 104,
+    "Salad - Signature Cobb w/ Hot Grilled Filet": 104,
+    "Salad - Signature Cobb w/ Nuggets": 104,
+    "Salad - Signature Cobb w/ Spicy Filet": 104,
+    "Salad - Signature Cobb w/Spicy Grilled Fil": 104,
+    "Salad - Spicy SW Base": 104,
+    "Salad - Spicy SW w/ CFA Filet": 104,
+    "Salad - Spicy SW w/ Grld Nuggets": 104,
+    "Salad - Spicy SW w/ Hot Grld Filet": 104,
+    "Salad - Spicy SW w/ Nuggets": 104,
+    "Salad - Spicy SW w/ Spicy Filet": 104,
+    "Salad - Spicy SW w/ Spicy Grld Filet": 104,
+    "Salad – Signature Cobb w/ Grilled Nuggets": 104,
+    "Salad Base - Signature Cobb": 104,
+    "Test - Salad - Signature Cobb w/Spicy": 104,
+    "Test - Salad - Spicy SW w/Spcy Strips": 104,
+  },
   "Lemonade": {
     "Lemonade - Regular, Small": 12,
     "Lemonade - Regular, Medium": 16,
@@ -630,6 +655,9 @@ const EnhancedUTPUpdate = () => {
   const formatPrepUtpDisplay = (category, value) => {
     if (["Lemonade", "Diet Lemonade", "Sunjoy Lemonade"].includes(category)) {
       return `${value.toFixed(2)} oz`;
+    }
+    if (category === "Romaine") {
+      return `${value.toFixed(2)} g`;
     }
     return value.toFixed(2);
   };

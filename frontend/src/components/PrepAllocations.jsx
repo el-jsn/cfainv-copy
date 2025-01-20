@@ -20,6 +20,7 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments) => {
             Lemonade: calculateBufferMultiplier(bufferData.find(item => item.productName === "Lemonade")?.bufferPrcnt || 1),
             "Diet Lemonade": calculateBufferMultiplier(bufferData.find(item => item.productName === "Diet Lemonade")?.bufferPrcnt || 1),
             "Sunjoy Lemonade": calculateBufferMultiplier(bufferData.find(item => item.productName === "Sunjoy Lemonade")?.bufferPrcnt || 1),
+            Romaine: calculateBufferMultiplier(bufferData.find(item => item.productName === "Romaine")?.bufferPrcnt || 1),
         };
 
         const utpValues = {
@@ -28,13 +29,17 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments) => {
             Lemonade: utpData.find(item => item.productName === "Lemonade")?.utp || 1.0,
             "Diet Lemonade": utpData.find(item => item.productName === "Diet Lemonade")?.utp || 1.0,
             "Sunjoy Lemonade": utpData.find(item => item.productName === "Sunjoy Lemonade")?.utp || 1.0,
+            Romaine: utpData.find(item => item.productName === "Romaine")?.utp || 1.0,
         };
 
 
-        return daysOrder.map((day) => {
+        return daysOrder.map((day, index) => {
             const entry = salesData.find(e => e.day === day) || { day, sales: 0 };
             const dayAdjustments = adjustments.filter(msg => msg.day === day);
             const currentDaySales = entry.sales;
+            const isSaturday = day === "Saturday"
+            const drinkMultiplier = isSaturday ? 1 : 0.75;
+
 
             const applyMessage = (product, pans, buckets = 0) => {
                 const message = dayAdjustments.find(msg => msg.product === product);
@@ -61,8 +66,8 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments) => {
 
             const calculateLettucePans = (utp, bufferMultiplier) => Math.round(((utp * (currentDaySales / 1000)) / 120) * bufferMultiplier);
             const calculateTomatoPans = (utp, bufferMultiplier) => Math.round(((utp * (currentDaySales / 1000)) / 166) * bufferMultiplier);
-            const calculateBuckets = (utp, bufferMultiplier) => Math.ceil((((utp / 33.814) * currentDaySales) / 1000 / 12) * bufferMultiplier);
-
+            const calculateRomainePans = (utp, bufferMultiplier) => Math.round(((utp * (currentDaySales / 1000)) / 2585.48) * bufferMultiplier);
+            const calculateBuckets = (utp, bufferMultiplier) => Math.ceil((((utp / 33.814) * currentDaySales) / 1000 / 12) * bufferMultiplier * drinkMultiplier);
 
 
 
@@ -71,12 +76,14 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments) => {
             const lemonadeBuckets = calculateBuckets(utpValues.Lemonade, bufferMultipliers.Lemonade);
             const dietLemonadeBuckets = calculateBuckets(utpValues["Diet Lemonade"], bufferMultipliers["Diet Lemonade"]);
             const sunjoyLemonadeBuckets = calculateBuckets(utpValues["Sunjoy Lemonade"], bufferMultipliers["Sunjoy Lemonade"]);
+            const romainePans = calculateRomainePans(utpValues.Romaine, bufferMultipliers.Romaine)
 
 
 
             return {
                 day: entry.day,
                 lettuce: applyMessage("Lettuce", lettucePans),
+                romaine: applyMessage("Romaine", romainePans),
                 tomato: applyMessage("Tomato", tomatoPans),
                 lemonade: applyMessage("Lemonade", 0, lemonadeBuckets),
                 dietLemonade: applyMessage("Diet Lemonade", 0, dietLemonadeBuckets),
@@ -158,10 +165,11 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
     const productsMap = useMemo(() => {
         return {
             "Lettuce": { name: "Lettuce", data: entry.lettuce, bg: "bg-green-200 text-gray-800", index: 0 },
-            "Tomato": { name: "Tomato", data: entry.tomato, bg: "bg-red-200 text-gray-800", index: 1 },
-            "Lemonade": { name: "Lemonade", data: entry.lemonade, bg: "bg-yellow-200 text-gray-800", index: 2 },
-            "Diet Lemonade": { name: "Diet Lemonade", data: entry.dietLemonade, bg: "bg-yellow-100 text-gray-800", index: 3 },
-            "Sunjoy Lemonade": { name: "Sunjoy Lemonade", data: entry.sunjoyLemonade, bg: "bg-orange-200 text-gray-800", index: 4 },
+            "Romaine": { name: "Romaine", data: entry.romaine, bg: "bg-green-300 text-gray-800", index: 1 },
+            "Tomato": { name: "Tomato", data: entry.tomato, bg: "bg-red-200 text-gray-800", index: 2 },
+            "Lemonade": { name: "Lemonade", data: entry.lemonade, bg: "bg-yellow-200 text-gray-800", index: 3 },
+            "Diet Lemonade": { name: "Diet Lemonade", data: entry.dietLemonade, bg: "bg-yellow-100 text-gray-800", index: 4 },
+            "Sunjoy Lemonade": { name: "Sunjoy Lemonade", data: entry.sunjoyLemonade, bg: "bg-orange-200 text-gray-800", index: 5 },
         }
     }, [entry]);
 
@@ -474,6 +482,7 @@ const PrepAllocations = () => {
                         />
                     ))}
                 </div>
+                <div className="mt-2 text-xs text-gray-500 text-right">*Drink Allocations for Monday - Friday are for 75% of daily sales, Saturday allocations are for 100%.</div>
             </div>
         </div>
     );
