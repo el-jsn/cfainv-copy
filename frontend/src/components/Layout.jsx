@@ -101,7 +101,7 @@ const Layout = memo(({ children }) => {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1">{children}</main>
     </div>
   );
 });
@@ -112,8 +112,8 @@ const NavLink = memo(({ to, icon, label, onClick, active }) => {
       to={to}
       onClick={onClick}
       className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${active
-          ? "bg-red-100 text-red-600"
-          : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+        ? "bg-red-100 text-red-600"
+        : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
         }`}
     >
       <div className="mr-2">{icon}</div>

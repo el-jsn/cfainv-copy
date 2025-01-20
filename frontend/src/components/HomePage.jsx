@@ -33,7 +33,7 @@ import {
   Typography,
   Button,
   IconButton,
-  Tooltip as MTTooltip, // To avoid naming conflicts with Chart.js tooltip
+  Tooltip as MTTooltip,
   Progress,
 } from "@material-tailwind/react";
 
@@ -111,8 +111,8 @@ const HomePage = () => {
         label: "Sales Projection",
         data: salesProjection.map((projection) => projection.sales),
         fill: false,
-        backgroundColor: "#6366F1",
-        borderColor: "#6366F1",
+        backgroundColor: "#434343", // Muted blueish-gray
+        borderColor: "#6366F1", // Keep this as it's good contrast color
         tension: 0.4,
       },
     ],
@@ -170,7 +170,6 @@ const HomePage = () => {
     },
   };
 
-
   const handleBufferEdit = (bufferId) => {
     setEditingBuffer(bufferId);
   };
@@ -202,7 +201,6 @@ const HomePage = () => {
     return null;
   };
 
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex justify-center items-center">
@@ -220,14 +218,14 @@ const HomePage = () => {
       <header className="bg-white border-b border-gray-200">
         <div className="container mx-auto px-6 py-3 flex justify-between items-center">
           <div className="flex items-center">
-            <LayoutDashboard className="mr-2 text-gray-700" size={20} />
+            <LayoutDashboard className=" text-gray-700" size={20} />
             <Typography variant="h5" color="gray" className="font-semibold">
               {user?.isAdmin ? 'Admin Dashboard' : 'Dashboard'}
             </Typography>
           </div>
           <div className="flex items-center space-x-4">
             {user?.isAdmin ? (
-              <Typography variant="small" className="bg-indigo-100 text-indigo-700 rounded-full px-2 py-1 font-medium">
+              <Typography variant="small" className="bg-indigo-50 text-indigo-700 rounded-full px-2 py-1 font-medium">
                 Admin
               </Typography>
             ) : (
@@ -242,8 +240,8 @@ const HomePage = () => {
       {/* Main Content */}
       <main className="container mx-auto px-6 py-6">
         {/* Section for UPTs and Sales Projections */}
-        <section className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <section className="mb-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {/* UPTs Data Card (Hidden for non-admins) */}
             {user?.isAdmin && (
               <Card className="bg-white shadow-md rounded-lg overflow-hidden">
@@ -253,7 +251,7 @@ const HomePage = () => {
                   className="px-6 py-4 border-b border-gray-200"
                 >
                   <div className="flex justify-between items-center">
-                    <Typography variant="h6" className="text-gray-700 font-semibold">
+                    <Typography variant="h6" className="text-gray-800 font-semibold">
                       UPTs by Product
                     </Typography>
                     <Link to="/update-upt">
@@ -265,7 +263,7 @@ const HomePage = () => {
                   </div>
                 </CardHeader>
                 <CardBody className="p-6">
-                  <Chart data={salesData} isCompact={true} height={300} chartColor="#6366F1" />
+                  <Chart data={salesData} chartColor="#6366F1" />
                 </CardBody>
               </Card>
             )}
@@ -278,7 +276,7 @@ const HomePage = () => {
                 className="px-6 py-4 border-b border-gray-200"
               >
                 <div className="flex justify-between items-center">
-                  <Typography variant="h6" className="text-gray-700 font-semibold">
+                  <Typography variant="h6" className="text-gray-800 font-semibold">
                     Weekly Sales Projections
                   </Typography>
                   {renderAdminSection(
@@ -302,7 +300,7 @@ const HomePage = () => {
                         <Typography variant="small" color="gray" className="font-medium">
                           {projection.day}
                         </Typography>
-                        <Typography variant="h6" className="text-gray-700 font-semibold">
+                        <Typography variant="h6" className="text-gray-800 font-semibold">
                           ${projection.sales}
                         </Typography>
                       </div>
@@ -318,7 +316,6 @@ const HomePage = () => {
           </div>
         </section>
 
-
         {/* Buffer Information */}
         {renderAdminSection(
           <section className="mb-8">
@@ -328,7 +325,7 @@ const HomePage = () => {
                 shadow={false}
                 className="px-6 py-4 border-b border-gray-200"
               >
-                <Typography variant="h6" className="text-gray-700 font-semibold">
+                <Typography variant="h6" className="text-gray-800 font-semibold">
                   Buffer Information
                 </Typography>
               </CardHeader>
@@ -372,70 +369,6 @@ const HomePage = () => {
             </Card>
           </section>
         )}
-
-        {/* Quick Actions */}
-        <section className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link to="/thawing-cabinet">
-              <Card className="bg-indigo-500 hover:bg-indigo-600 text-white p-4 flex items-center justify-between shadow-md rounded-lg">
-                <div>
-                  <Typography variant="h6" color="white" className="font-semibold">
-                    Thawing Cabinet
-                  </Typography>
-                  <Typography variant="small" color="indigo-100">
-                    View allocations
-                  </Typography>
-                </div>
-                <ShoppingBag className="h-5 w-5" />
-              </Card>
-            </Link>
-            {renderAdminSection(
-              <Link to="/data/message/all">
-                <Card className="bg-indigo-500 hover:bg-indigo-600 text-white p-4 flex items-center justify-between shadow-md rounded-lg">
-                  <div>
-                    <Typography variant="h6" color="white" className="font-semibold">
-                      Adjust Allocations
-                    </Typography>
-                    <Typography variant="small" color="indigo-100">
-                      Manual adjustments
-                    </Typography>
-                  </div>
-                  <MessageSquare className="h-5 w-5" />
-                </Card>
-              </Link>
-            )}
-            {renderAdminSection(
-              <Link to="/instructions">
-                <Card className="bg-green-500 hover:bg-green-600 text-white p-4 flex items-center justify-between shadow-md rounded-lg">
-                  <div>
-                    <Typography variant="h6" color="white" className="font-semibold">
-                      Allocation Instructions
-                    </Typography>
-                    <Typography variant="small" color="green-100">
-                      Stocking guidance
-                    </Typography>
-                  </div>
-                  <Inspect className="h-5 w-5" />
-                </Card>
-              </Link>
-            )}
-            {renderAdminSection(
-              <Link to="/closure/plans">
-                <Card className="bg-red-500 hover:bg-red-600 text-white p-4 flex items-center justify-between shadow-md rounded-lg">
-                  <div>
-                    <Typography variant="h6" color="white" className="font-semibold">
-                      Store Closures
-                    </Typography>
-                    <Typography variant="small" color="red-100">
-                      Manage closures
-                    </Typography>
-                  </div>
-                  <Calendar className="h-5 w-5" />
-                </Card>
-              </Link>
-            )}
-          </div>
-        </section>
       </main>
     </div>
   );
