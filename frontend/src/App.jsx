@@ -12,6 +12,7 @@ import Layout from "./components/Layout";
 import ClosurePlannerComponent from "./components/ClosurePlannerComponent";
 import ClosurePlanList from "./components/ClosurePlanList";
 import Instructions from "./components/InstructionsComponent";
+import PrepAllocations from "./components/PrepAllocations";
 import { useEffect } from "react";
 import { AuthProvider, useAuth } from "./components/AuthContext";
 import HowToUse from "./components/HowToUse";
@@ -110,6 +111,11 @@ const App = () => {
             <Route path="/thawing-cabinet" element={
               <ProtectedRoute>
                 <ThawingCabinet />
+              </ProtectedRoute>
+            } />
+            <Route path="/prep-allocations" element={
+              <ProtectedRoute>
+                <PrepAllocations />
               </ProtectedRoute>
             } />
             <Route path="/data/message/add" element={

@@ -81,7 +81,7 @@ app.use("/api/upt", authenticateToken,salesRoutes);
 app.use("/api/sales", authenticateToken,ProjectedSalesRoutes);
 app.use("/api/auth", userRoutes);
 app.use('/api/adjustment', authenticateToken,DayDataRoutes);
-app.use('/api/buffer',authenticateToken, ProductBufferRoutes);
+app.use('/api/buffer', ProductBufferRoutes);
 app.use('/api/closure',authenticateToken, closureRoutes);
 app.use('/api/messages', authenticateToken ,messageRoutes);
 

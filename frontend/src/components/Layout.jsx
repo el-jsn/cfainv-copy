@@ -10,6 +10,7 @@ import {
   BrainCog,
   Calendar,
   LucideFileQuestion,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "./AuthContext";
 
@@ -19,10 +20,12 @@ const Layout = memo(({ children }) => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNavbar, setShowNavbar] = useState(true);
+  const [allocationsMenuOpen, setAllocationsMenuOpen] = useState(false);
+
 
   // Toggle Navbar visibility based on the route
   useEffect(() => {
-    const hiddenRoutes = ["/thawing-cabinet"];
+    const hiddenRoutes = ["/thawing-cabinet", "/prep-allocations"];
     setShowNavbar(!hiddenRoutes.includes(location.pathname));
   }, [location.pathname]);
 
@@ -30,18 +33,32 @@ const Layout = memo(({ children }) => {
     setMobileMenuOpen(!mobileMenuOpen);
   }, [mobileMenuOpen]);
 
+  const handleToggleAllocationsMenu = useCallback(() => {
+    setAllocationsMenuOpen(!allocationsMenuOpen);
+  }, [allocationsMenuOpen]);
+
   const handleNavigation = useCallback(
     (to) => {
       if (mobileMenuOpen) handleToggleMenu();
+      if (allocationsMenuOpen) handleToggleAllocationsMenu();
       navigate(to);
     },
-    [mobileMenuOpen, handleToggleMenu, navigate]
+    [mobileMenuOpen, handleToggleMenu, navigate, allocationsMenuOpen, handleToggleAllocationsMenu]
   );
 
   const quickAccessLinks = React.useMemo(() => {
     const links = [
       { to: "/", icon: <Home />, label: "Home" },
-      { to: "/thawing-cabinet", icon: <Calendar />, label: "Thawing Cabinet" },
+      {
+        to: "/allocations",
+        icon: <Calendar />,
+        label: "Allocations",
+        hasDropdown: true,
+        dropdownLinks: [
+          { to: "/thawing-cabinet", label: "Thawing Cabinet" },
+          { to: "/prep-allocations", label: "Prep Allocations" },
+        ],
+      },
       { to: "/how-to", icon: <LucideFileQuestion />, label: "How to Use" },
     ];
 
@@ -84,14 +101,25 @@ const Layout = memo(({ children }) => {
             >
               <ul className="flex flex-col sm:flex-row sm:space-x-4">
                 {quickAccessLinks.map((link) => (
-                  <li key={link.to}>
-                    <NavLink
-                      to={link.to}
-                      icon={link.icon}
-                      label={link.label}
-                      onClick={() => handleNavigation(link.to)}
-                      active={location.pathname === link.to}
-                    />
+                  <li key={link.to} className="relative">
+                    {link.hasDropdown ? (
+                      <AllocationDropdown
+                        label={link.label}
+                        icon={link.icon}
+                        onToggle={handleToggleAllocationsMenu}
+                        isOpen={allocationsMenuOpen}
+                        links={link.dropdownLinks}
+                        handleNavigation={handleNavigation}
+                      />
+                    ) : (
+                      <NavLink
+                        to={link.to}
+                        icon={link.icon}
+                        label={link.label}
+                        onClick={() => handleNavigation(link.to)}
+                        active={location.pathname === link.to}
+                      />
+                    )}
                   </li>
                 ))}
               </ul>
@@ -119,6 +147,36 @@ const NavLink = memo(({ to, icon, label, onClick, active }) => {
       <div className="mr-2">{icon}</div>
       {label}
     </Link>
+  );
+});
+
+
+const AllocationDropdown = memo(({ label, icon, onToggle, isOpen, links, handleNavigation }) => {
+  return (
+    <div className="relative">
+      <button
+        onClick={onToggle}
+        className="flex items-center px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+      >
+        <div className="mr-2">{icon}</div>
+        {label}
+        <ChevronDown className={`ml-1 w-4 h-4 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="absolute left-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10">
+          {links.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              onClick={() => handleNavigation(link.to)}
+              className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 });
 
