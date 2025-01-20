@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import axiosInstance from "./axiosInstance";
 import { Calendar, PlusCircle, Edit2, Trash2, Save, X, AlertCircle } from "lucide-react";
+import { set } from "mongoose";
 
 const InstructionManager = () => {
     const [day, setDay] = useState("Monday");
@@ -145,7 +146,10 @@ const InstructionManager = () => {
                                 <select
                                     id="day"
                                     value={day}
-                                    onChange={(e) => setDay(e.target.value)}
+                                    onChange={(e) => {
+                                        setDay(e.target.value)
+                                        setSelectedProducts([]);
+                                    }}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-800 sm:text-sm"
                                 >
                                     {daysOfWeek.map((d) => (
