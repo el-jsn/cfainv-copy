@@ -51,6 +51,7 @@ const HomePage = () => {
   const [salesData, setSalesData] = useState([]);
   const [salesProjection, setSalesProjection] = useState([]);
   const [bufferData, setBufferData] = useState([]);
+  const [activeBufferView, setActiveBufferView] = useState('chicken'); // Changed to track "chicken" or "prep"
   const [editingBuffer, setEditingBuffer] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
@@ -200,6 +201,39 @@ const HomePage = () => {
     if (value < 0) return <ArrowDown className="inline-block w-4 h-4 mr-1 text-red-600" />;
     return null;
   };
+  // Function to filter buffer data for Chicken
+  const chickenBufferData = () => {
+    return bufferData.filter(buffer =>
+      [
+        "Spicy Strips",
+        "Spicy Filets",
+        "Filets",
+        "Grilled Filets",
+        "Grilled Nuggets",
+        "Nuggets"
+      ].includes(buffer.productName)
+    );
+  };
+
+  // Function to filter buffer data for Prep
+  const prepBufferData = () => {
+    return bufferData.filter(buffer =>
+      ![
+        "Spicy Strips",
+        "Spicy Filets",
+        "Filets",
+        "Grilled Filets",
+        "Grilled Nuggets",
+        "Nuggets"
+      ].includes(buffer.productName)
+    );
+  };
+
+
+  const handleToggleBufferView = (view) => {
+    setActiveBufferView(view);
+  };
+
 
   if (isLoading) {
     return (
@@ -325,45 +359,65 @@ const HomePage = () => {
                 shadow={false}
                 className="px-6 py-4 border-b border-gray-200"
               >
-                <Typography variant="h6" className="text-gray-800 font-semibold">
-                  Buffer Information
-                </Typography>
+                <div className="flex justify-between items-center">
+                  <Typography variant="h6" className="text-gray-800 font-semibold">
+                    Buffer Information
+                  </Typography>
+                  <div className="flex space-x-2">
+                    <Button
+                      size="sm"
+                      className={`${activeBufferView === 'chicken' ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-gray-200 hover:bg-gray-300'} text-white rounded`}
+                      onClick={() => handleToggleBufferView('chicken')}
+                    >
+                      Chicken
+                    </Button>
+                    <Button
+                      size="sm"
+                      className={`${activeBufferView === 'prep' ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-gray-200 hover:bg-gray-300'} text-white rounded`}
+                      onClick={() => handleToggleBufferView('prep')}
+                    >
+                      Prep
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardBody className="p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {bufferData.map((buffer) => (
-                    <Card key={buffer._id} className="p-3 bg-gray-50 rounded-lg">
-                      <Typography variant="small" color="gray" className="font-medium truncate">
-                        {buffer.productName}
-                      </Typography>
-                      {editingBuffer === buffer._id ? (
-                        <input
-                          type="number"
-                          defaultValue={buffer.bufferPrcnt}
-                          onBlur={(e) =>
-                            handleBufferUpdate(
-                              buffer._id,
-                              parseFloat(e.target.value)
-                            )
-                          }
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        />
-                      ) : (
-                        <Typography variant="h6" className={`flex items-center ${getBufferColor(buffer.bufferPrcnt)} font-semibold`}>
-                          {getBufferArrow(buffer.bufferPrcnt)}
-                          {buffer.bufferPrcnt}%
-                          <MTTooltip content="Edit Buffer">
-                            <IconButton size="sm" className="ml-2 text-gray-500 hover:text-gray-700 focus:outline-none" onClick={() => handleBufferEdit(buffer._id)}>
-                              <Edit2 className="h-4 w-4" />
-                            </IconButton>
-                          </MTTooltip>
+                  {
+                    (activeBufferView === 'chicken' ? chickenBufferData() : prepBufferData()).map((buffer) => (
+                      <Card key={buffer._id} className="p-3 bg-gray-50 rounded-lg">
+                        <Typography variant="small" color="gray" className="font-medium truncate">
+                          {buffer.productName}
                         </Typography>
-                      )}
-                      <Typography variant="small" color="gray" className="mt-1">
-                        Updated: {new Date(buffer.updatedOn).toLocaleDateString()}
-                      </Typography>
-                    </Card>
-                  ))}
+                        {editingBuffer === buffer._id ? (
+                          <input
+                            type="number"
+                            defaultValue={buffer.bufferPrcnt}
+                            onBlur={(e) =>
+                              handleBufferUpdate(
+                                buffer._id,
+                                parseFloat(e.target.value)
+                              )
+                            }
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          />
+                        ) : (
+                          <Typography variant="h6" className={`flex items-center ${getBufferColor(buffer.bufferPrcnt)} font-semibold`}>
+                            {getBufferArrow(buffer.bufferPrcnt)}
+                            {buffer.bufferPrcnt}%
+                            <MTTooltip content="Edit Buffer">
+                              <IconButton size="sm" className="ml-2 text-gray-500 hover:text-gray-700 focus:outline-none" onClick={() => handleBufferEdit(buffer._id)}>
+                                <Edit2 className="h-4 w-4" />
+                              </IconButton>
+                            </MTTooltip>
+                          </Typography>
+                        )}
+                        <Typography variant="small" color="gray" className="mt-1">
+                          Updated: {new Date(buffer.updatedOn).toLocaleDateString()}
+                        </Typography>
+                      </Card>
+                    ))
+                  }
                 </div>
               </CardBody>
             </Card>
