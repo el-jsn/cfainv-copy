@@ -33,7 +33,12 @@ import {
     Edit2,
     FileText,
     Trash2,
-    Save
+    Save,
+    Layers,
+    ListChecks,
+    Grid,
+    Coffee,
+    Info
 } from 'lucide-react';
 import { styled } from '@mui/material/styles';
 
@@ -92,10 +97,13 @@ const HowToUse = () => {
         if (!searchQuery) return activeSection;
 
         const sections = {
-            dashboard: { title: "Using the Dashboard", content: ["Dashboard Overview", "UPTs by Product", "Weekly Sales Projection", "Buffer Information", "Thawing Cabinet"] },
+            dashboard: { title: "Using the Dashboard", content: ["Dashboard Overview", "UPTs by Product", "Weekly Sales Projection", "Buffer Information", "Buffer Toggle", "Thawing Cabinet"] },
             analytics: { title: "Using the Sales Analytics Suite", content: ["Upload Sales Data", "Key Performance Indicators", "Performance Trends", "Top Performers", "Discrepancy Alerts", "Promotional Insights", "Record UPT Data", "Bottom Performing Items", "Filter and Search"] },
             allocation: { title: "Using the Allocation Adjustment Center", content: ["View Active Modifications", "Time Remaining", "Modification Details", "Delete Modifications", "Add New Modifications", "Set Day", "Select Product", "Set Cases and Bags", "Set Duration", "Review Summary"] },
             instructions: { title: "Using the Instructions Board", content: ["Set Day", "Select Products", "Input Instruction Message", "Save/Update Instruction", "Edit Instructions", "Delete Instruction", "Instruction Placement"] },
+            closure: { title: "Using the Store Closure Feature", content: ["View Closure Plans", "Add New Closure Plan", "Closure Details", "Edit Closure Plan", "Delete Closure Plan", "Set Day", "Set Reason", "Set Duration"] },
+            thawing: { title: "Using the Thawing Cabinet", content: ["Understanding Calculations", "Displaying Allocations", "Data Layout", "Closed Days", "Product Allocations", "Instruction Messages"] },
+            prep: { title: "Using the Prep Allocations", content: ["Understanding Calculations", "Displaying Allocations", "Data Layout", "Closed Days", "Product Allocations", "Instruction Messages"] },
             tips: { title: "Tips & Best Practices", content: ["File Format Tips", "Navigation Tips", "Best Practices"] }
         }
         const found = Object.keys(sections).find(key => {
@@ -151,6 +159,27 @@ const HowToUse = () => {
                                     setActiveSection={setActiveSection}
                                 />
                                 <NavigationItem
+                                    section="closure"
+                                    title="Store Closure"
+                                    icon={ListChecks}
+                                    activeSection={filteredSections}
+                                    setActiveSection={setActiveSection}
+                                />
+                                <NavigationItem
+                                    section="thawing"
+                                    title="Thawing Cabinet"
+                                    icon={Grid}
+                                    activeSection={filteredSections}
+                                    setActiveSection={setActiveSection}
+                                />
+                                <NavigationItem
+                                    section="prep"
+                                    title="Prep Allocations"
+                                    icon={Coffee}
+                                    activeSection={filteredSections}
+                                    setActiveSection={setActiveSection}
+                                />
+                                <NavigationItem
                                     section="tips"
                                     title="Tips & Notes"
                                     icon={Lightbulb}
@@ -200,6 +229,11 @@ const HowToUse = () => {
                                         icon={Settings}
                                         title="Buffer Information"
                                         description="(Admin Only) Adjust buffer percentages for products"
+                                    />
+                                    <IconItem
+                                        icon={Layers}
+                                        title="Buffer Toggle"
+                                        description="(Admin Only) Use the 'Chicken' and 'Prep' buttons to switch between the chicken and prep buffer data"
                                     />
                                     <IconItem
                                         icon={ShoppingBag}
@@ -368,7 +402,133 @@ const HowToUse = () => {
                                 </div>
                             </InstructionSection>
                         )}
+                        {/* Store Closure Section */}
+                        {filteredSections === 'closure' && (
+                            <InstructionSection title="Using the Store Closure Feature">
+                                <div className="grid gap-4">
+                                    <IconItem
+                                        icon={ListChecks}
+                                        title="View Closure Plans"
+                                        description="Review a list of all scheduled store closures with their reasons and expiration times."
+                                    />
+                                    <IconItem
+                                        icon={PlusCircle}
+                                        title="Add New Closure Plan"
+                                        description="Use the add plan button to start creating a new closure plan."
+                                    />
+                                    <IconItem
+                                        icon={Calendar}
+                                        title="Closure Details"
+                                        description="Review the date, reason, and duration of each closure listed."
+                                    />
+                                    <IconItem
+                                        icon={Edit2}
+                                        title="Edit Closure Plan"
+                                        description="Note: Once a closure plan has been set, the details cannot be directly modified"
+                                    />
+                                    <IconItem
+                                        icon={Trash2}
+                                        title="Delete Closure Plan"
+                                        description="Use the delete icon to remove a scheduled closure. This action is irreversible."
+                                    />
+                                </div>
+                                <InstructionSection title="Using the Add Closure Plan Form" className="mt-4">
+                                    <div className="grid gap-4">
+                                        <IconItem
+                                            icon={Calendar}
+                                            title="Set Day"
+                                            description="Choose the day when the store will be closed by using the datepicker."
+                                        />
+                                        <IconItem
+                                            icon={Info}
+                                            title="Set Reason"
+                                            description="Enter the reason for the store closure using the available textfield."
+                                        />
+                                        <IconItem
+                                            icon={Clock}
+                                            title="Set Duration"
+                                            description="Choose the duration the store will be closed for, and choose between days or weeks using the select field."
+                                        />
 
+                                    </div>
+                                </InstructionSection>
+
+                            </InstructionSection>
+                        )}
+                        {/* Thawing Cabinet Section */}
+                        {filteredSections === 'thawing' && (
+                            <InstructionSection title="Using the Thawing Cabinet">
+                                <div className="grid gap-4">
+                                    <IconItem
+                                        icon={Lightbulb}
+                                        title="Understanding Calculations"
+                                        description="The thawing cabinet estimates the required number of cases and bags for each product by using the following process: It starts with the sales projection of the following day, and divides it by the number of servings per case or bag. This results in a base allocation. This allocation is then multiplied by the buffer percentage, which allows for extra or less depending on the percentage value. This final amount is displayed under each product for each day."
+                                    />
+                                    <IconItem
+                                        icon={Grid}
+                                        title="Displaying Allocations"
+                                        description="The Thawing Cabinet displays your calculated allocations for each day of the week based on sales, UPT, and buffer data."
+                                    />
+                                    <IconItem
+                                        icon={LayoutDashboard}
+                                        title="Data Layout"
+                                        description="Each day of the week is displayed as a card with the allocations for each product"
+                                    />
+                                    <IconItem
+                                        icon={AlertTriangle}
+                                        title="Closed Days"
+                                        description="If there is a store closure scheduled for a day, the day card will display a closed indicator, with the specified closure reason."
+                                    />
+                                    <IconItem
+                                        icon={ShoppingBag}
+                                        title="Product Allocations"
+                                        description="The allocated amount is displayed in cases or bags underneath each product title. Modified amounts are highlighted in red."
+                                    />
+                                    <IconItem
+                                        icon={FileText}
+                                        title="Instruction Messages"
+                                        description="Any instruction message set for a day, with or without product specific instructions, is displayed on that day."
+                                    />
+                                </div>
+                            </InstructionSection>
+                        )}
+                        {/* Prep Allocations Section */}
+                        {filteredSections === 'prep' && (
+                            <InstructionSection title="Using the Prep Allocations">
+                                <div className="grid gap-4">
+                                    <IconItem
+                                        icon={Lightbulb}
+                                        title="Understanding Calculations"
+                                        description="The Prep Allocations calculates the number of pans and buckets needed for your prep items based on current day's sales. The system multiplies your daily sales by the UPT value for that item, and divides it by servings per pan, or servings per bucket to estimate the number of pans or buckets needed. It then multiplies the amount by the specified buffer percentage to adjust the quantity of each item."
+                                    />
+                                    <IconItem
+                                        icon={Grid}
+                                        title="Displaying Allocations"
+                                        description="The Prep Allocations display your calculated allocations for each day of the week."
+                                    />
+                                    <IconItem
+                                        icon={LayoutDashboard}
+                                        title="Data Layout"
+                                        description="Each day of the week is displayed as a card with the allocations for each prep product."
+                                    />
+                                    <IconItem
+                                        icon={AlertTriangle}
+                                        title="Closed Days"
+                                        description="If there is a store closure scheduled for a day, the day card will display a closed indicator, along with the specified reason."
+                                    />
+                                    <IconItem
+                                        icon={ShoppingBag}
+                                        title="Product Allocations"
+                                        description="The allocated amount is displayed in pans and buckets underneath each product title. Modified amounts are highlighted in red."
+                                    />
+                                    <IconItem
+                                        icon={FileText}
+                                        title="Instruction Messages"
+                                        description="Any instruction message set for a day, with or without product specific instructions, is displayed on that day."
+                                    />
+                                </div>
+                            </InstructionSection>
+                        )}
                         {/* Tips Section */}
                         {filteredSections === 'tips' && (
                             <InstructionSection title="Tips & Best Practices" className="space-y-6">
