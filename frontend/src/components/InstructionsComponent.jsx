@@ -4,16 +4,16 @@ import { Calendar, PlusCircle, Edit2, Trash2, Save, X, AlertCircle } from "lucid
 import { set } from "mongoose";
 
 const InstructionManager = () => {
-    const [day, setDay] = useState("Monday");
+    const [selectedDays, setSelectedDays] = useState([]);
     const [message, setMessage] = useState("");
     const [instructions, setInstructions] = useState([]);
     const [editingInstruction, setEditingInstruction] = useState(null);
     const [error, setError] = useState("");
     const [selectedProducts, setSelectedProducts] = useState([]);
+    const [disabledProductMessage, setDisabledProductMessage] = useState(null);
 
     const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const productOptions = ["Filets", "Spicy Filets", "Nuggets", "Spicy Strips", "Grilled Filets", "Grilled Nuggets"];
-
 
     useEffect(() => {
         fetchInstructions();
@@ -34,20 +34,22 @@ const InstructionManager = () => {
             return;
         }
         const products = selectedProducts.join(",");
-
         try {
-            if (editingInstruction) {
-                await axiosInstance.put(`/messages/${editingInstruction.day}`, { message, products });
-                setInstructions(prev =>
-                    prev.map(inst => (inst._id === editingInstruction._id ? { ...inst, message, products } : inst))
-                );
-                setEditingInstruction(null);
-            } else {
-                const response = await axiosInstance.post("/messages", { day, message, products });
-                setInstructions(prev => [...prev, response.data]);
+            for (const day of selectedDays) {
+                if (editingInstruction) {
+                    await axiosInstance.put(`/messages/${editingInstruction._id}`, { message, products, day });
+                    setInstructions(prev =>
+                        prev.map(inst => (inst._id === editingInstruction._id && inst.day === day ? { ...inst, message, products } : inst))
+                    );
+                    setEditingInstruction(null);
+                } else {
+                    const response = await axiosInstance.post("/messages", { day, message, products });
+                    setInstructions(prev => [...prev, response.data]);
+                }
             }
             setMessage("");
             setSelectedProducts([]);
+            setSelectedDays([]);
             setError("");
         } catch (error) {
             setError(error.response?.data?.message || "Failed to save instruction. Please try again.");
@@ -55,16 +57,16 @@ const InstructionManager = () => {
     };
 
     const handleEditInstruction = (instruction) => {
-        setDay(instruction.day);
         setMessage(instruction.message);
         setSelectedProducts(instruction.products ? instruction.products.split(",") : []);
+        setSelectedDays([instruction.day]);
         setEditingInstruction(instruction);
     };
 
     const handleCancelEdit = () => {
-        setDay("Monday");
         setMessage("");
         setSelectedProducts([]);
+        setSelectedDays([]);
         setEditingInstruction(null);
     };
 
@@ -77,24 +79,77 @@ const InstructionManager = () => {
         }
     };
     const handleProductSelect = (product) => {
-        setSelectedProducts(prev => {
-            if (prev.includes(product)) {
-                return prev.filter(p => p !== product);
+        if (selectedProducts.includes(product)) {
+            // Deselect only if the product is currently selected
+            if (disabledProducts.includes(product)) {
+                setSelectedProducts(prev => prev.filter(p => p !== product));
+                return;
             } else {
-                return [...prev, product];
+                setSelectedProducts(prev => prev.filter(p => p !== product));
+                return;
             }
-        });
+        }
+
+
+        let message = null
+        for (const day of selectedDays) {
+            const existingInstruction = instructions.find(inst => inst.day === day && inst.products && inst.products.split(",").includes(product) && (!editingInstruction || inst._id !== editingInstruction._id));
+
+            if (existingInstruction) {
+                message = `An instruction for ${product} already exists on ${day}!`;
+                break;
+            }
+        }
+
+        if (message) {
+            setDisabledProductMessage(message);
+            setTimeout(() => {
+                setDisabledProductMessage(null);
+            }, 3000);
+            return
+        }
+
+        setSelectedProducts(prev => [...prev, product]);
     };
 
+    const handleDaySelect = (day) => {
+        // check if the day is already selected, and if it is, then remove it from the selected list
+        if (selectedDays.includes(day)) {
+            setSelectedDays(prev => prev.filter(d => d !== day));
+            return
+        }
+        setSelectedDays(prev => [...prev, day]);
+    };
+
+    const handleMouseEnterProduct = (product) => {
+        if (disabledProducts.includes(product)) {
+            let message = "";
+            for (const day of selectedDays) {
+                const existingInstruction = instructions.find(inst => inst.day === day && inst.products && inst.products.split(",").includes(product) && (!editingInstruction || inst._id !== editingInstruction._id));
+                if (existingInstruction) {
+                    message = `Already exists for ${day}`;
+                    break;
+                }
+            }
+
+            setDisabledProductMessage(`${product} ${message}`)
+        }
+    }
+    const handleMouseLeaveProduct = () => {
+        setDisabledProductMessage(null);
+    };
 
     const disabledProducts = useMemo(() => {
-        if (!day) return [];
+        if (!selectedDays || selectedDays.length === 0) return [];
         const productsInUse = instructions
-            .filter(inst => inst.day === day && (!editingInstruction || inst._id !== editingInstruction._id))
+            .filter(inst => {
+                setSelectedProducts([]);
+                // Check if any selected day is included in the instruction
+                return selectedDays.includes(inst.day) && (!editingInstruction || inst._id !== editingInstruction._id);
+            })
             .flatMap(inst => (inst.products ? inst.products.split(",") : []));
         return productsInUse;
-    }, [instructions, day, editingInstruction]);
-
+    }, [instructions, selectedDays, editingInstruction]);
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans antialiased">
@@ -127,6 +182,19 @@ const InstructionManager = () => {
                         </div>
                     </div>
                 )}
+                {/* pop-up message */}
+                {disabledProductMessage && (
+                    <div className="fixed top-4 right-4 bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded shadow-lg z-50">
+                        <div className="flex">
+                            <div className="flex-shrink-0">
+                                <AlertCircle className="h-5 w-5 text-yellow-500" />
+                            </div>
+                            <div className="ml-3">
+                                <p className="text-sm text-yellow-800">{disabledProductMessage}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Add/Edit Instruction Form */}
                 <div className="bg-white shadow overflow-hidden rounded-xl mb-8 border border-gray-200">
@@ -143,23 +211,24 @@ const InstructionManager = () => {
                                 <label htmlFor="day" className="block text-sm font-medium text-gray-700">
                                     Day of the week
                                 </label>
-                                <select
-                                    id="day"
-                                    value={day}
-                                    onChange={(e) => {
-                                        setDay(e.target.value)
-                                        setSelectedProducts([]);
-                                    }}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-800 sm:text-sm"
-                                >
-                                    {daysOfWeek.map((d) => (
-                                        <option key={d} value={d}>
-                                            {d}
-                                        </option>
+                                <div className="mt-1 flex flex-wrap gap-2">
+                                    {daysOfWeek.map((day) => (
+                                        <button
+                                            key={day}
+                                            type="button"
+                                            onClick={() => handleDaySelect(day)}
+                                            className={`rounded-md border-2 text-sm font-medium px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                                            ${selectedDays.includes(day)
+                                                    ? 'bg-indigo-100 border-indigo-500 text-indigo-700'
+                                                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            {day}
+                                        </button>
                                     ))}
-                                </select>
-                            </div>
+                                </div>
 
+                            </div>
 
                             <div className="space-y-1">
                                 <label htmlFor="products" className="block text-sm font-medium text-gray-700">
@@ -172,6 +241,8 @@ const InstructionManager = () => {
                                             type="button"
                                             onClick={() => handleProductSelect(product)}
                                             disabled={disabledProducts.includes(product)}
+                                            onMouseEnter={() => handleMouseEnterProduct(product)}
+                                            onMouseLeave={handleMouseLeaveProduct}
                                             className={`rounded-md border-2 text-sm font-medium px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500
                                             ${selectedProducts.includes(product)
                                                     ? 'bg-indigo-100 border-indigo-500 text-indigo-700'

@@ -25,7 +25,7 @@ const Layout = memo(({ children }) => {
 
   // Toggle Navbar visibility based on the route
   useEffect(() => {
-    const hiddenRoutes = ["/thawing-cabinet", "/prep-allocations"];
+    const hiddenRoutes = ["/thawing-cabinet", "/prep-allocations", "/login"];
     setShowNavbar(!hiddenRoutes.includes(location.pathname));
   }, [location.pathname]);
 

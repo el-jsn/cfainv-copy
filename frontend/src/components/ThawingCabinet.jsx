@@ -1,9 +1,11 @@
 // src/components/ThawingCabinet.js
 
 import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from "react";
-import { Clock, Maximize, Minimize } from "lucide-react";
+import { BackpackIcon, Clock, Maximize, Minimize } from "lucide-react";
 import axiosInstance from "./axiosInstance";
 import playbackVid from "../assets/background.mp4";
+import { Link } from "react-router-dom";
+import { ArrowBackIos } from "@mui/icons-material";
 console.log(playbackVid);
 
 const useCalculateThawingData = (salesData, utpData, bufferData, adjustments) => {
@@ -444,7 +446,7 @@ const ThawingCabinet = () => {
       <div className="h-full w-full bg-white rounded-lg md:rounded-xl shadow-xl p-2 sm:p-4 border border-gray-100 flex flex-col">
         <div className="flex items-center justify-between mb-2 sm:mb-3">
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Thawing Cabinet</h2>
+            <Link to={"/"} className="text-lg sm:text-xl font-bold text-gray-800"><ArrowBackIos /> Thawing Cabinet</Link>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-1 sm:gap-2 bg-gray-50 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm">

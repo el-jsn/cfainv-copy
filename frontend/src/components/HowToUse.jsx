@@ -38,7 +38,8 @@ import {
     ListChecks,
     Grid,
     Coffee,
-    Info
+    Info,
+    Copy
 } from 'lucide-react';
 import { styled } from '@mui/material/styles';
 
@@ -99,8 +100,8 @@ const HowToUse = () => {
         const sections = {
             dashboard: { title: "Using the Dashboard", content: ["Dashboard Overview", "UPTs by Product", "Weekly Sales Projection", "Buffer Information", "Buffer Toggle", "Thawing Cabinet"] },
             analytics: { title: "Using the Sales Analytics Suite", content: ["Upload Sales Data", "Key Performance Indicators", "Performance Trends", "Top Performers", "Discrepancy Alerts", "Promotional Insights", "Record UPT Data", "Bottom Performing Items", "Filter and Search"] },
-            allocation: { title: "Using the Allocation Adjustment Center", content: ["View Active Modifications", "Time Remaining", "Modification Details", "Delete Modifications", "Add New Modifications", "Set Day", "Select Product", "Set Cases and Bags", "Set Duration", "Review Summary"] },
-            instructions: { title: "Using the Instructions Board", content: ["Set Day", "Select Products", "Input Instruction Message", "Save/Update Instruction", "Edit Instructions", "Delete Instruction", "Instruction Placement"] },
+            allocation: { title: "Using the Allocation Adjustment Center", content: ["View Active Modifications", "Time Remaining", "Modification Details", "Delete Modifications", "Add New Modifications", "Set Day", "Select Product", "Set Cases and Bags", "Set Duration", "Review Summary", "Bulk Modify Allocations", "Using the Bulk Modify Form", "Set Days", "Select Products", "Set Cases and Bags", "Set Duration", "Review Summary"] },
+            instructions: { title: "Using the Instructions Board", content: ["Set Day", "Select Products", "Input Instruction Message", "Save/Update Instruction", "Edit Instructions", "Delete Instruction", "Instruction Placement", "Viewing Instructions", "Modifying Instructions", "Instruction Details"] },
             closure: { title: "Using the Store Closure Feature", content: ["View Closure Plans", "Add New Closure Plan", "Closure Details", "Edit Closure Plan", "Delete Closure Plan", "Set Day", "Set Reason", "Set Duration"] },
             thawing: { title: "Using the Thawing Cabinet", content: ["Understanding Calculations", "Displaying Allocations", "Data Layout", "Closed Days", "Product Allocations", "Instruction Messages"] },
             prep: { title: "Using the Prep Allocations", content: ["Understanding Calculations", "Displaying Allocations", "Data Layout", "Closed Days", "Product Allocations", "Instruction Messages"] },
@@ -326,6 +327,11 @@ const HowToUse = () => {
                                         title="Add New Modifications"
                                         description="Click the plus icon at the bottom to manually adjust your allocations"
                                     />
+                                    <IconItem
+                                        icon={Copy}
+                                        title="Bulk Modify Allocations"
+                                        description="Click the bulk modify icon to adjust multiple product allocations at once."
+                                    />
                                 </div>
                                 <InstructionSection title="Using the Add Allocation Adjustment Form" className="mt-4">
                                     <div className="grid gap-4">
@@ -356,6 +362,41 @@ const HowToUse = () => {
                                         />
                                     </div>
                                 </InstructionSection>
+                                <InstructionSection title="Using the Bulk Modify Form" className="mt-4">
+                                    <div className="grid gap-4">
+
+                                        <IconItem
+                                            icon={Package}
+                                            title="Select Products"
+                                            description="Choose the products that will be affected by this adjustment."
+                                        />
+                                        <IconItem
+                                            icon={Edit2}
+                                            title="Set Cases and Bags"
+                                            description="Define if cases or bags should be added or removed by selecting the correct operation and quantity."
+                                        />
+                                        <IconItem
+                                            icon={Clock}
+                                            title="Set Duration"
+                                            description="Define how long this change will be active. You can select days or weeks as a unit of measure."
+                                        />
+                                        <IconItem
+                                            icon={HelpCircle}
+                                            title="Review Summary"
+                                            description="Review all details you entered in a summary before submitting the form."
+                                        />
+                                        <IconItem
+                                            icon={PlusCircle}
+                                            title="Click Bulk Modify"
+                                            description="Click the bulk modify button to get the pop-up to select days."
+                                        />
+                                        <IconItem
+                                            icon={Calendar}
+                                            title="Set Days"
+                                            description="Choose the days on which these modifications will take place. You can select multiple days."
+                                        />
+                                    </div>
+                                </InstructionSection>
                             </InstructionSection>
                         )}
 
@@ -366,40 +407,58 @@ const HowToUse = () => {
                                     <IconItem
                                         icon={Calendar}
                                         title="Set Day"
-                                        description="Select the day of the week for which you want to create or edit an instruction."
+                                        description="Click on the day you want to add an instruction to. You can select multiple days."
                                     />
                                     <IconItem
                                         icon={ShoppingBag}
                                         title="Select Products"
-                                        description="Select the products for which this instruction applies. Products already used in other instructions for the same day will be disabled. If you don't select any products, this will be a universal instruction for that day."
+                                        description="Click on the products you want this instruction to apply to. If you don't select any products, the instruction will be displayed at the top of each selected day. A Disabled product implies that an instruction is already set for that product on the selected day."
                                     />
                                     <IconItem
                                         icon={FileText}
                                         title="Input Instruction Message"
-                                        description="Enter the text you want to be displayed as the instruction for a given day."
+                                        description="Enter your instruction message in the text field provided."
                                     />
                                     <IconItem
                                         icon={PlusCircle}
                                         title="Save/Update Instruction"
-                                        description="Save or update your instruction by clicking the save button."
+                                        description="Click the save button to create a new instruction, or update an existing instruction"
                                     />
                                     <IconItem
                                         icon={Edit2}
                                         title="Edit Instructions"
-                                        description="Click the pencil icon to edit an instruction for a specific day."
+                                        description="Click the pencil icon on the instruction listing to start editing that instruction"
                                     />
                                     <IconItem
                                         icon={Trash2}
                                         title="Delete Instruction"
-                                        description="Click the delete button to remove an instruction from a specific day."
+                                        description="Click the trash icon to permanently delete an instruction"
                                     />
                                     <IconItem
                                         icon={Lightbulb}
                                         title="Instruction Placement"
-                                        description="Instructions without products will be displayed at the top of the day card, while instructions with products will be displayed under the allocations for those specific products."
+                                        description="Instructions without products will appear at the top of the day card, while product specific instructions will be displayed under the corresponding product's allocation"
                                     />
-
                                 </div>
+                                <InstructionSection title="Using the instruction listing" className="mt-4">
+                                    <div className="grid gap-4">
+                                        <IconItem
+                                            icon={Calendar}
+                                            title="Viewing Instructions"
+                                            description="The instruction listing displays all the current week's instructions for each day"
+                                        />
+                                        <IconItem
+                                            icon={Edit2}
+                                            title="Modifying Instructions"
+                                            description="Use the pencil icon to edit a selected instruction, or the trash icon to delete a selected instruction."
+                                        />
+                                        <IconItem
+                                            icon={FileText}
+                                            title="Instruction Details"
+                                            description="The instruction listing displays the day, message, and products assigned to each instruction."
+                                        />
+                                    </div>
+                                </InstructionSection>
                             </InstructionSection>
                         )}
                         {/* Store Closure Section */}
@@ -538,7 +597,7 @@ const HowToUse = () => {
                                 </div>
                                 <div className="bg-green-50 rounded-lg p-4">
                                     <h3 className="text-lg font-medium text-green-900 mb-2">Navigation Tips</h3>
-                                    <p className="text-green-800">Use tooltips next to section headers for additional context</p>
+                                    <p className="text-green-800">Clicking the titles on both Thawing Cabinet and Prep Allocations takes back to the home page. Use tooltips next to section headers for additional context</p>
                                 </div>
                                 <div className="bg-purple-50 rounded-lg p-4">
                                     <h3 className="text-lg font-medium text-purple-900 mb-2">Best Practices</h3>

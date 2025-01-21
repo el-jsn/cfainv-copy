@@ -17,6 +17,13 @@ import {
   Alert,
   Collapse,
   InputAdornment,
+  Modal,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Checkbox,
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { blue, green } from "@mui/material/colors";
@@ -26,7 +33,7 @@ const theme = createTheme({
     primary: blue,
     secondary: green,
     background: {
-      default: "#f0f8ff", // Light blue background
+      default: "#f0f8ff",
       paper: "#fff",
     },
   },
@@ -59,6 +66,9 @@ const MessageFormComponent = () => {
     duration: { value: "", unit: "days" },
   });
   const [formErrors, setFormErrors] = useState({});
+  const [openModal, setOpenModal] = useState(false);
+  const [selectedDays, setSelectedDays] = useState([]);
+  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   const validateForm = () => {
     const errors = {};
@@ -75,8 +85,20 @@ const MessageFormComponent = () => {
     return Object.keys(errors).length === 0;
   };
 
+  const handleOpenModal = () => setOpenModal(true);
+  const handleCloseModal = () => setOpenModal(false);
+
+  const handleToggleDay = (day) => {
+    if (selectedDays.includes(day)) {
+      setSelectedDays(selectedDays.filter((d) => d !== day));
+    } else {
+      setSelectedDays([...selectedDays, day]);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!validateForm()) return;
 
     const durationInSeconds =
@@ -96,15 +118,60 @@ const MessageFormComponent = () => {
       .join(" and ");
 
     const dataToSend = {
-      day: formData.day,
       product: formData.product,
       message: messageString,
       durationInSeconds,
     };
-
     try {
-      await axiosInstance.post("/adjustment/data", dataToSend);
+      const daysToUse = selectedDays.length > 0 ? selectedDays : [formData.day];
+
+      for (const day of daysToUse) {
+        const dataToSendPerDay = { ...dataToSend, day: day };
+        await axiosInstance.post("/adjustment/data", dataToSendPerDay);
+      }
       setShowSuccess(true);
+      setTimeout(() => {
+        navigate("/data/message/all");
+      }, 2000);
+    } catch (error) {
+      console.error("Error submitting data:", error);
+    }
+  };
+
+  const handleBulkAdd = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    const durationInSeconds =
+      formData.duration.unit === "weeks"
+        ? formData.duration.value * 7 * 24 * 60 * 60
+        : formData.duration.value * 24 * 60 * 60;
+
+    const messageString = [
+      formData.message.casesQuantity
+        ? `${formData.message.casesOperation}${formData.message.casesQuantity} cases`
+        : null,
+      formData.message.bagsQuantity
+        ? `${formData.message.bagsOperation}${formData.message.bagsQuantity} bags`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" and ");
+
+
+    const dataToSend = {
+      product: formData.product,
+      message: messageString,
+      durationInSeconds,
+    };
+    try {
+      for (const day of selectedDays) {
+        const dataToSendPerDay = { ...dataToSend, day: day };
+        await axiosInstance.post("/adjustment/data", dataToSendPerDay);
+      }
+      setShowSuccess(true);
+      handleCloseModal();
       setTimeout(() => {
         navigate("/data/message/all");
       }, 2000);
@@ -133,6 +200,18 @@ const MessageFormComponent = () => {
     return `On ${formData.day}, ${adjustmentText} of ${formData.product} would be adjusted and displayed until ${formattedDate}.`;
   };
 
+  const modalStyle = {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    width: 400,
+    bgcolor: "background.paper",
+    border: "2px solid #000",
+    boxShadow: 24,
+    p: 4,
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <Box
@@ -148,11 +227,7 @@ const MessageFormComponent = () => {
       >
         <Container maxWidth="md">
           <Collapse in={showSuccess}>
-            <Alert
-              icon={<CheckCircle />}
-              severity="success"
-              sx={{ mb: 2 }}
-            >
+            <Alert icon={<CheckCircle />} severity="success" sx={{ mb: 2 }}>
               Modification successful. Redirecting...
             </Alert>
           </Collapse>
@@ -182,13 +257,11 @@ const MessageFormComponent = () => {
                     setFormData((prev) => ({ ...prev, day: e.target.value }))
                   }
                 >
-                  {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map(
-                    (day) => (
-                      <MenuItem key={day} value={day}>
-                        {day}
-                      </MenuItem>
-                    )
-                  )}
+                  {daysOfWeek.map((day) => (
+                    <MenuItem key={day} value={day}>
+                      {day}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
               <FormControl fullWidth margin="normal" variant="outlined">
@@ -205,13 +278,18 @@ const MessageFormComponent = () => {
                     }))
                   }
                 >
-                  {["Nuggets", "Filets", "Spicy Filets", "Grilled Filets", "Grilled Nuggets", "Spicy Strips"].map(
-                    (product) => (
-                      <MenuItem key={product} value={product}>
-                        {product}
-                      </MenuItem>
-                    )
-                  )}
+                  {[
+                    "Nuggets",
+                    "Filets",
+                    "Spicy Filets",
+                    "Grilled Filets",
+                    "Grilled Nuggets",
+                    "Spicy Strips",
+                  ].map((product) => (
+                    <MenuItem key={product} value={product}>
+                      {product}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
               <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
@@ -248,7 +326,7 @@ const MessageFormComponent = () => {
                                 },
                               }))
                             }
-                            sx={{ mr: 1, height: '100%' }}
+                            sx={{ mr: 1, height: "100%" }}
                             variant="standard"
                             disableUnderline
                           >
@@ -290,7 +368,7 @@ const MessageFormComponent = () => {
                                 },
                               }))
                             }
-                            sx={{ mr: 1, height: '100%' }}
+                            sx={{ mr: 1, height: "100%" }}
                             variant="standard"
                             disableUnderline
                           >
@@ -367,10 +445,58 @@ const MessageFormComponent = () => {
               >
                 Modify
               </Button>
+              <Button
+                fullWidth
+                variant="contained"
+                color="secondary"
+                sx={{ mt: 3, py: 1.5 }}
+                onClick={handleOpenModal}
+              >
+                Bulk Modify
+              </Button>
             </form>
           </Paper>
         </Container>
       </Box>
+      {/* Modal for Bulk Modification */}
+      <Modal
+        open={openModal}
+        onClose={handleCloseModal}
+        aria-labelledby="bulk-modify-modal-title"
+        aria-describedby="bulk-modify-modal-description"
+      >
+        <Box sx={modalStyle}>
+          <Typography id="bulk-modify-modal-title" variant="h6" component="h2" mb={2}>
+            Select Days for Bulk Modification
+          </Typography>
+          <List>
+            {daysOfWeek.map((day) => (
+              <ListItem key={day} disablePadding>
+                <ListItemButton onClick={() => handleToggleDay(day)} dense>
+                  <ListItemIcon>
+                    <Checkbox
+                      edge="start"
+                      checked={selectedDays.includes(day)}
+                      tabIndex={-1}
+                      disableRipple
+                    />
+                  </ListItemIcon>
+                  <ListItemText primary={day} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+          <Button
+            fullWidth
+            variant="contained"
+            color="secondary"
+            sx={{ mt: 3, py: 1.5 }}
+            onClick={handleBulkAdd}
+          >
+            Bulk Add
+          </Button>
+        </Box>
+      </Modal>
     </ThemeProvider>
   );
 };
