@@ -36,7 +36,20 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments) =>
 
     return daysOrder.map((day, index) => {
       const entry = salesData.find(e => e.day === day) || { day, sales: 0 };
-      const nextDaySales = salesData[(index + 1) % salesData.length]?.sales || 0;
+      let nextDaySales;
+
+      if (day === "Friday") {
+        // Use Saturday's sales for Friday
+        nextDaySales = salesData.find(e => e.day === "Saturday")?.sales || 0;
+      } else if (day === "Saturday") {
+        // Use Monday's sales for Saturday
+        nextDaySales = salesData.find(e => e.day === "Monday")?.sales || 0;
+      } else {
+        // Calculate the index for the sales two days ahead
+        const nextDayIndex = (index + 2) % daysOrder.length;
+        nextDaySales = salesData[nextDayIndex]?.sales || 0;
+      }
+
       const dayAdjustments = adjustments.filter(msg => msg.day === day);
 
       const applyMessage = (product, cases, bags = 0) => {
@@ -88,6 +101,7 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments) =>
     });
   }, [salesData, utpData, bufferData, adjustments]);
 };
+
 
 const useFilteredClosures = (closures) => {
   return useMemo(() => {
