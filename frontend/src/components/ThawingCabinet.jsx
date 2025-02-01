@@ -8,9 +8,34 @@ import { Link } from "react-router-dom";
 import { ArrowBackIos } from "@mui/icons-material";
 console.log(playbackVid);
 
-const useCalculateThawingData = (salesData, utpData, bufferData, adjustments) => {
+const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, salesProjectionConfig) => {
   return useMemo(() => {
-    if (!salesData || !utpData || !bufferData) return [];
+    console.log('Calculating with:', {
+      salesData,
+      utpData,
+      bufferData,
+      adjustments,
+      salesProjectionConfig
+    });
+
+    // Add a default configuration if none exists
+    const defaultConfig = {
+      "Monday": { "Tuesday": 0, "Wednesday": 100, "Thursday": 0, "Friday": 0, "Saturday": 0 },
+      "Tuesday": { "Monday": 0, "Wednesday": 100, "Thursday": 0, "Friday": 0, "Saturday": 0 },
+      "Wednesday": { "Monday": 0, "Tuesday": 0, "Thursday": 100, "Friday": 0, "Saturday": 0 },
+      "Thursday": { "Monday": 0, "Tuesday": 0, "Wednesday": 0, "Friday": 100, "Saturday": 0 },
+      "Friday": { "Monday": 0, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Saturday": 100 },
+      "Saturday": { "Monday": 100, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Friday": 0 }
+    };
+
+    if (!salesData || !utpData || !bufferData) {
+      console.log('Missing required data:', { salesData, utpData, bufferData });
+      return [];
+    }
+
+    // Use the provided config or fall back to default
+    const projectionConfig = salesProjectionConfig || defaultConfig;
+    console.log('Using projection config:', projectionConfig);
 
     const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -36,19 +61,18 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments) =>
 
     return daysOrder.map((day, index) => {
       const entry = salesData.find(e => e.day === day) || { day, sales: 0 };
-      let nextDaySales;
 
-      if (day === "Friday") {
-        // Use Saturday's sales for Friday
-        nextDaySales = salesData.find(e => e.day === "Saturday")?.sales || 0;
-      } else if (day === "Saturday") {
-        // Use Monday's sales for Saturday
-        nextDaySales = salesData.find(e => e.day === "Monday")?.sales || 0;
-      } else {
-        // Calculate the index for the sales two days ahead
-        const nextDayIndex = (index + 2) % daysOrder.length;
-        nextDaySales = salesData[nextDayIndex]?.sales || 0;
+      // Calculate projected sales based on configuration
+      const dayConfig = projectionConfig[day];
+      let nextDaySales = 0;
+
+      if (dayConfig) {
+        Object.entries(dayConfig).forEach(([sourceDay, percentage]) => {
+          const sourceSales = salesData.find(e => e.day === sourceDay)?.sales || 0;
+          nextDaySales += (sourceSales * (percentage / 100));
+        });
       }
+      console.log(`${day} nextDaySales:`, nextDaySales);
 
       const dayAdjustments = adjustments.filter(msg => msg.day === day);
 
@@ -99,7 +123,7 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments) =>
         strips: applyMessage("Spicy Strips", stripsCalculatedCases, remainingStripsBags)
       };
     });
-  }, [salesData, utpData, bufferData, adjustments]);
+  }, [salesData, utpData, bufferData, adjustments, salesProjectionConfig]);
 };
 
 
@@ -293,6 +317,7 @@ const ThawingCabinet = () => {
   const adjustmentsRef = useRef(adjustments);
   const videoRef = useRef(null); // Ref for the video element
   const containerRef = useRef(null)
+  const [salesProjectionConfig, setSalesProjectionConfig] = useState(null);
 
 
   useEffect(() => {
@@ -376,6 +401,7 @@ const ThawingCabinet = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      console.log('Fetching data...');
       const [
         adjustmentsResponse,
         closuresResponse,
@@ -383,6 +409,7 @@ const ThawingCabinet = () => {
         salesResponse,
         utpResponse,
         bufferResponse,
+        configResponse,
       ] = await Promise.all([
         axiosInstance.get("/adjustment/data"),
         axiosInstance.get("/closure/plans"),
@@ -390,7 +417,15 @@ const ThawingCabinet = () => {
         axiosInstance.get("/sales"),
         axiosInstance.get("/upt"),
         axiosInstance.get("/buffer"),
+        axiosInstance.get("/sales-projection-config"),
       ]);
+
+      console.log('Responses:', {
+        sales: salesResponse.data,
+        utp: utpResponse.data,
+        buffer: bufferResponse.data,
+        config: configResponse.data
+      });
 
       const salesData = salesResponse.data;
       const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -405,6 +440,7 @@ const ThawingCabinet = () => {
       setClosures(closuresResponse.data);
       setMessages(messagesResponse.data);
       setLastUpdated(new Date());
+      setSalesProjectionConfig(configResponse.data);
     } catch (error) {
       console.error("Error fetching data:", error);
       // Consider setting an error state to display an error message to the user
@@ -444,8 +480,20 @@ const ThawingCabinet = () => {
   }, [fetchData, requestWakeLock]);
 
   const currentDay = getCurrentDay();
-  const calculatedData = useCalculateThawingData(data?.sales, data?.utp, data?.buffer, adjustments);
+  const calculatedData = useCalculateThawingData(
+    data?.sales,
+    data?.utp,
+    data?.buffer,
+    adjustments,
+    salesProjectionConfig
+  );
   const filteredClosures = useFilteredClosures(closures);
+
+  console.log('Rendering with:', {
+    data,
+    salesProjectionConfig,
+    calculatedData
+  });
 
   if (loading) {
     return (

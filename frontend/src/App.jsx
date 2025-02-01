@@ -17,6 +17,8 @@ import { useEffect } from "react";
 import { AuthProvider, useAuth } from "./components/AuthContext";
 import HowToUse from "./components/HowToUse";
 import { Navigate } from "react-router-dom";
+import SalesProjectionConfig from './components/SalesProjectionConfig';
+import DeveloperInfo from './components/DeveloperInfo';
 
 const App = () => {
 
@@ -143,6 +145,12 @@ const App = () => {
                 <Instructions />
               </ProtectedRoute>
             } />
+            <Route path="/thawing-cabinet/config" element={
+              <ProtectedRoute adminOnly>
+                <SalesProjectionConfig />
+              </ProtectedRoute>
+            } />
+            <Route path="/dev-info" element={<DeveloperInfo />} />
           </Routes>
         </Layout>
       </Router>

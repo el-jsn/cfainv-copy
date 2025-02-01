@@ -19,6 +19,7 @@ import cron from 'node-cron';
 import {authenticateToken} from './middlewares/userAuth.js';
 import messageRoutes from './routes/message.route.js';
 import cookieParser from 'cookie-parser';
+import salesProjectionConfigRoutes from './routes/salesProjectionConfig.route.js';
 
 
 dotenv.config();
@@ -84,6 +85,7 @@ app.use('/api/adjustment', authenticateToken,DayDataRoutes);
 app.use('/api/buffer', ProductBufferRoutes);
 app.use('/api/closure',authenticateToken, closureRoutes);
 app.use('/api/messages', authenticateToken ,messageRoutes);
+app.use('/api', salesProjectionConfigRoutes);
 
 
 // Serve frontend in production mode

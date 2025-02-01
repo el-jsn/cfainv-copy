@@ -257,18 +257,6 @@ const HomePage = () => {
               {user?.isAdmin ? 'Admin Dashboard' : 'Dashboard'}
             </Typography>
           </div>
-          <div className="flex items-center space-x-4">
-            {user?.isAdmin ? (
-              <Typography variant="small" className="bg-indigo-50 text-indigo-700 rounded-full px-2 py-1 font-medium">
-                Admin
-              </Typography>
-            ) : (
-              <Typography variant="small" className="bg-gray-100 text-gray-700 rounded-full px-2 py-1 font-medium">
-                User
-              </Typography>
-            )}
-            <LogoutButton />
-          </div>
         </div>
       </header>
       {/* Main Content */}
