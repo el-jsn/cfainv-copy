@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Code, Server, Database, Shield, Github, ExternalLink } from 'lucide-react';
 
 const DeveloperInfo = () => {
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -148,9 +152,11 @@ const DeveloperInfo = () => {
                             <p className="text-xl text-gray-600">Lead Developer & System Architect</p>
                         </div>
                         <p className="text-gray-600 leading-relaxed">
-                            Full-stack developer with expertise in building scalable web applications
-                            and implementing efficient business solutions. Specialized in React.js,
-                            Node.js, and modern web technologies.
+                            Full-stack developer specializing in modern web frameworks and automation solutions.
+                            Experienced in building scalable applications using Next.js, Django, Nuxt.js, and Nest.js.
+                            Passionate about creating efficient business solutions through intelligent automation
+                            and implementing robust architectures. Proficient in both frontend and backend development,
+                            with expertise in React.js, Node.js, and various modern web technologies.
                         </p>
                         <div className="flex gap-4 pt-4">
                             <a
@@ -165,6 +171,15 @@ const DeveloperInfo = () => {
                                 LinkedIn
                             </a>
                             <a
+                                href="https://github.com/el-jsn"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
+                            >
+                                <Github className="w-5 h-5" />
+                                Portfolio
+                            </a>
+                            <a
                                 href="mailto:Jashan6103@gmail.com"
                                 className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                             >
@@ -174,6 +189,33 @@ const DeveloperInfo = () => {
                         </div>
                     </div>
                 </div>
+            </motion.section>
+
+            {/* Website Preview */}
+            <motion.section
+                variants={itemVariants}
+                className="bg-white rounded-2xl shadow-xl p-8"
+            >
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">Portfolio Preview</h3>
+                <a
+                    href="https://eljsn.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block relative w-full aspect-video rounded-lg overflow-hidden shadow-lg group"
+                >
+                    <iframe
+                        src="https://eljsn.vercel.app/"
+                        title="Portfolio Preview"
+                        className="w-full h-full border-0"
+                        loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-75 flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100">
+                        <div className="text-white flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                            <span className="text-lg font-semibold">Visit Full Site</span>
+                            <ExternalLink className="w-5 h-5" />
+                        </div>
+                    </div>
+                </a>
             </motion.section>
 
             {/* Version Info */}
