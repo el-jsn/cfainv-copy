@@ -70,9 +70,11 @@ const Layout = memo(({ children }) => {
           ]
         }
       );
+
+      items.push({ name: "Guide", url: "/how-to", icon: LucideFileQuestion });
+
     }
 
-    items.push({ name: "Guide", url: "/how-to", icon: LucideFileQuestion });
 
     return items;
   }, [user]);
