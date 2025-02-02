@@ -234,6 +234,19 @@ const HomePage = () => {
     setActiveBufferView(view);
   };
 
+  // Filter out Sunday from sales projection data
+  const filteredSalesProjection = salesProjection.filter(
+    (projection) => projection.day !== "Sunday"
+  );
+
+  // Calculate weekly total excluding Sunday
+  const weeklyTotal = filteredSalesProjection.reduce(
+    (acc, curr) => acc + curr.sales,
+    0
+  );
+
+  // Calculate daily average excluding Sunday
+  const dailyAverage = weeklyTotal / filteredSalesProjection.length;
 
   if (isLoading) {
     return (
@@ -247,169 +260,255 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
-      {/* Navigation Bar */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-6 py-3 flex justify-between items-center">
+    <div className="min-h-screen bg-[#F8FAFC]">
+      {/* Simplified Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center">
-            <LayoutDashboard className=" text-gray-700" size={20} />
-            <Typography variant="h5" color="gray" className="font-semibold">
+            <LayoutDashboard className="text-indigo-500" size={24} />
+            <Typography variant="h5" className="font-bold text-gray-800 ml-3">
               {user?.isAdmin ? 'Admin Dashboard' : 'Dashboard'}
             </Typography>
           </div>
         </div>
       </header>
+
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-6">
-        {/* Section for UPTs and Sales Projections */}
-        <section className="mb-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {/* UPTs Data Card (Hidden for non-admins) */}
-            {user?.isAdmin && (
-              <Card className="bg-white shadow-md rounded-lg overflow-hidden">
-                <CardHeader
-                  floated={false}
-                  shadow={false}
-                  className="px-6 py-4 border-b border-gray-200"
-                >
-                  <div className="flex justify-between items-center">
-                    <Typography variant="h6" className="text-gray-800 font-semibold">
-                      UPTs by Product
-                    </Typography>
-                    <Link to="/update-upt">
-                      <Button size="sm" className="bg-indigo-500 hover:bg-indigo-600 text-white flex items-center gap-2 rounded">
-                        Update
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardHeader>
+      <main className="container mx-auto px-6 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {renderAdminSection(
+            <>
+              <Card className="transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
                 <CardBody className="p-6">
-                  <Chart data={salesData} chartColor="#6366F1" />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Typography variant="small" className="text-gray-600 mb-1 font-medium">
+                        Today's Sales
+                      </Typography>
+                      <Typography variant="h4" className="font-bold text-gray-800">
+                        ${filteredSalesProjection[0]?.sales.toLocaleString() || 0}
+                      </Typography>
+                      <Typography variant="small" className="text-gray-500">
+                        {filteredSalesProjection[0]?.day || ""}
+                      </Typography>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
+                      <ShoppingBag className="h-6 w-6 text-green-600" />
+                    </div>
+                  </div>
                 </CardBody>
               </Card>
-            )}
 
-            {/* Sales Projections Card */}
-            <Card className="bg-white shadow-md rounded-lg overflow-hidden md:col-span-2 lg:col-span-2">
-              <CardHeader
-                floated={false}
-                shadow={false}
-                className="px-6 py-4 border-b border-gray-200"
-              >
-                <div className="flex justify-between items-center">
-                  <Typography variant="h6" className="text-gray-800 font-semibold">
-                    Weekly Sales Projections
-                  </Typography>
-                  {renderAdminSection(
-                    <Link to="/update-sales-projection">
-                      <Button size="sm" className="bg-indigo-500 hover:bg-indigo-600 text-white flex items-center gap-2 rounded">
-                        Update
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  )}
+              <Card className="transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
+                <CardBody className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Typography variant="small" className="text-gray-600 mb-1 font-medium">
+                        Daily Average
+                      </Typography>
+                      <Typography variant="h4" className="font-bold text-gray-800">
+                        ${Math.round(dailyAverage).toLocaleString()}
+                      </Typography>
+                      <Typography variant="small" className="text-gray-500">
+                        Mon-Sat Average
+                      </Typography>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                      <Inspect className="h-6 w-6 text-blue-600" />
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              <Card className="transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
+                <CardBody className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Typography variant="small" className="text-gray-600 mb-1 font-medium">
+                        Weekly Total
+                      </Typography>
+                      <Typography variant="h4" className="font-bold text-gray-800">
+                        ${weeklyTotal.toLocaleString()}
+                      </Typography>
+                      <Typography variant="small" className="text-gray-500">
+                        6-Day Total
+                      </Typography>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                      <Calendar className="h-6 w-6 text-purple-600" />
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            </>
+          )}
+        </div>
+
+        {/* Charts Section with Modern Design */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* UPTs Chart */}
+          {renderAdminSection(
+            <Card className="lg:col-span-1 transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
+              <CardHeader floated={false} shadow={false} className="rounded-none">
+                <div className="flex items-center justify-between p-6">
+                  <div>
+                    <Typography variant="h6" color="blue-gray" className="font-bold">
+                      UPTs by Product
+                    </Typography>
+                    <Typography variant="small" className="text-gray-600">
+                      Product Performance
+                    </Typography>
+                  </div>
+                  <Link to="/update-upt">
+                    <Button size="sm" className="bg-indigo-500 hover:bg-indigo-600">
+                      Update
+                    </Button>
+                  </Link>
                 </div>
               </CardHeader>
-              <CardBody className="p-6">
-                <div style={{ height: 300 }}>
-                  <Line options={chartOptions} data={chartData} />
-                </div>
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {salesProjection.length > 0 ? (
-                    salesProjection.map((projection) => (
-                      <div key={projection._id} className="bg-gray-100 rounded-md p-3 text-center">
-                        <Typography variant="small" color="gray" className="font-medium">
-                          {projection.day}
-                        </Typography>
-                        <Typography variant="h6" className="text-gray-800 font-semibold">
-                          ${projection.sales}
-                        </Typography>
-                      </div>
-                    ))
-                  ) : (
-                    <Typography variant="small" color="gray" className="italic col-span-3 text-center">
-                      No sales projections available
-                    </Typography>
-                  )}
-                </div>
+              <CardBody className="px-6 pt-0">
+                <Chart data={salesData} height={300} />
               </CardBody>
             </Card>
-          </div>
-        </section>
+          )}
 
-        {/* Buffer Information */}
+          {/* Sales Projection Chart */}
+          <Card className="lg:col-span-2 transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
+            <CardHeader floated={false} shadow={false} className="rounded-none">
+              <div className="flex items-center justify-between p-6">
+                <div>
+                  <Typography variant="h6" color="blue-gray" className="font-bold">
+                    Weekly Sales Projections
+                  </Typography>
+                  <Typography variant="small" className="text-gray-600">
+                    7-Day Forecast
+                  </Typography>
+                </div>
+                {renderAdminSection(
+                  <Link to="/update-sales-projection">
+                    <Button size="sm" className="bg-indigo-500 hover:bg-indigo-600">
+                      Update
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </CardHeader>
+            <CardBody className="px-6 pt-0">
+              <div className="h-[300px]">
+                <Line options={chartOptions} data={chartData} />
+              </div>
+              <div className="grid grid-cols-7 gap-4 mt-6">
+                {filteredSalesProjection.map((projection) => (
+                  <div key={projection._id}
+                    className="bg-gray-50 rounded-lg p-3 text-center transform transition-transform hover:scale-105">
+                    <Typography variant="small" className="text-gray-600">
+                      {projection.day.slice(0, 3)}
+                    </Typography>
+                    <Typography variant="h6" className="font-bold text-gray-800">
+                      ${projection.sales}
+                    </Typography>
+                  </div>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+
+        {/* Buffer Section with Modern Design */}
         {renderAdminSection(
-          <section className="mb-8">
-            <Card className="bg-white shadow-md rounded-lg overflow-hidden">
-              <CardHeader
-                floated={false}
-                shadow={false}
-                className="px-6 py-4 border-b border-gray-200"
-              >
-                <div className="flex justify-between items-center">
-                  <Typography variant="h6" className="text-gray-800 font-semibold">
+          <Card className="transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
+            <CardHeader floated={false} shadow={false} className="rounded-none">
+              <div className="flex items-center justify-between p-6">
+                <div>
+                  <Typography variant="h6" className="font-bold text-gray-800">
                     Buffer Information
                   </Typography>
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      className={`${activeBufferView === 'chicken' ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-gray-200 hover:bg-gray-300'} text-white rounded`}
-                      onClick={() => handleToggleBufferView('chicken')}
-                    >
-                      Chicken
-                    </Button>
-                    <Button
-                      size="sm"
-                      className={`${activeBufferView === 'prep' ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-gray-200 hover:bg-gray-300'} text-white rounded`}
-                      onClick={() => handleToggleBufferView('prep')}
-                    >
-                      Prep
-                    </Button>
-                  </div>
+                  <Typography variant="small" className="text-gray-600">
+                    Product Buffer Status
+                  </Typography>
                 </div>
-              </CardHeader>
-              <CardBody className="p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {
-                    (activeBufferView === 'chicken' ? chickenBufferData() : prepBufferData()).map((buffer) => (
-                      <Card key={buffer._id} className="p-3 bg-gray-50 rounded-lg">
-                        <Typography variant="small" color="gray" className="font-medium truncate">
-                          {buffer.productName}
-                        </Typography>
-                        {editingBuffer === buffer._id ? (
+                <div className="flex space-x-2">
+                  <Button
+                    size="sm"
+                    className={`${activeBufferView === 'chicken'
+                      ? 'bg-indigo-500 hover:bg-indigo-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} 
+                      transition-all duration-300`}
+                    onClick={() => handleToggleBufferView('chicken')}
+                  >
+                    Chicken
+                  </Button>
+                  <Button
+                    size="sm"
+                    className={`${activeBufferView === 'prep'
+                      ? 'bg-indigo-500 hover:bg-indigo-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}
+                      transition-all duration-300`}
+                    onClick={() => handleToggleBufferView('prep')}
+                  >
+                    Prep
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardBody className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {(activeBufferView === 'chicken' ? chickenBufferData() : prepBufferData()).map((buffer) => (
+                  <div key={buffer._id}
+                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+                    <div className="flex justify-between items-start mb-2">
+                      <Typography variant="h6" className="font-semibold text-gray-800">
+                        {buffer.productName}
+                      </Typography>
+                      {editingBuffer === buffer._id ? (
+                        <div className="flex items-center space-x-2">
                           <input
                             type="number"
                             defaultValue={buffer.bufferPrcnt}
-                            onBlur={(e) =>
-                              handleBufferUpdate(
-                                buffer._id,
-                                parseFloat(e.target.value)
-                              )
-                            }
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            className="w-20 p-1 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            autoFocus
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                handleBufferUpdate(buffer._id, parseFloat(e.target.value));
+                              }
+                            }}
                           />
-                        ) : (
-                          <Typography variant="h6" className={`flex items-center ${getBufferColor(buffer.bufferPrcnt)} font-semibold`}>
+                          <Button
+                            size="sm"
+                            className="bg-indigo-500 hover:bg-indigo-600 px-3 py-1 rounded-lg transition-colors duration-300"
+                            onClick={(e) => {
+                              const input = e.target.previousSibling;
+                              handleBufferUpdate(buffer._id, parseFloat(input.value));
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <div className={`flex items-center ${getBufferColor(buffer.bufferPrcnt)} font-bold text-lg`}>
                             {getBufferArrow(buffer.bufferPrcnt)}
                             {buffer.bufferPrcnt}%
-                            <MTTooltip content="Edit Buffer">
-                              <IconButton size="sm" className="ml-2 text-gray-500 hover:text-gray-700 focus:outline-none" onClick={() => handleBufferEdit(buffer._id)}>
-                                <Edit2 className="h-4 w-4" />
-                              </IconButton>
-                            </MTTooltip>
-                          </Typography>
-                        )}
-                        <Typography variant="small" color="gray" className="mt-1">
-                          Updated: {new Date(buffer.updatedOn).toLocaleDateString()}
-                        </Typography>
-                      </Card>
-                    ))
-                  }
-                </div>
-              </CardBody>
-            </Card>
-          </section>
+                          </div>
+                          <IconButton
+                            size="sm"
+                            className="bg-indigo-500 hover:bg-indigo-600 text-white transition-colors duration-300"
+                            onClick={() => handleBufferEdit(buffer._id)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </IconButton>
+                        </div>
+                      )}
+                    </div>
+                    <Typography variant="small" className="text-gray-500 mt-2">
+                      Updated: {new Date(buffer.updatedOn).toLocaleDateString()}
+                    </Typography>
+                  </div>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
         )}
       </main>
     </div>

@@ -87,9 +87,8 @@ const App = () => {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/login" element={
-              <LoginPage />
-            } />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/dev-info" element={<DeveloperInfo />} />
             <Route path="/" element={
               <ProtectedRoute>
                 <HomePage />
@@ -150,7 +149,6 @@ const App = () => {
                 <SalesProjectionConfig />
               </ProtectedRoute>
             } />
-            <Route path="/dev-info" element={<DeveloperInfo />} />
           </Routes>
         </Layout>
       </Router>

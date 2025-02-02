@@ -203,11 +203,12 @@ const DeveloperInfo = () => {
                     rel="noopener noreferrer"
                     className="block relative w-full aspect-video rounded-lg overflow-hidden shadow-lg group"
                 >
-                    <iframe
-                        src="https://eljsn.vercel.app/"
-                        title="Portfolio Preview"
-                        className="w-full h-full border-0"
-                        loading="lazy"
+                    <div className="w-full h-full bg-cover bg-center bg-no-repeat"
+                        style={{
+                            backgroundImage: `url('https://i.imgur.com/YOURIMAGE.png')`,
+                            // Replace YOURIMAGE with your actual website screenshot
+                            // You'll need to host this image somewhere like imgur or your own server
+                        }}
                     />
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-75 flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100">
                         <div className="text-white flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
