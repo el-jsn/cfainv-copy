@@ -48,6 +48,7 @@ const Layout = memo(({ children }) => {
 
     if (user?.isAdmin) {
       items.push(
+
         {
           name: "Sales",
           url: "#",
@@ -65,7 +66,8 @@ const Layout = memo(({ children }) => {
           hasDropdown: true,
           dropdownLinks: [
             { to: "/update-upt", label: "UPT Settings" },
-            { to: "/data/message/all", label: "Instructions" },
+            { to: "/data/message/all", label: "Allocation Adjustments" },
+            { to: "/instructions", label: "Allocation Instructions" },
             { to: "/closure/plans", label: "Store Closures" },
           ]
         }
