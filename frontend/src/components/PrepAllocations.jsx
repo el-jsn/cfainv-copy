@@ -66,7 +66,7 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments) => {
             };
 
 
-            const calculateLettucePans = (utp, bufferMultiplier) => Math.round(((utp * (currentDaySales / 1000)) / 120) * bufferMultiplier);
+            const calculateLettucePans = (utp, bufferMultiplier) => Math.round(((utp * (currentDaySales / 1000)) / 144) * bufferMultiplier);
             const calculateTomatoPans = (utp, bufferMultiplier) => Math.round(((utp * (currentDaySales / 1000)) / 166) * bufferMultiplier);
             const calculateRomainePans = (utp, bufferMultiplier) => Math.round(((utp * (currentDaySales / 1000)) / 2585.48) * bufferMultiplier);
             const calculateBuckets = (utp, bufferMultiplier) => Math.ceil((((utp / 33.814) * currentDaySales) / 1000 / 12) * bufferMultiplier * drinkMultiplier);

@@ -56,6 +56,8 @@ const HomePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [futureProjections, setFutureProjections] = useState({});
+  const [chartView, setChartView] = useState('sequential'); // 'sequential' or 'overlap'
 
   useEffect(() => {
     if (!user) {
@@ -67,15 +69,17 @@ const HomePage = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [salesResponse, projectionResponse, bufferResponse] =
+        const [salesResponse, projectionResponse, bufferResponse, futureResponse] =
           await Promise.all([
             axiosInstance.get("/upt"),
             axiosInstance.get("/sales"),
             axiosInstance.get("/buffer"),
+            axiosInstance.get("/projections/future"),
           ]);
 
         setSalesData(salesResponse.data);
 
+        // Process current week's projections
         const salesProjectionArray = Object.entries(
           projectionResponse.data
         ).map(([day, data]) => ({ day, ...data }));
@@ -87,14 +91,87 @@ const HomePage = () => {
           "Thursday",
           "Friday",
           "Saturday",
-          "Sunday",
         ];
-        const sortedSalesProjection = salesProjectionArray.sort(
-          (a, b) => daysOfWeek.indexOf(a.day) - daysOfWeek.indexOf(b.day)
-        );
 
-        setSalesProjection(sortedSalesProjection);
+        // Get current week's dates
+        const today = new Date();
+        const currentWeekDates = [];
+        const nextWeekDates = [];
+
+        // Find Monday of current week
+        const monday = new Date(today);
+        const dayOfWeek = monday.getDay();
+        const diff = monday.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        monday.setDate(diff);
+        monday.setHours(0, 0, 0, 0);  // Use local time instead of UTC
+
+        // Generate dates for current week (Monday to Saturday)
+        for (let i = 0; i < 6; i++) {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + i);
+          currentWeekDates.push(date);
+        }
+
+        // Generate dates for next week (Monday to Saturday)
+        const nextMonday = new Date(monday);
+        nextMonday.setDate(monday.getDate() + 7);
+        for (let i = 0; i < 6; i++) {
+          const date = new Date(nextMonday);
+          date.setDate(nextMonday.getDate() + i);
+          nextWeekDates.push(date);
+        }
+
+        // Create a map of future projections by date
+        const futureProjectionsMap = futureResponse.data.reduce((acc, proj) => {
+          // Convert the UTC date to local date string
+          const date = new Date(proj.date);
+          const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+          const dateStr = localDate.toISOString().split('T')[0];
+          acc[dateStr] = proj.amount;
+          return acc;
+        }, {});
+
+        // Combine current week and next week projections
+        const combinedProjections = [
+          ...currentWeekDates.map((date) => {
+            const dateStr = date.toISOString().split('T')[0];
+            const dayIndex = date.getDay() - 1; // Monday = 0, Saturday = 5
+            const dayName = daysOfWeek[dayIndex];
+            const defaultSales = salesProjectionArray.find(p => p.day === dayName)?.sales || 0;
+
+            return {
+              date,
+              dateStr,
+              day: dayName,
+              sales: defaultSales,
+              originalSales: defaultSales
+            };
+          }),
+          ...nextWeekDates.map((date) => {
+            const dateStr = date.toISOString().split('T')[0];
+            const dayIndex = date.getDay() - 1; // Monday = 0, Saturday = 5
+            const dayName = daysOfWeek[dayIndex];
+            const defaultSales = salesProjectionArray.find(p => p.day === dayName)?.sales || 0;
+
+            return {
+              date,
+              dateStr,
+              day: dayName,
+              sales: futureProjectionsMap[dateStr] || defaultSales,
+              originalSales: defaultSales
+            };
+          })
+        ].filter(proj => {
+          const day = proj.date.getDay();
+          return day !== 0; // Filter out Sundays
+        });
+
+        // Sort projections by date to ensure correct order
+        combinedProjections.sort((a, b) => a.date - b.date);
+
+        setSalesProjection(combinedProjections);
         setBufferData(bufferResponse.data);
+        setFutureProjections(futureProjectionsMap);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -105,48 +182,100 @@ const HomePage = () => {
     fetchData();
   }, []);
 
+  // Update the getShortDayName function to only return Mon-Sat
+  const getShortDayName = (date) => {
+    const days = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return days[date.getDay() || 7]; // Use 7 for Sunday to avoid issues
+  };
+
+  // Update the chart data labels
   const chartData = {
-    labels: salesProjection.map((projection) => projection.day),
+    labels: salesProjection.map((projection) => {
+      const date = new Date(projection.date);
+      return `${date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      })} (${getShortDayName(date)})`;
+    }),
     datasets: [
       {
         label: "Sales Projection",
         data: salesProjection.map((projection) => projection.sales),
         fill: false,
-        backgroundColor: "#434343", // Muted blueish-gray
-        borderColor: "#6366F1", // Keep this as it's good contrast color
+        backgroundColor: "#434343",
+        borderColor: "#6366F1",
         tension: 0.4,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        pointBackgroundColor: "#6366F1",
+        pointBorderColor: "#ffffff",
+        pointBorderWidth: 2,
       },
     ],
   };
+
+  // Add a function to calculate y-axis bounds
+  const getYAxisBounds = (projections) => {
+    const allSales = projections.map(proj => proj.sales);
+    const minSales = Math.min(...allSales);
+    const maxSales = Math.max(...allSales);
+    return {
+      min: Math.floor((minSales - 2000) / 1000) * 1000, // Round down to nearest thousand
+      max: Math.ceil((maxSales + 1000) / 1000) * 1000   // Round up to nearest thousand
+    };
+  };
+
+  // Update both chart options
+  const yAxisBounds = getYAxisBounds(salesProjection);
 
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: "top",
-        labels: {
-          font: {
-            family: 'SF Pro Display, Helvetica',
-            weight: "bold",
-            size: 14,
-          },
-        },
+        display: false,
       },
       title: {
         display: true,
-        text: "Weekly Sales Projection",
+        text: "14-Day Sales Forecast",
         font: {
           size: 18,
           weight: "bold",
           family: 'SF Pro Display, Helvetica',
         },
-        padding: { top: 10, bottom: 10 },
+        padding: { top: 10, bottom: 20 },
       },
+      tooltip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1E1E1E',
+        bodyColor: '#1E1E1E',
+        bodyFont: {
+          size: 14,
+          family: 'SF Pro Display, Helvetica',
+        },
+        padding: 12,
+        borderColor: '#E5E7EB',
+        borderWidth: 1,
+        displayColors: false,
+        callbacks: {
+          title: (tooltipItems) => {
+            const date = new Date(salesProjection[tooltipItems[0].dataIndex].date);
+            return `${date.toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric'
+            })}`;
+          },
+          label: (context) => {
+            return `Sales: $${context.raw.toLocaleString()}`;
+          }
+        }
+      }
     },
     scales: {
       y: {
-        beginAtZero: true,
+        min: yAxisBounds.min,
+        max: yAxisBounds.max,
         grid: {
           color: "#E5E7EB",
         },
@@ -154,8 +283,13 @@ const HomePage = () => {
           font: {
             family: 'SF Pro Display, Helvetica',
             size: 12,
-          }
-        }
+          },
+          callback: (value) => `$${value.toLocaleString()}`,
+          padding: 10,
+        },
+        border: {
+          display: false,
+        },
       },
       x: {
         grid: {
@@ -165,10 +299,155 @@ const HomePage = () => {
           font: {
             family: 'SF Pro Display, Helvetica',
             size: 12,
-          }
-        }
+            weight: '500',
+          },
+          maxRotation: 45,
+          minRotation: 45,
+          padding: 8,
+        },
+        border: {
+          display: false,
+        },
       },
     },
+    elements: {
+      line: {
+        borderWidth: 3,
+      },
+    },
+    layout: {
+      padding: {
+        left: 10,
+        right: 10,
+        top: 10,
+        bottom: 20,
+      },
+    },
+  };
+
+  // Add function to prepare overlapping chart data
+  const getOverlappingChartData = () => {
+    const currentWeek = salesProjection.slice(0, 6);
+    const nextWeek = salesProjection.slice(6);
+
+    return {
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      datasets: [
+        {
+          label: "Current Week",
+          data: currentWeek.map(proj => proj.sales),
+          borderColor: "#6366F1",
+          backgroundColor: "#6366F1",
+          borderWidth: 3,
+          tension: 0.4,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointBackgroundColor: "#6366F1",
+          pointBorderColor: "#ffffff",
+          pointBorderWidth: 2,
+        },
+        {
+          label: "Next Week",
+          data: nextWeek.map(proj => proj.sales),
+          borderColor: "#E51636",
+          backgroundColor: "#E51636",
+          borderWidth: 3,
+          borderDash: [5, 5],
+          tension: 0.4,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointBackgroundColor: "#E51636",
+          pointBorderColor: "#ffffff",
+          pointBorderWidth: 2,
+        }
+      ]
+    };
+  };
+
+  // Update the overlapping chart options
+  const overlappingChartOptions = {
+    ...chartOptions,
+    plugins: {
+      ...chartOptions.plugins,
+      legend: {
+        display: true,
+        position: 'top',
+        labels: {
+          font: {
+            family: 'SF Pro Display, Helvetica',
+            size: 12,
+            weight: '500',
+          },
+          usePointStyle: true,
+          padding: 20,
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1E1E1E',
+        bodyColor: '#1E1E1E',
+        bodyFont: {
+          size: 14,
+          family: 'SF Pro Display, Helvetica',
+        },
+        padding: 12,
+        borderColor: '#E5E7EB',
+        borderWidth: 1,
+        displayColors: false,
+        callbacks: {
+          title: (tooltipItems) => {
+            const datasetIndex = tooltipItems[0].datasetIndex;
+            const index = tooltipItems[0].dataIndex;
+            const currentWeekProj = salesProjection[index];
+            const nextWeekProj = salesProjection[index + 6];
+            const currentDate = new Date(currentWeekProj.date);
+            const nextDate = new Date(nextWeekProj.date);
+
+            // Only show both dates when hovering current week's dot AND sales are the same
+            if (datasetIndex === 0 && currentWeekProj.sales === nextWeekProj.sales) {
+              return [
+                `Current Week - ${currentDate.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric'
+                })}`,
+                `Next Week - ${nextDate.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric'
+                })}`
+              ];
+            }
+
+            // For different sales or next week's dots, show only the relevant date
+            const date = datasetIndex === 0 ? currentDate : nextDate;
+            const weekLabel = datasetIndex === 0 ? 'Current Week' : 'Next Week';
+            return `${weekLabel} - ${date.toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric'
+            })}`;
+          },
+          label: (context) => {
+            const datasetIndex = context.datasetIndex;
+            const index = context.dataIndex;
+            const currentWeekProj = salesProjection[index];
+            const nextWeekProj = salesProjection[index + 6];
+
+            // Only show one sales value since we're only showing tooltip when they're the same
+            return `Sales: $${context.raw.toLocaleString()}`;
+          }
+        }
+      }
+    },
+    scales: {
+      ...chartOptions.scales,
+      y: {
+        ...chartOptions.scales.y,
+        min: yAxisBounds.min,
+        max: yAxisBounds.max,
+      }
+    }
   };
 
   const handleBufferEdit = (bufferId) => {
@@ -379,37 +658,75 @@ const HomePage = () => {
               <div className="flex items-center justify-between p-6">
                 <div>
                   <Typography variant="h6" color="blue-gray" className="font-bold">
-                    Weekly Sales Projections
+                    Sales Projections
                   </Typography>
                   <Typography variant="small" className="text-gray-600">
-                    7-Day Forecast
+                    14-Day Forecast
                   </Typography>
                 </div>
-                {renderAdminSection(
-                  <Link to="/update-sales-projection">
-                    <Button size="sm" className="bg-indigo-500 hover:bg-indigo-600">
-                      Update
+                <div className="flex items-center gap-4">
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <Button
+                      size="sm"
+                      className={`px-4 py-2 rounded-md transition-all duration-300 ${chartView === 'sequential'
+                        ? 'bg-indigo-500 text-white'
+                        : 'bg-transparent text-gray-600 hover:bg-gray-200'
+                        }`}
+                      onClick={() => setChartView('sequential')}
+                    >
+                      Sequential
                     </Button>
-                  </Link>
-                )}
+                    <Button
+                      size="sm"
+                      className={`px-4 py-2 rounded-md transition-all duration-300 ${chartView === 'overlap'
+                        ? 'bg-indigo-500 text-white'
+                        : 'bg-transparent text-gray-600 hover:bg-gray-200'
+                        }`}
+                      onClick={() => setChartView('overlap')}
+                    >
+                      Overlap
+                    </Button>
+                  </div>
+                  {renderAdminSection(
+                    <Link to="/update-sales-projection">
+                      <Button size="sm" className="bg-indigo-500 hover:bg-indigo-600">
+                        Update
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardBody className="px-6 pt-0">
               <div className="h-[300px]">
-                <Line options={chartOptions} data={chartData} />
+                <Line
+                  options={chartView === 'sequential' ? chartOptions : overlappingChartOptions}
+                  data={chartView === 'sequential' ? chartData : getOverlappingChartData()}
+                />
               </div>
-              <div className="grid grid-cols-7 gap-4 mt-6">
-                {filteredSalesProjection.map((projection) => (
-                  <div key={projection._id}
-                    className="bg-gray-50 rounded-lg p-3 text-center transform transition-transform hover:scale-105">
-                    <Typography variant="small" className="text-gray-600">
-                      {projection.day.slice(0, 3)}
-                    </Typography>
-                    <Typography variant="h6" className="font-bold text-gray-800">
-                      ${projection.sales}
-                    </Typography>
-                  </div>
-                ))}
+              <div className="grid grid-cols-6 gap-4 mt-6">
+                {salesProjection.slice(0, 6).map((projection) => {
+                  const date = new Date(projection.date);
+                  return (
+                    <div key={projection.dateStr}
+                      className={`bg-gray-50 rounded-lg p-3 text-center transform transition-transform hover:scale-105 
+                        ${projection.sales !== projection.originalSales ? 'ring-2 ring-indigo-500' : ''}`}
+                    >
+                      <Typography variant="h6" className="font-bold text-gray-800">
+                        ${projection.sales.toLocaleString()}
+                      </Typography>
+                      <Typography variant="small" className="text-gray-500">
+                        {date.toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </Typography>
+                      <Typography variant="small" className="text-gray-400">
+                        ({getShortDayName(date)})
+                      </Typography>
+                    </div>
+                  );
+                })}
               </div>
             </CardBody>
           </Card>

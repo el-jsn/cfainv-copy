@@ -46,7 +46,12 @@ import {
     Percent,
     AlertCircle,
     GripVertical,
-    RotateCcw
+    RotateCcw,
+    DollarSign,
+    CalendarPlus,
+    ArrowRight,
+    BarChart,
+    LineChart
 } from 'lucide-react';
 import { styled } from '@mui/material/styles';
 import { motion } from 'framer-motion';
@@ -148,7 +153,8 @@ const HowToUse = () => {
             thawing: { title: "Using the Thawing Cabinet", content: ["Understanding Calculations", "Displaying Allocations", "Data Layout", "Closed Days", "Product Allocations", "Instruction Messages"] },
             prep: { title: "Using the Prep Allocations", content: ["Understanding Calculations", "Displaying Allocations", "Data Layout", "Closed Days", "Product Allocations", "Instruction Messages"] },
             tips: { title: "Tips & Best Practices", content: ["File Format Tips", "Navigation Tips", "Best Practices"] },
-            salesrules: { title: "Sales Projection Configuration", content: ["Configure Projection Rules", "Using Presets", "Quick Setup", "Custom Distribution", "Validation"] }
+            salesrules: { title: "Sales Projection Configuration", content: ["Configure Projection Rules", "Using Presets", "Quick Setup", "Custom Distribution", "Validation"] },
+            projections: { title: "Managing Sales Projections", content: ["Projections Dashboard", "Weekly Projections", "Future Projections Calendar", "Upcoming Changes", "Projection Views"] }
         }
         const found = Object.keys(sections).find(key => {
             return sections[key].content.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -228,6 +234,13 @@ const HowToUse = () => {
                                     setActiveSection={setActiveSection}
                                 />
                                 <NavigationItem
+                                    section="projections"
+                                    title="Sales Projections"
+                                    icon={DollarSign}
+                                    activeSection={filteredSections}
+                                    setActiveSection={setActiveSection}
+                                />
+                                <NavigationItem
                                     section="salesrules"
                                     title="Sales Rules"
                                     icon={Sliders}
@@ -254,33 +267,113 @@ const HowToUse = () => {
                                     <IconItem
                                         icon={LayoutDashboard}
                                         title="Dashboard Overview"
-                                        description="Get a snapshot of critical information and quickly access key actions"
+                                        description="The main dashboard provides real-time access to critical business metrics, sales projections, and buffer information. The layout is organized into distinct cards for easy monitoring and quick actions."
                                     />
-                                    <IconItem
-                                        icon={BarChart2}
-                                        title="UPTs by Product"
-                                        description="(Admin Only) See unit per thousand (UPT) data for product categories"
-                                    />
-                                    <IconItem
-                                        icon={TrendingUp}
-                                        title="Weekly Sales Projection"
-                                        description="View projected sales for each day of the week"
-                                    />
-                                    <IconItem
-                                        icon={Settings}
-                                        title="Buffer Information"
-                                        description="(Admin Only) Adjust buffer percentages for products"
-                                    />
-                                    <IconItem
-                                        icon={Layers}
-                                        title="Buffer Toggle"
-                                        description="(Admin Only) Use the 'Chicken' and 'Prep' buttons to switch between the chicken and prep buffer data"
-                                    />
-                                    <IconItem
-                                        icon={ShoppingBag}
-                                        title="Thawing Cabinet"
-                                        description="View allocated products in the thawing cabinet"
-                                    />
+
+                                    {/* Sales Projections Section */}
+                                    <InstructionSection title="Sales Projections Card" className="mt-4">
+                                        <div className="grid gap-4">
+                                            <IconItem
+                                                icon={TrendingUp}
+                                                title="14-Day Forecast"
+                                                description="View a comprehensive 14-day sales projection chart showing both current and next week's projections. The chart updates automatically when projections are modified."
+                                            />
+                                            <IconItem
+                                                icon={BarChart2}
+                                                title="View Options"
+                                                description="Toggle between Sequential view (all 14 days in order) and Overlap view (compare weeks) using the buttons above the chart. Each view offers different insights into your projections."
+                                            />
+                                            <IconItem
+                                                icon={MousePointer}
+                                                title="Interactive Features"
+                                                description="Hover over any point on the chart to see the exact date and projected sales amount. Points with modified projections are highlighted for easy identification."
+                                            />
+                                            <IconItem
+                                                icon={Calendar}
+                                                title="Daily Breakdown"
+                                                description="Below the chart, find individual cards for each day showing the date, day of week, and projected sales amount. Modified projections are highlighted with an indigo border."
+                                            />
+                                        </div>
+                                    </InstructionSection>
+
+                                    {/* UPT Section */}
+                                    <InstructionSection title="UPT Information" className="mt-4">
+                                        <div className="grid gap-4">
+                                            <IconItem
+                                                icon={Database}
+                                                title="UPT by Product"
+                                                description="(Admin Only) View Units Per Thousand (UPT) data for each product category. This data is crucial for allocation calculations and is automatically applied to projections."
+                                            />
+                                            <IconItem
+                                                icon={Edit2}
+                                                title="Quick UPT Updates"
+                                                description="Admins can quickly update UPT values directly from the dashboard. Changes immediately affect allocation calculations across the system."
+                                            />
+                                            <IconItem
+                                                icon={ArrowUpRight}
+                                                title="Performance Indicators"
+                                                description="Green arrows indicate improved performance, while red arrows show decreased performance compared to previous periods."
+                                            />
+                                        </div>
+                                    </InstructionSection>
+
+                                    {/* Buffer Information */}
+                                    <InstructionSection title="Buffer Management" className="mt-4">
+                                        <div className="grid gap-4">
+                                            <IconItem
+                                                icon={Layers}
+                                                title="Buffer Overview"
+                                                description="Monitor and manage buffer percentages for both chicken products and prep items. Each product's current buffer percentage is clearly displayed with color-coding."
+                                            />
+                                            <IconItem
+                                                icon={ArrowRight}
+                                                title="Buffer Toggle"
+                                                description="Switch between Chicken and Prep views using the toggle buttons. Each view shows relevant products and their current buffer settings."
+                                            />
+                                            <IconItem
+                                                icon={Edit2}
+                                                title="Quick Buffer Updates"
+                                                description="Click the edit icon next to any product to modify its buffer percentage. Changes are saved automatically and immediately affect allocation calculations."
+                                            />
+                                            <IconItem
+                                                icon={AlertTriangle}
+                                                title="Buffer Indicators"
+                                                description="Color-coding helps quickly identify buffer levels: Red for low buffer, Yellow for moderate, and Green for optimal buffer percentages."
+                                            />
+                                        </div>
+                                    </InstructionSection>
+
+                                    {/* Quick Actions */}
+                                    <InstructionSection title="Dashboard Actions" className="mt-4">
+                                        <div className="grid gap-4">
+                                            <IconItem
+                                                icon={Settings}
+                                                title="Quick Access"
+                                                description="Use the action buttons at the top of each card to quickly navigate to detailed views or make updates. Admin users see additional options for system configuration."
+                                            />
+                                            <IconItem
+                                                icon={RefreshCw}
+                                                title="Real-Time Updates"
+                                                description="The dashboard automatically refreshes to show the latest data. Modified values are highlighted to easily track recent changes."
+                                            />
+                                            <IconItem
+                                                icon={MessageSquare}
+                                                title="Status Messages"
+                                                description="Important system messages and updates appear at the top of the dashboard. Click messages to see more details or take required actions."
+                                            />
+                                        </div>
+                                    </InstructionSection>
+                                </div>
+
+                                <div className="mt-4 p-4 bg-blue-50 rounded-md">
+                                    <p className="text-blue-800">
+                                        <strong>Dashboard Best Practices:</strong>
+                                        <br />1. Review the sales projection chart daily to spot any unusual patterns
+                                        <br />2. Monitor buffer percentages regularly and adjust based on actual needs
+                                        <br />3. Pay attention to color indicators for quick status assessment
+                                        <br />4. Use the overlap view to compare week-over-week projections
+                                        <br />5. Check UPT data weekly to ensure accurate allocation calculations
+                                    </p>
                                 </div>
                             </InstructionSection>
                         )}
@@ -671,44 +764,35 @@ const HowToUse = () => {
                         )}
                         {/* Sales Rules Section */}
                         {filteredSections === 'salesrules' && (
-                            <InstructionSection title="Sales Projection Configuration">
+                            <InstructionSection title="Sales Rules Configuration">
                                 <div className="grid gap-4">
                                     <IconItem
                                         icon={Sliders}
-                                        title="Configure Projection Rules"
-                                        description="Set up rules for how sales data from different days is used to calculate thawing cabinet projections"
+                                        title="Configure Rules"
+                                        description="Set up rules for how sales data from different days is used to calculate projections"
                                     />
                                     <IconItem
                                         icon={LayoutTemplate}
-                                        title="Using Presets"
-                                        description="Choose from preset configurations like 'Next Day', 'Two Days Ahead', or 'Split Days' for quick setup"
+                                        title="Preset Templates"
+                                        description="Choose from preset configurations for quick setup of common projection patterns"
                                     />
                                     <IconItem
                                         icon={GripVertical}
-                                        title="Drag and Drop"
-                                        description="Drag days from the source section and drop them into target columns to create assignments. Drag existing assignments to move or delete them."
+                                        title="Custom Distribution"
+                                        description="Drag and drop days to create custom projection calculation rules"
                                     />
                                     <IconItem
-                                        icon={Edit2}
-                                        title="Edit Percentages"
-                                        description="Click on any percentage to edit it directly. Values must total either 0% or 100% for each day."
-                                    />
-                                    <IconItem
-                                        icon={Trash2}
-                                        title="Delete Assignments"
-                                        description="Drag any assignment to the delete zone at the bottom right to remove it"
-                                    />
-                                    <IconItem
-                                        icon={RotateCcw}
-                                        title="Cancel Changes"
-                                        description="Use the Cancel Changes button to revert to the last saved configuration"
+                                        icon={Percent}
+                                        title="Weight Distribution"
+                                        description="Set percentage weights to determine how much each source day influences the projection"
                                     />
                                     <IconItem
                                         icon={Save}
-                                        title="Save Configuration"
-                                        description="Changes are tracked automatically. Click Save Changes when you're ready to update the configuration."
+                                        title="Save Rules"
+                                        description="Save your configuration to apply the new calculation rules"
                                     />
                                 </div>
+
                                 <div className="mt-4 p-4 bg-blue-50 rounded-md">
                                     <p className="text-blue-800">
                                         <strong>Example:</strong> To set up Wednesday's projections:
@@ -734,6 +818,123 @@ const HowToUse = () => {
                                 <div className="bg-purple-50 rounded-lg p-4">
                                     <h3 className="text-lg font-medium text-purple-900 mb-2">Best Practices</h3>
                                     <p className="text-purple-800">Regularly review and update your allocations based on performance data</p>
+                                </div>
+                            </InstructionSection>
+                        )}
+
+                        {/* Sales Projections Section */}
+                        {filteredSections === 'projections' && (
+                            <InstructionSection title="Managing Sales Projections">
+                                <div className="grid gap-4">
+                                    <IconItem
+                                        icon={LayoutDashboard}
+                                        title="Projections Dashboard Overview"
+                                        description="The Sales Projections Dashboard provides a comprehensive view of both your weekly standard projections and any future date-specific projections. Access this through the 'Update Sales Projection' button on the homepage."
+                                    />
+
+                                    {/* Weekly Projections */}
+                                    <InstructionSection title="Weekly Projections" className="mt-4">
+                                        <div className="grid gap-4">
+                                            <IconItem
+                                                icon={Calendar}
+                                                title="Standard Weekly Setup"
+                                                description="The left panel shows input fields for Monday through Saturday. These values serve as your default weekly projections when no specific future projection is set."
+                                            />
+                                            <IconItem
+                                                icon={DollarSign}
+                                                title="Direct Input"
+                                                description="Enter dollar amounts without the $ symbol. The system automatically formats your input. Use whole numbers only - no decimals or special characters."
+                                            />
+                                            <IconItem
+                                                icon={Save}
+                                                title="Save Changes"
+                                                description="Click 'Update Weekly Projections' to save your changes. The button shows a loading spinner while saving, and a green success message appears when complete."
+                                            />
+                                            <IconItem
+                                                icon={AlertCircle}
+                                                title="Validation"
+                                                description="All fields must contain valid numbers. Empty fields will be treated as $0. The system prevents invalid inputs like negative numbers."
+                                            />
+                                        </div>
+                                    </InstructionSection>
+
+                                    {/* Future Projections */}
+                                    <InstructionSection title="Future Projections Calendar" className="mt-4">
+                                        <div className="grid gap-4">
+                                            <IconItem
+                                                icon={CalendarPlus}
+                                                title="Interactive Calendar"
+                                                description="The calendar shows the next 14 days. Dates with existing projections are highlighted and display their projected amount. Past dates are grayed out and disabled."
+                                            />
+                                            <IconItem
+                                                icon={MousePointer}
+                                                title="Setting Projections"
+                                                description="Click any future date to open the projection dialog. Enter the projected sales amount for that specific date. This will override the standard weekly projection for that day."
+                                            />
+                                            <IconItem
+                                                icon={Trash2}
+                                                title="Managing Projections"
+                                                description="When viewing a date with an existing projection, use the trash icon in the dialog to remove it. This will revert that date back to using the standard weekly projection."
+                                            />
+                                            <IconItem
+                                                icon={Info}
+                                                title="Visual Indicators"
+                                                description="Dates with projections show the amount below the date. The current date is marked with a dot. Sundays show in red as they're typically closed."
+                                            />
+                                        </div>
+                                    </InstructionSection>
+
+                                    {/* Upcoming Changes */}
+                                    <InstructionSection title="Upcoming Changes" className="mt-4">
+                                        <div className="grid gap-4">
+                                            <IconItem
+                                                icon={Clock}
+                                                title="Future Updates Panel"
+                                                description="The bottom section shows all future projections that will be automatically applied next Sunday. Each entry shows the target date and the new projection amount."
+                                            />
+                                            <IconItem
+                                                icon={ArrowRight}
+                                                title="Automatic Updates"
+                                                description="Every Sunday at midnight, the system automatically applies any future projections for the upcoming week to your weekly projections. These changes override the standard weekly values."
+                                            />
+                                            <IconItem
+                                                icon={RefreshCw}
+                                                title="Update Cycle"
+                                                description="After projections are applied, they're marked as 'applied' in the system and won't appear in the upcoming changes list anymore. New projections can then be set for those dates in future weeks."
+                                            />
+                                        </div>
+                                    </InstructionSection>
+
+                                    {/* Chart Views */}
+                                    <InstructionSection title="Projection Views" className="mt-4">
+                                        <div className="grid gap-4">
+                                            <IconItem
+                                                icon={BarChart}
+                                                title="Sequential View"
+                                                description="The default view shows a continuous line chart of all 14 days. Each point shows the date and projected amount. Hover over points to see detailed information."
+                                            />
+                                            <IconItem
+                                                icon={LineChart}
+                                                title="Overlap View"
+                                                description="Switch to this view to compare weeks directly. Current week shows as a solid line, next week as dotted. When projections match between weeks, hovering shows both dates."
+                                            />
+                                            <IconItem
+                                                icon={TrendingUp}
+                                                title="Chart Features"
+                                                description="The chart automatically scales to show your data clearly. The y-axis starts slightly below your lowest projection and ends above your highest for optimal visibility."
+                                            />
+                                        </div>
+                                    </InstructionSection>
+                                </div>
+
+                                <div className="mt-4 p-4 bg-blue-50 rounded-md">
+                                    <p className="text-blue-800">
+                                        <strong>Best Practices:</strong>
+                                        <br />1. Set your standard weekly projections first as a baseline
+                                        <br />2. Use future projections for known variations (events, holidays, etc.)
+                                        <br />3. Review the upcoming changes section regularly to stay aware of scheduled updates
+                                        <br />4. Use the overlap view to easily spot significant variations between weeks
+                                    </p>
                                 </div>
                             </InstructionSection>
                         )}

@@ -147,10 +147,11 @@ const Layout = memo(({ children }) => {
                   onClick={handleLogoClick}
                 >
                   <img
-                    src="https://upload.wikimedia.org/wikipedia/commons/0/02/Chick-fil-A_Logo.svg"
+                    src="./imgs/Chick-fil-A-North-Barrie-Logo.png"
                     alt="Chick-fil-A Logo"
-                    className="h-8 w-auto"
+                    className="h-16 w-auto"
                   />
+
                 </Link>
 
                 <div className="flex-1 flex justify-center px-4">

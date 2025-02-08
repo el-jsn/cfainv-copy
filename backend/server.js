@@ -20,6 +20,8 @@ import {authenticateToken} from './middlewares/userAuth.js';
 import messageRoutes from './routes/message.route.js';
 import cookieParser from 'cookie-parser';
 import salesProjectionConfigRoutes from './routes/salesProjectionConfig.route.js';
+import futureProjectionRoutes from "./routes/futureProjection.route.js";
+import { applyFutureProjections } from './controllers/futureProjection.controller.js';
 
 
 dotenv.config();
@@ -86,6 +88,7 @@ app.use('/api/buffer', ProductBufferRoutes);
 app.use('/api/closure',authenticateToken, closureRoutes);
 app.use('/api/messages', authenticateToken ,messageRoutes);
 app.use('/api', salesProjectionConfigRoutes);
+app.use("/api", futureProjectionRoutes);
 
 
 // Serve frontend in production mode
@@ -110,6 +113,20 @@ app.use(express.static('frontend/dist', {
 // Schedule cleanup task using cron jobs
 cron.schedule('0 * * * *', () => {
   cleanupExpiredRecords();
+});
+
+// Run at 12:01 AM every Sunday (in Eastern Time)
+cron.schedule('1 0 * * 0', async () => {
+  console.log('Running weekly projection updates...');
+  try {
+    await applyFutureProjections();
+    console.log('Weekly projection updates completed');
+  } catch (error) {
+    console.error('Error in weekly projection updates:', error);
+  }
+}, {
+  scheduled: true,
+  timezone: "America/Toronto"
 });
 
 // Handle unknown routes (404)

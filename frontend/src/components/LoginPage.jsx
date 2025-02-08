@@ -59,10 +59,12 @@ const LoginPage = () => {
                 stiffness: 260,
                 damping: 20
               }}
-              src="https://upload.wikimedia.org/wikipedia/commons/0/02/Chick-fil-A_Logo.svg"
+              src="./imgs/Chick-fil-A-North-Barrie-Logo.png"
               alt="Chick-fil-A Logo"
-              className="h-24 w-auto drop-shadow-xl"
+              className="h-32 w-auto drop-shadow-xl"
             />
+
+
           </div>
 
           {/* Login Form */}
