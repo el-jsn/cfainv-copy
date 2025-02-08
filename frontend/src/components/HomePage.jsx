@@ -15,6 +15,7 @@ import {
   Inspect,
   LayoutDashboard,
   ShoppingBag,
+  DollarSign,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -527,6 +528,13 @@ const HomePage = () => {
   // Calculate daily average excluding Sunday
   const dailyAverage = weeklyTotal / filteredSalesProjection.length;
 
+  // Add a function to get today's day name
+  const getTodayDayName = () => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const today = new Date();
+    return days[today.getDay()];
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex justify-center items-center">
@@ -566,10 +574,12 @@ const HomePage = () => {
                         Today's Sales
                       </Typography>
                       <Typography variant="h4" className="font-bold text-gray-800">
-                        ${filteredSalesProjection[0]?.sales.toLocaleString() || 0}
+                        ${salesProjection.find(proj =>
+                          new Date(proj.date).getDay() === new Date().getDay()
+                        )?.sales.toLocaleString() || '0'}
                       </Typography>
                       <Typography variant="small" className="text-gray-500">
-                        {filteredSalesProjection[0]?.day || ""}
+                        {getTodayDayName()}
                       </Typography>
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
