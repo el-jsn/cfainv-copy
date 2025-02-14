@@ -6,9 +6,10 @@ import axiosInstance from "./axiosInstance";
 import playbackVid from "../assets/background.mp4";
 import { Link } from "react-router-dom";
 import { ArrowBackIos } from "@mui/icons-material";
+import { useAuth } from "./AuthContext";
 console.log(playbackVid);
 
-const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, salesProjectionConfig) => {
+const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections) => {
   return useMemo(() => {
     console.log('Calculating with:', {
       salesData,
@@ -65,11 +66,43 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, sa
       // Calculate projected sales based on configuration
       const dayConfig = projectionConfig[day];
       let nextDaySales = 0;
+      let salesCalculationDetails = [];
 
       if (dayConfig) {
         Object.entries(dayConfig).forEach(([sourceDay, percentage]) => {
-          const sourceSales = salesData.find(e => e.day === sourceDay)?.sales || 0;
-          nextDaySales += (sourceSales * (percentage / 100));
+          if (percentage > 0) {
+            let sourceSales;
+            // If the source day is Monday, check for future projections
+            if (sourceDay === 'Monday') {
+              // Get next Monday's date
+              const today = new Date();
+              const nextMonday = new Date(today);
+              nextMonday.setDate(today.getDate() + (8 - today.getDay())); // Get next Monday
+              const nextMondayStr = nextMonday.toISOString().split('T')[0];
+
+              // Use future projection if available, otherwise use standard weekly projection
+              sourceSales = futureProjections.find(proj =>
+                new Date(proj.date).toISOString().split('T')[0] === nextMondayStr
+              )?.amount || salesData.find(e => e.day === sourceDay)?.sales || 0;
+
+              console.log(`Using Monday's sales for ${day}:`, {
+                nextMondayStr,
+                futureProjection: sourceSales,
+                standardProjection: salesData.find(e => e.day === sourceDay)?.sales
+              });
+            } else {
+              sourceSales = salesData.find(e => e.day === sourceDay)?.sales || 0;
+            }
+
+            nextDaySales += (sourceSales * (percentage / 100));
+            salesCalculationDetails.push({
+              day: sourceDay,
+              percentage,
+              amount: sourceSales,
+              contribution: sourceSales * (percentage / 100),
+              isFromFutureProjection: sourceDay === 'Monday' && sourceSales !== salesData.find(e => e.day === sourceDay)?.sales
+            });
+          }
         });
       }
       console.log(`${day} nextDaySales:`, nextDaySales);
@@ -115,6 +148,8 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, sa
 
       return {
         day: entry.day,
+        sales: nextDaySales,
+        salesCalculation: salesCalculationDetails,
         filets: applyMessage("Filets", filetsCases),
         spicy: applyMessage("Spicy Filets", spicyCases),
         grilledFilets: applyMessage("Grilled Filets", grilledFiletsCalculatedCases, remainingGrilledFiletsBags),
@@ -123,7 +158,7 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, sa
         strips: applyMessage("Spicy Strips", stripsCalculatedCases, remainingStripsBags)
       };
     });
-  }, [salesData, utpData, bufferData, adjustments, salesProjectionConfig]);
+  }, [salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections]);
 };
 
 
@@ -152,7 +187,7 @@ const useFilteredClosures = (closures) => {
   }, [closures]);
 };
 
-const DayCard = memo(({ entry, currentDay, closures, messages }) => {
+const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) => {
   const isToday = entry.day === currentDay;
 
   const closure = useMemo(() => {
@@ -239,6 +274,29 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
     );
   };
 
+  const renderSalesDetails = () => {
+    if (!showAdminView) return null;
+
+    return (
+      <div className="text-xs text-gray-600 mt-1 p-1 bg-gray-50 rounded">
+        <div>Sales: ${entry.sales.toLocaleString()}</div>
+        {entry.salesCalculation.length > 0 && (
+          <div className="mt-1">
+            Calculation:
+            {entry.salesCalculation.map((calc, idx) => (
+              <div key={idx} className="ml-2">
+                {calc.percentage}% of {calc.day} (${calc.amount.toLocaleString()})
+                = ${calc.contribution.toLocaleString()}
+                {calc.isFromFutureProjection && (
+                  <span className="ml-1 text-blue-600 font-medium">(Future Projection)</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div
@@ -258,6 +316,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
           }`}
       >
         <div className="p-1">{entry.day}</div>
+        {showAdminView && renderSalesDetails()}
         {noProductMessages.map((msg, index) => (
           <div key={index} className="mt-1 text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200">
             {msg.message}
@@ -306,6 +365,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
 });
 
 const ThawingCabinet = () => {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
@@ -318,6 +378,8 @@ const ThawingCabinet = () => {
   const videoRef = useRef(null); // Ref for the video element
   const containerRef = useRef(null)
   const [salesProjectionConfig, setSalesProjectionConfig] = useState(null);
+  const [showAdminView, setShowAdminView] = useState(false);
+  const [futureProjections, setFutureProjections] = useState({});
 
 
   useEffect(() => {
@@ -410,6 +472,7 @@ const ThawingCabinet = () => {
         utpResponse,
         bufferResponse,
         configResponse,
+        futureProjectionsResponse,
       ] = await Promise.all([
         axiosInstance.get("/adjustment/data"),
         axiosInstance.get("/closure/plans"),
@@ -418,6 +481,7 @@ const ThawingCabinet = () => {
         axiosInstance.get("/upt"),
         axiosInstance.get("/buffer"),
         axiosInstance.get("/sales-projection-config"),
+        axiosInstance.get("/projections/future"),
       ]);
 
       console.log('Responses:', {
@@ -441,6 +505,7 @@ const ThawingCabinet = () => {
       setMessages(messagesResponse.data);
       setLastUpdated(new Date());
       setSalesProjectionConfig(configResponse.data);
+      setFutureProjections(futureProjectionsResponse.data);
     } catch (error) {
       console.error("Error fetching data:", error);
       // Consider setting an error state to display an error message to the user
@@ -485,7 +550,8 @@ const ThawingCabinet = () => {
     data?.utp,
     data?.buffer,
     adjustments,
-    salesProjectionConfig
+    salesProjectionConfig,
+    futureProjections
   );
   const filteredClosures = useFilteredClosures(closures);
 
@@ -511,6 +577,17 @@ const ThawingCabinet = () => {
             <Link to={"/"} className="text-lg sm:text-xl font-bold text-gray-800"><ArrowBackIos /> Thawing Cabinet</Link>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
+            {user && user.isAdmin && (
+              <button
+                onClick={() => setShowAdminView(!showAdminView)}
+                className={`px-3 py-1 rounded-lg text-sm transition-colors duration-200 ${showAdminView
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-600'
+                  }`}
+              >
+                {showAdminView ? 'Admin View' : 'User View'}
+              </button>
+            )}
             <div className="flex items-center gap-1 sm:gap-2 bg-gray-50 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm">
               <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
               <span className="text-gray-600 font-medium whitespace-nowrap">
@@ -538,6 +615,7 @@ const ThawingCabinet = () => {
               currentDay={currentDay}
               closures={filteredClosures}
               messages={messages}
+              showAdminView={showAdminView}
             />
           ))}
         </div>
