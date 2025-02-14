@@ -9,7 +9,7 @@ import { ArrowBackIos } from "@mui/icons-material";
 import { useAuth } from "./AuthContext";
 console.log(playbackVid);
 
-const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections) => {
+const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections, isNextWeek) => {
   return useMemo(() => {
     console.log('Calculating with:', {
       salesData,
@@ -62,6 +62,7 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, sa
 
     return daysOrder.map((day, index) => {
       const entry = salesData.find(e => e.day === day) || { day, sales: 0 };
+      const today = new Date();
 
       // Calculate projected sales based on configuration
       const dayConfig = projectionConfig[day];
@@ -72,27 +73,63 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, sa
         Object.entries(dayConfig).forEach(([sourceDay, percentage]) => {
           if (percentage > 0) {
             let sourceSales;
-            // If the source day is Monday, check for future projections
-            if (sourceDay === 'Monday') {
-              // Get next Monday's date
-              const today = new Date();
+            let sourceDate;
+
+            if (isNextWeek) {
+              // For next week's view
               const nextMonday = new Date(today);
-              nextMonday.setDate(today.getDate() + (8 - today.getDay())); // Get next Monday
-              const nextMondayStr = nextMonday.toISOString().split('T')[0];
+              // Get to next Monday first
+              nextMonday.setDate(today.getDate() + (8 - today.getDay()));
 
-              // Use future projection if available, otherwise use standard weekly projection
-              sourceSales = futureProjections.find(proj =>
-                new Date(proj.date).toISOString().split('T')[0] === nextMondayStr
-              )?.amount || salesData.find(e => e.day === sourceDay)?.sales || 0;
+              // Then calculate the target date based on the source day
+              sourceDate = new Date(nextMonday);
+              const daysToAdd = daysOrder.indexOf(sourceDay);
+              sourceDate.setDate(nextMonday.getDate() + daysToAdd);
 
-              console.log(`Using Monday's sales for ${day}:`, {
-                nextMondayStr,
-                futureProjection: sourceSales,
-                standardProjection: salesData.find(e => e.day === sourceDay)?.sales
-              });
+              // If it's Monday and we're looking at next week, look 2 weeks ahead
+              if (sourceDay === 'Monday') {
+                sourceDate.setDate(sourceDate.getDate() + 7);
+              }
+
+              // Skip Sunday
+              if (sourceDate.getDay() === 0) {
+                sourceDate.setDate(sourceDate.getDate() + 1);
+              }
             } else {
-              sourceSales = salesData.find(e => e.day === sourceDay)?.sales || 0;
+              // Current week view
+              if (sourceDay === 'Monday') {
+                // For current week, if using Monday's sales, look at next week's Monday
+                sourceDate = new Date(today);
+                sourceDate.setDate(today.getDate() + (8 - today.getDay()));
+
+                // If we landed on Sunday, move to Monday
+                if (sourceDate.getDay() === 0) {
+                  sourceDate.setDate(sourceDate.getDate() + 1);
+                }
+              } else {
+                // Get to current week's Monday first
+                const thisMonday = new Date(today);
+                thisMonday.setDate(today.getDate() - today.getDay() + 1);
+
+                // Then calculate the target date based on the source day
+                sourceDate = new Date(thisMonday);
+                const daysToAdd = daysOrder.indexOf(sourceDay);
+                sourceDate.setDate(thisMonday.getDate() + daysToAdd);
+
+                // If we landed on Sunday, move to next Monday
+                if (sourceDate.getDay() === 0) {
+                  sourceDate.setDate(sourceDate.getDate() + 1);
+                }
+              }
             }
+
+            // Format date for comparison
+            const dateStr = sourceDate.toISOString().split('T')[0];
+
+            // Check future projections first, fall back to weekly if none exists
+            sourceSales = futureProjections.find(proj =>
+              new Date(proj.date).toISOString().split('T')[0] === dateStr
+            )?.amount || salesData.find(e => e.day === sourceDay)?.sales || 0;
 
             nextDaySales += (sourceSales * (percentage / 100));
             salesCalculationDetails.push({
@@ -100,7 +137,8 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, sa
               percentage,
               amount: sourceSales,
               contribution: sourceSales * (percentage / 100),
-              isFromFutureProjection: sourceDay === 'Monday' && sourceSales !== salesData.find(e => e.day === sourceDay)?.sales
+              isFromFutureProjection: sourceSales !== salesData.find(e => e.day === sourceDay)?.sales,
+              date: sourceDate
             });
           }
         });
@@ -158,7 +196,7 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, sa
         strips: applyMessage("Spicy Strips", stripsCalculatedCases, remainingStripsBags)
       };
     });
-  }, [salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections]);
+  }, [salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections, isNextWeek]);
 };
 
 
@@ -285,7 +323,9 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
             Calculation:
             {entry.salesCalculation.map((calc, idx) => (
               <div key={idx} className="ml-2">
-                {calc.percentage}% of {calc.day} (${calc.amount.toLocaleString()})
+                {calc.percentage}% of {calc.day}
+                {calc.date && ` (${calc.date.toLocaleDateString()})`}
+                (${calc.amount.toLocaleString()})
                 = ${calc.contribution.toLocaleString()}
                 {calc.isFromFutureProjection && (
                   <span className="ml-1 text-blue-600 font-medium">(Future Projection)</span>
@@ -380,6 +420,7 @@ const ThawingCabinet = () => {
   const [salesProjectionConfig, setSalesProjectionConfig] = useState(null);
   const [showAdminView, setShowAdminView] = useState(false);
   const [futureProjections, setFutureProjections] = useState({});
+  const [showNextWeek, setShowNextWeek] = useState(false);
 
 
   useEffect(() => {
@@ -551,7 +592,8 @@ const ThawingCabinet = () => {
     data?.buffer,
     adjustments,
     salesProjectionConfig,
-    futureProjections
+    futureProjections,
+    showNextWeek
   );
   const filteredClosures = useFilteredClosures(closures);
 
@@ -573,20 +615,38 @@ const ThawingCabinet = () => {
     <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="h-full w-full bg-white rounded-lg md:rounded-xl shadow-xl p-2 sm:p-4 border border-gray-100 flex flex-col">
         <div className="flex items-center justify-between mb-2 sm:mb-3">
-          <div>
-            <Link to={"/"} className="text-lg sm:text-xl font-bold text-gray-800"><ArrowBackIos /> Thawing Cabinet</Link>
+          <div className="flex items-center gap-2">
+            <Link to={"/"} className="text-lg sm:text-xl font-bold text-gray-800">
+              <ArrowBackIos /> Thawing Cabinet
+            </Link>
+            {showNextWeek && (
+              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-md text-sm font-medium">
+                Next Week's Projections
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             {user && user.isAdmin && (
-              <button
-                onClick={() => setShowAdminView(!showAdminView)}
-                className={`px-3 py-1 rounded-lg text-sm transition-colors duration-200 ${showAdminView
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-600'
-                  }`}
-              >
-                {showAdminView ? 'Admin View' : 'User View'}
-              </button>
+              <>
+                <button
+                  onClick={() => setShowAdminView(!showAdminView)}
+                  className={`px-3 py-1 rounded-lg text-sm transition-colors duration-200 ${showAdminView
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-600'
+                    }`}
+                >
+                  {showAdminView ? 'Admin View' : 'User View'}
+                </button>
+                <button
+                  onClick={() => setShowNextWeek(!showNextWeek)}
+                  className={`px-3 py-1 rounded-lg text-sm transition-colors duration-200 ${showNextWeek
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-100 text-gray-600'
+                    }`}
+                >
+                  {showNextWeek ? 'Next Week' : 'Current Week'}
+                </button>
+              </>
             )}
             <div className="flex items-center gap-1 sm:gap-2 bg-gray-50 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm">
               <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />

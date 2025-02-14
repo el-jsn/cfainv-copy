@@ -132,7 +132,12 @@ const FutureProjectionsCalendar = ({ onProjectionChange }) => {
     };
 
     return (
-        <Box sx={{ p: { xs: 3, md: 4 } }}>
+        <Box sx={{
+            p: { xs: 3, md: 4 },
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
             <Typography variant="h5" component="h2" gutterBottom>
                 Future Projections
             </Typography>
@@ -148,10 +153,12 @@ const FutureProjectionsCalendar = ({ onProjectionChange }) => {
                     onMonthChange={handleMonthChange}
                     sx={{
                         width: '100%',
+                        flex: 1,
+                        minHeight: '400px',
                         '& .MuiPickersDay-root': {
                             color: '#1E1E1E',
-                            height: '45px',
-                            width: '45px',
+                            height: '40px',
+                            width: '40px',
                             margin: '0px',
                             '&:hover': {
                                 backgroundColor: 'rgba(229, 22, 54, 0.1)',
@@ -177,8 +184,9 @@ const FutureProjectionsCalendar = ({ onProjectionChange }) => {
                             },
                         },
                         '& .MuiDayCalendar-weekContainer': {
-                            margin: '2px 0',
+                            margin: '1px 0',
                             justifyContent: 'space-around',
+                            minHeight: '45px',
                             '& > *:first-of-type': {
                                 backgroundColor: 'rgba(229, 22, 54, 0.03)',
                                 borderRadius: '8px',
@@ -200,7 +208,7 @@ const FutureProjectionsCalendar = ({ onProjectionChange }) => {
                         },
                         '& .MuiDayCalendar-header': {
                             justifyContent: 'space-around',
-                            marginBottom: '8px',
+                            marginBottom: '4px',
                         },
                         '& .MuiPickersCalendarHeader-label': {
                             color: '#1E1E1E',
@@ -228,13 +236,14 @@ const FutureProjectionsCalendar = ({ onProjectionChange }) => {
                                         position: 'relative',
                                         cursor: 'pointer',
                                         borderRadius: '50%',
-                                        height: '45px',
-                                        width: '45px',
+                                        height: '40px',
+                                        width: '40px',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
-                                        justifyContent: 'center',
+                                        justifyContent: 'flex-start',
                                         padding: 0,
+                                        paddingBottom: '16px',
                                         color: !isCurrentViewMonth ? '#9e9e9e' : '#1E1E1E',
                                         opacity: !isCurrentViewMonth ? 0.5 : 1,
                                         ...(hasProjection && {
@@ -250,13 +259,14 @@ const FutureProjectionsCalendar = ({ onProjectionChange }) => {
                                             '&::after': {
                                                 content: '""',
                                                 position: 'absolute',
-                                                bottom: '4px',
+                                                bottom: '2px',
                                                 left: '50%',
                                                 transform: 'translateX(-50%)',
                                                 width: '4px',
                                                 height: '4px',
                                                 borderRadius: '50%',
                                                 backgroundColor: '#E51636',
+                                                zIndex: 2,
                                             },
                                         }),
                                         ...(isSunday && {
@@ -275,9 +285,10 @@ const FutureProjectionsCalendar = ({ onProjectionChange }) => {
                                         sx={{
                                             fontWeight: hasProjection || isToday ? 600 : 400,
                                             fontSize: '0.875rem',
-                                            mb: hasProjection ? '14px' : 0,
                                             lineHeight: 1,
-                                            opacity: !isCurrentViewMonth ? 0.5 : 1,
+                                            mt: '4px',
+                                            position: 'relative',
+                                            zIndex: 1,
                                         }}
                                     >
                                         {props.day.date()}
@@ -287,7 +298,7 @@ const FutureProjectionsCalendar = ({ onProjectionChange }) => {
                                             variant="caption"
                                             sx={{
                                                 position: 'absolute',
-                                                bottom: '-10px',
+                                                bottom: '-4px',
                                                 left: '50%',
                                                 transform: 'translateX(-50%)',
                                                 fontSize: '0.7rem',
@@ -299,7 +310,6 @@ const FutureProjectionsCalendar = ({ onProjectionChange }) => {
                                                 borderRadius: '4px',
                                                 boxShadow: '0 1px 3px rgba(229, 22, 54, 0.2)',
                                                 zIndex: 1,
-                                                opacity: !isCurrentViewMonth ? 0.7 : 1,
                                             }}
                                         >
                                             ${projections[dateStr]}

@@ -115,20 +115,6 @@ cron.schedule('0 * * * *', () => {
   cleanupExpiredRecords();
 });
 
-// Change from Sunday 12:01 AM to Saturday midnight (11:59 PM)
-cron.schedule('59 23 * * 6', async () => {
-  console.log('Running weekly projection updates...');
-  try {
-    await applyFutureProjections();
-    console.log('Weekly projection updates completed');
-  } catch (error) {
-    console.error('Error in weekly projection updates:', error);
-  }
-}, {
-  scheduled: true,
-  timezone: "America/Toronto"
-});
-
 // Handle unknown routes (404)
 app.all('*', (req, res) => {
   res.status(404).json({

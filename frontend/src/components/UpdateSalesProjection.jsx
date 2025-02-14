@@ -124,41 +124,6 @@ const UpdateSalesProjection = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [severity, setSeverity] = useState("success");
-  const [upcomingChanges, setUpcomingChanges] = useState([]);
-
-  // Move fetchUpcomingChanges outside useEffect
-  const fetchUpcomingChanges = async () => {
-    try {
-      const response = await axiosInstance.get("/projections/future");
-      if (response.data) {
-        // Get next Sunday
-        const today = new Date();
-        const nextSunday = new Date(today);
-        nextSunday.setDate(today.getDate() + (7 - today.getDay()));
-        nextSunday.setHours(0, 0, 0, 0);
-
-        const nextSaturday = new Date(nextSunday);
-        nextSaturday.setDate(nextSunday.getDate() + 6);
-        nextSaturday.setHours(23, 59, 59, 999);
-
-        // Filter projections for next week
-        const nextWeekChanges = response.data
-          .filter(proj => {
-            const projDate = new Date(proj.date);
-            return projDate >= nextSunday && projDate <= nextSaturday && !proj.appliedToWeek;
-          })
-          .map(proj => ({
-            updateDate: nextSunday,
-            targetDate: new Date(proj.date),
-            amount: proj.amount
-          }));
-
-        setUpcomingChanges(nextWeekChanges);
-      }
-    } catch (error) {
-      console.error("Error fetching upcoming changes:", error);
-    }
-  };
 
   useEffect(() => {
     const fetchSalesProjection = async () => {
@@ -183,7 +148,6 @@ const UpdateSalesProjection = () => {
     };
 
     fetchSalesProjection();
-    fetchUpcomingChanges(); // Initial fetch
   }, []);
 
   const handleChange = (e) => {
@@ -293,73 +257,7 @@ const UpdateSalesProjection = () => {
             {/* Future Projections Section */}
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ height: '100%' }}>
-                <FutureProjectionsCalendar onProjectionChange={fetchUpcomingChanges} />
-              </Paper>
-            </Grid>
-
-            {/* Upcoming Updates Section */}
-            <Grid item xs={12}>
-              <Paper elevation={0} sx={{ p: 4, height: '100%' }}>
-                <Typography variant="h6" gutterBottom sx={{ color: '#E51636', fontWeight: 600 }}>
-                  Upcoming Updates
-                </Typography>
-                <Typography variant="subtitle2" gutterBottom sx={{ color: 'text-secondary', mb: 3 }}>
-                  Changes that will be applied automatically this Saturday at midnight
-                </Typography>
-
-                {upcomingChanges.length > 0 ? (
-                  <Box sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                    maxWidth: '800px'
-                  }}>
-                    {upcomingChanges.map((change, index) => (
-                      <Paper
-                        key={index}
-                        sx={{
-                          p: 2,
-                          border: '1px solid rgba(229, 22, 54, 0.1)',
-                          backgroundColor: 'rgba(229, 22, 54, 0.02)',
-                          borderRadius: 2
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Box sx={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            bgcolor: '#E51636'
-                          }} />
-                          <Typography>
-                            This Saturday at midnight{' '}
-                            <strong>
-                              ({change.updateDate.toLocaleDateString('en-US', {
-                                month: 'long',
-                                day: 'numeric'
-                              })})
-                            </strong>
-                            {': '}
-                            Sales projection for{' '}
-                            <strong>
-                              {change.targetDate.toLocaleDateString('en-US', {
-                                weekday: 'long',
-                                month: 'long',
-                                day: 'numeric'
-                              })}
-                            </strong>
-                            {' '}will be set to{' '}
-                            <strong>${change.amount.toLocaleString()}</strong>
-                          </Typography>
-                        </Box>
-                      </Paper>
-                    ))}
-                  </Box>
-                ) : (
-                  <Typography variant="body1" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                    No changes scheduled for next week
-                  </Typography>
-                )}
+                <FutureProjectionsCalendar />
               </Paper>
             </Grid>
           </Grid>
