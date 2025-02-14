@@ -109,7 +109,7 @@ export const deleteFutureProjection = async (req, res) => {
   }
 };
 
-// Apply future projections to weekly projections (runs every Sunday morning)
+// Apply future projections to weekly projections (runs every Saturday night)
 export const applyFutureProjections = async () => {
   try {
     // Get current date in Eastern Time (ET)
@@ -117,30 +117,25 @@ export const applyFutureProjections = async () => {
     // Convert to Toronto timezone
     const etDate = new Date(today.toLocaleString('en-US', { timeZone: 'America/Toronto' }));
     
-    // Only proceed if it's Sunday
-    if (etDate.getDay() !== 0) {
-      console.log('Not Sunday in ET, skipping projection updates');
-      return;
-    }
-
-    // Get the start (Sunday) and end (Saturday) of the current week
-    const startOfWeek = new Date(etDate);
-    startOfWeek.setHours(0, 0, 0, 0);
+    // Get the start (Sunday) and end (Saturday) of the next week
+    const startOfNextWeek = new Date(etDate);
+    startOfNextWeek.setDate(etDate.getDate() + 1); // Next day (Sunday)
+    startOfNextWeek.setHours(0, 0, 0, 0);
     
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23, 59, 59, 999);
+    const endOfNextWeek = new Date(startOfNextWeek);
+    endOfNextWeek.setDate(startOfNextWeek.getDate() + 6);
+    endOfNextWeek.setHours(23, 59, 59, 999);
 
-    console.log('Checking projections for week:', {
-      startOfWeek,
-      endOfWeek
+    console.log('Checking projections for next week:', {
+      startOfNextWeek,
+      endOfNextWeek
     });
 
-    // Find all future projections for this week that haven't been applied
+    // Find all future projections for next week that haven't been applied
     const weeklyProjections = await FutureProjection.find({
       date: {
-        $gte: startOfWeek,
-        $lte: endOfWeek
+        $gte: startOfNextWeek,
+        $lte: endOfNextWeek
       },
       appliedToWeek: false
     });

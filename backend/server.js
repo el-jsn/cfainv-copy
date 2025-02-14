@@ -115,8 +115,8 @@ cron.schedule('0 * * * *', () => {
   cleanupExpiredRecords();
 });
 
-// Run at 12:01 AM every Sunday (in Eastern Time)
-cron.schedule('1 0 * * 0', async () => {
+// Change from Sunday 12:01 AM to Saturday midnight (11:59 PM)
+cron.schedule('59 23 * * 6', async () => {
   console.log('Running weekly projection updates...');
   try {
     await applyFutureProjections();
