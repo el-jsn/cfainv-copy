@@ -890,17 +890,17 @@ const HowToUse = () => {
                                             <IconItem
                                                 icon={Clock}
                                                 title="Future Updates Panel"
-                                                description="The bottom section shows all future projections that will be automatically applied next Sunday. Each entry shows the target date and the new projection amount."
+                                                description="The bottom section shows all future projections that will be automatically applied this Saturday at midnight. Each entry shows the target date and the new projection amount."
                                             />
                                             <IconItem
                                                 icon={ArrowRight}
                                                 title="Automatic Updates"
-                                                description="Every Sunday at midnight, the system automatically applies any future projections for the upcoming week to your weekly projections. These changes override the standard weekly values."
+                                                description="Every Saturday at midnight, the system automatically applies any future projections for the upcoming week to your weekly projections. These changes override the standard weekly values."
                                             />
                                             <IconItem
                                                 icon={RefreshCw}
                                                 title="Update Cycle"
-                                                description="After projections are applied, they're marked as 'applied' in the system and won't appear in the upcoming changes list anymore. New projections can then be set for those dates in future weeks."
+                                                description="After projections are applied on Saturday night, they're marked as 'applied' in the system and won't appear in the upcoming changes list anymore. New projections can then be set for those dates in future weeks."
                                             />
                                         </div>
                                     </InstructionSection>

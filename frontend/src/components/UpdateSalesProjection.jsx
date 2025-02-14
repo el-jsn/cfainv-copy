@@ -303,8 +303,8 @@ const UpdateSalesProjection = () => {
                 <Typography variant="h6" gutterBottom sx={{ color: '#E51636', fontWeight: 600 }}>
                   Upcoming Updates
                 </Typography>
-                <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary', mb: 3 }}>
-                  Changes that will be applied automatically next Sunday
+                <Typography variant="subtitle2" gutterBottom sx={{ color: 'text-secondary', mb: 3 }}>
+                  Changes that will be applied automatically this Saturday at midnight
                 </Typography>
 
                 {upcomingChanges.length > 0 ? (
@@ -332,13 +332,12 @@ const UpdateSalesProjection = () => {
                             bgcolor: '#E51636'
                           }} />
                           <Typography>
-                            On{' '}
+                            This Saturday at midnight{' '}
                             <strong>
-                              {change.updateDate.toLocaleDateString('en-US', {
-                                weekday: 'long',
+                              ({change.updateDate.toLocaleDateString('en-US', {
                                 month: 'long',
                                 day: 'numeric'
-                              })}
+                              })})
                             </strong>
                             {': '}
                             Sales projection for{' '}
@@ -358,7 +357,7 @@ const UpdateSalesProjection = () => {
                   </Box>
                 ) : (
                   <Typography variant="body1" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                    No upcoming changes scheduled for next week
+                    No changes scheduled for next week
                   </Typography>
                 )}
               </Paper>
