@@ -51,7 +51,9 @@ import {
     CalendarPlus,
     ArrowRight,
     BarChart,
-    LineChart
+    LineChart,
+    Eye,
+    Calculator
 } from 'lucide-react';
 import { styled } from '@mui/material/styles';
 import { motion } from 'framer-motion';
@@ -859,27 +861,22 @@ const HowToUse = () => {
                                     </InstructionSection>
 
                                     {/* Future Projections */}
-                                    <InstructionSection title="Future Projections Calendar" className="mt-4">
+                                    <InstructionSection title="Future Projections" className="mt-4">
                                         <div className="grid gap-4">
                                             <IconItem
-                                                icon={CalendarPlus}
-                                                title="Interactive Calendar"
-                                                description="The calendar shows the next 14 days. Dates with existing projections are highlighted and display their projected amount. Past dates are grayed out and disabled."
+                                                icon={Calendar}
+                                                title="Calendar View"
+                                                description="View and set sales projections for specific dates. Dates with projections show the amount below the date. Current day is highlighted with a dot."
                                             />
                                             <IconItem
-                                                icon={MousePointer}
+                                                icon={DollarSign}
                                                 title="Setting Projections"
-                                                description="Click any future date to open the projection dialog. Enter the projected sales amount for that specific date. This will override the standard weekly projection for that day."
+                                                description="Click any future date to set or update its sales projection. These projections will override the standard weekly projections when used."
                                             />
                                             <IconItem
                                                 icon={Trash2}
-                                                title="Managing Projections"
-                                                description="When viewing a date with an existing projection, use the trash icon in the dialog to remove it. This will revert that date back to using the standard weekly projection."
-                                            />
-                                            <IconItem
-                                                icon={Info}
-                                                title="Visual Indicators"
-                                                description="Dates with projections show the amount below the date. The current date is marked with a dot. Sundays show in red as they're typically closed."
+                                                title="Removing Projections"
+                                                description="When editing a projection, use the delete icon to remove it. The system will fall back to standard weekly projections for that date."
                                             />
                                         </div>
                                     </InstructionSection>
@@ -938,6 +935,47 @@ const HowToUse = () => {
                                 </div>
                             </InstructionSection>
                         )}
+
+                        {/* Thawing Cabinet Features */}
+                        <InstructionSection title="Thawing Cabinet Features" className="mt-4">
+                            <div className="grid gap-4">
+                                <IconItem
+                                    icon={Eye}
+                                    title="Admin View Toggle"
+                                    description="Administrators can switch between User and Admin views. Admin view shows detailed sales calculations and projection sources for each day."
+                                />
+                                <IconItem
+                                    icon={Calendar}
+                                    title="Week Selection"
+                                    description="Admins can toggle between current week and next week's projections using the week toggle button."
+                                />
+                                <IconItem
+                                    icon={Calculator}
+                                    title="Sales Calculations"
+                                    description="In admin view, see how each day's sales are calculated. When a day uses Monday's sales, it will show if it's using a future projection (marked in blue)."
+                                />
+                                <IconItem
+                                    icon={Info}
+                                    title="Projection Sources"
+                                    description="The system uses future projections when available, falling back to weekly projections otherwise. For calculations using Monday's sales, it looks ahead to next Monday's projection."
+                                />
+                                <IconItem
+                                    icon={Clock}
+                                    title="Two-Week Preview"
+                                    description="When viewing next week's projections, the system looks two weeks ahead for Monday's numbers, ensuring accurate future planning."
+                                />
+                            </div>
+
+                            <div className="mt-4 p-4 bg-blue-50 rounded-md">
+                                <p className="text-blue-800">
+                                    <strong>Understanding Sales Calculations:</strong>
+                                    <br />1. Current Week: Uses future projections for next Monday when calculating days based on Monday's sales
+                                    <br />2. Next Week View: Uses future projections for all days where available
+                                    <br />3. Admin View: Shows detailed breakdowns of calculations and projection sources
+                                    <br />4. Future Projections: Marked in blue when used instead of standard weekly projections
+                                </p>
+                            </div>
+                        </InstructionSection>
 
                     </div>
                 </div>
