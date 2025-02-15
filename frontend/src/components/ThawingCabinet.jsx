@@ -295,19 +295,25 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
       <div
         key={productData.index}
         className={`flex-1 ${productData.bg} p-2 m-1 rounded-md transition-all duration-200
-                    hover:shadow-sm flex flex-col justify-center items-center`}
+                    hover:shadow-sm flex flex-col`}
       >
-        <div className="font-semibold text-center mb-0.5 text-l sm:text-base">{productData.name}</div>
-        <div className={`text-center text-l sm:text-base ${productData.data.modified ? "text-red-700 font-bold" : ""}`}>
+        <div className="font-semibold text-center mb-1 text-sm sm:text-base">{productData.name}</div>
+        <div className={`text-center text-sm sm:text-base ${productData.data.modified ? "text-red-700 font-bold" : ""}`}>
           {productData.data.cases > 0 && <div>{productData.data.cases} cases</div>}
           {productData.data.bags > 0 && <div>{productData.data.bags} bags</div>}
         </div>
-        {relevantMessages.map((msg, index) => (
-          <div key={index} className="mt-1 text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200">
-            {msg.message}
+        {relevantMessages.length > 0 && (
+          <div className="mt-2 space-y-1">
+            {relevantMessages.map((msg, index) => (
+              <div
+                key={index}
+                className="text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200"
+              >
+                {msg.message}
+              </div>
+            ))}
           </div>
-        ))}
-
+        )}
       </div>
     );
   };
@@ -341,12 +347,11 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
   return (
     <div
       key={entry.day}
-      className={`flex flex-col transition-all duration-200
+      className={`h-full w-full flex flex-col transition-all duration-200
             ${isToday
           ? 'ring-2 ring-blue-500 shadow-lg border-transparent'
           : 'border border-gray-200 hover:shadow-md'
         } rounded-lg md:rounded-xl`}
-      style={{ height: '100%', width: '100%' }}
     >
       <div
         className={`p-2 sm:p-2 rounded-t-lg md:rounded-t-xl font-bold text-center text-sm sm:text-base
@@ -396,7 +401,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
           <div className="absolute bottom-0 right-0 w-12 h-12 bg-red-200 rounded-tl-full opacity-50"></div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col gap-1 p-1 sm:p-2 relative">
+        <div className="flex-1 flex flex-col gap-2 p-2 sm:p-3">
           {Object.keys(productsMap).map(productName => renderProductBox(productName))}
         </div>
       )}
@@ -612,8 +617,8 @@ const ThawingCabinet = () => {
   }
 
   return (
-    <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="h-full w-full bg-white rounded-lg md:rounded-xl shadow-xl p-2 sm:p-4 border border-gray-100 flex flex-col">
+    <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
+      <div className="min-h-full w-full bg-white rounded-lg md:rounded-xl shadow-xl p-2 sm:p-4 border border-gray-100 flex flex-col">
         <div className="flex items-center justify-between mb-2 sm:mb-3">
           <div className="flex items-center gap-2">
             <Link to={"/"} className="text-lg sm:text-xl font-bold text-gray-800">
@@ -667,16 +672,22 @@ const ThawingCabinet = () => {
           </div>
         </div>
 
-        <div ref={containerRef} className={`flex-1 flex gap-1 sm:gap-2 ${isFullScreen ? 'fullscreen' : ''} `} style={{ maxHeight: 'calc(100% - 50px)' }}>
+        <div
+          ref={containerRef}
+          className={`flex-1 flex gap-1 sm:gap-2 ${isFullScreen ? 'fullscreen' : ''}`}
+          style={{ minHeight: '0' }}
+        >
           {calculatedData.map((entry) => (
-            <DayCard
-              key={entry.day}
-              entry={entry}
-              currentDay={currentDay}
-              closures={filteredClosures}
-              messages={messages}
-              showAdminView={showAdminView}
-            />
+            <div className="flex-1 min-w-0">
+              <DayCard
+                key={entry.day}
+                entry={entry}
+                currentDay={currentDay}
+                closures={filteredClosures}
+                messages={messages}
+                showAdminView={showAdminView}
+              />
+            </div>
           ))}
         </div>
       </div>
