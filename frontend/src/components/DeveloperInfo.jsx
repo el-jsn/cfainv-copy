@@ -209,7 +209,9 @@ const DeveloperInfo = () => {
                                 GitHub
                             </a>
                             <a
-                                href="mailto:Jashan6103@gmail.com"
+                                href="https://eljsn.vercel.app/"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
                             >
                                 <ExternalLink className="w-5 h-5" />
