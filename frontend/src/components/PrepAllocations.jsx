@@ -285,7 +285,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
         const renderSaladCount = (count, traySize) => {
             return (
                 <div>
-                    {count} salads ({Math.ceil(count / traySize)} trays)
+                    {count} salads ({Math.round(count / traySize)} trays)
                 </div>
             );
         };
