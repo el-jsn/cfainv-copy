@@ -59,6 +59,8 @@ const HomePage = () => {
   const navigate = useNavigate();
   const [futureProjections, setFutureProjections] = useState({});
   const [chartView, setChartView] = useState('sequential'); // 'sequential' or 'overlap'
+  const [nextWeekTotal, setNextWeekTotal] = useState(0);
+  const [nextWeekAverage, setNextWeekAverage] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -132,25 +134,26 @@ const HomePage = () => {
           return acc;
         }, {});
 
+        // Calculate next week's total and average
+        let nextWeekTotalAmount = 0;
+        let nextWeekCount = 0;
+
+        nextWeekDates.forEach(date => {
+          const dateStr = date.toISOString().split('T')[0];
+          const dayName = daysOfWeek[date.getDay() - 1];
+          const amount = futureProjectionsMap[dateStr] || salesProjectionArray.find(p => p.day === dayName)?.sales || 0;
+          nextWeekTotalAmount += amount;
+          nextWeekCount++;
+        });
+
+        setNextWeekTotal(nextWeekTotalAmount);
+        setNextWeekAverage(nextWeekCount > 0 ? nextWeekTotalAmount / nextWeekCount : 0);
+
         // Combine current week and next week projections
         const combinedProjections = [
           ...currentWeekDates.map((date) => {
             const dateStr = date.toISOString().split('T')[0];
-            const dayIndex = date.getDay() - 1; // Monday = 0, Saturday = 5
-            const dayName = daysOfWeek[dayIndex];
-            const defaultSales = salesProjectionArray.find(p => p.day === dayName)?.sales || 0;
-
-            return {
-              date,
-              dateStr,
-              day: dayName,
-              sales: defaultSales,
-              originalSales: defaultSales
-            };
-          }),
-          ...nextWeekDates.map((date) => {
-            const dateStr = date.toISOString().split('T')[0];
-            const dayIndex = date.getDay() - 1; // Monday = 0, Saturday = 5
+            const dayIndex = date.getDay() - 1;
             const dayName = daysOfWeek[dayIndex];
             const defaultSales = salesProjectionArray.find(p => p.day === dayName)?.sales || 0;
 
@@ -159,12 +162,28 @@ const HomePage = () => {
               dateStr,
               day: dayName,
               sales: futureProjectionsMap[dateStr] || defaultSales,
-              originalSales: defaultSales
+              originalSales: defaultSales,
+              hasFutureProjection: !!futureProjectionsMap[dateStr]
+            };
+          }),
+          ...nextWeekDates.map((date) => {
+            const dateStr = date.toISOString().split('T')[0];
+            const dayIndex = date.getDay() - 1;
+            const dayName = daysOfWeek[dayIndex];
+            const defaultSales = salesProjectionArray.find(p => p.day === dayName)?.sales || 0;
+
+            return {
+              date,
+              dateStr,
+              day: dayName,
+              sales: futureProjectionsMap[dateStr] || defaultSales,
+              originalSales: defaultSales,
+              hasFutureProjection: !!futureProjectionsMap[dateStr]
             };
           })
         ].filter(proj => {
           const day = proj.date.getDay();
-          return day !== 0; // Filter out Sundays
+          return day !== 0;
         });
 
         // Sort projections by date to ensure correct order
@@ -203,12 +222,12 @@ const HomePage = () => {
         label: "Sales Projection",
         data: salesProjection.map((projection) => projection.sales),
         fill: false,
-        backgroundColor: "#434343",
-        borderColor: "#6366F1",
+        backgroundColor: salesProjection.map(proj => proj.hasFutureProjection ? "#E51636" : "#6366F1"),
+        borderColor: salesProjection.map(proj => proj.hasFutureProjection ? "#E51636" : "#6366F1"),
         tension: 0.4,
         pointRadius: 6,
         pointHoverRadius: 8,
-        pointBackgroundColor: "#6366F1",
+        pointBackgroundColor: salesProjection.map(proj => proj.hasFutureProjection ? "#E51636" : "#6366F1"),
         pointBorderColor: "#ffffff",
         pointBorderWidth: 2,
       },
@@ -221,8 +240,8 @@ const HomePage = () => {
     const minSales = Math.min(...allSales);
     const maxSales = Math.max(...allSales);
     return {
-      min: Math.floor((minSales - 2000) / 1000) * 1000, // Round down to nearest thousand
-      max: Math.ceil((maxSales + 1000) / 1000) * 1000   // Round up to nearest thousand
+      min: Math.floor((minSales - 2000) / 1000) * 1000,
+      max: Math.ceil((maxSales + 1000) / 1000) * 1000
     };
   };
 
@@ -260,15 +279,24 @@ const HomePage = () => {
         displayColors: false,
         callbacks: {
           title: (tooltipItems) => {
-            const date = new Date(salesProjection[tooltipItems[0].dataIndex].date);
-            return `${date.toLocaleDateString('en-US', {
+            const projection = salesProjection[tooltipItems[0].dataIndex];
+            const date = new Date(projection.date);
+            const formattedDate = date.toLocaleDateString('en-US', {
               weekday: 'long',
               month: 'long',
               day: 'numeric'
-            })}`;
+            });
+            return projection.hasFutureProjection
+              ? `${formattedDate} (Future Projection)`
+              : formattedDate;
           },
           label: (context) => {
-            return `Sales: $${context.raw.toLocaleString()}`;
+            const projection = salesProjection[context.dataIndex];
+            const lines = [`Sales: $${context.raw.toLocaleString()}`];
+            if (projection.hasFutureProjection && projection.originalSales !== projection.sales) {
+              lines.push(`Default: $${projection.originalSales.toLocaleString()}`);
+            }
+            return lines;
           }
         }
       }
@@ -337,27 +365,27 @@ const HomePage = () => {
         {
           label: "Current Week",
           data: currentWeek.map(proj => proj.sales),
-          borderColor: "#6366F1",
-          backgroundColor: "#6366F1",
+          borderColor: currentWeek.map(proj => proj.hasFutureProjection ? "#E51636" : "#6366F1"),
+          backgroundColor: currentWeek.map(proj => proj.hasFutureProjection ? "#E51636" : "#6366F1"),
           borderWidth: 3,
           tension: 0.4,
           pointRadius: 6,
           pointHoverRadius: 8,
-          pointBackgroundColor: "#6366F1",
+          pointBackgroundColor: currentWeek.map(proj => proj.hasFutureProjection ? "#E51636" : "#6366F1"),
           pointBorderColor: "#ffffff",
           pointBorderWidth: 2,
         },
         {
           label: "Next Week",
           data: nextWeek.map(proj => proj.sales),
-          borderColor: "#E51636",
-          backgroundColor: "#E51636",
+          borderColor: nextWeek.map(proj => proj.hasFutureProjection ? "#E51636" : "#6366F1"),
+          backgroundColor: nextWeek.map(proj => proj.hasFutureProjection ? "#E51636" : "#6366F1"),
           borderWidth: 3,
           borderDash: [5, 5],
           tension: 0.4,
           pointRadius: 6,
           pointHoverRadius: 8,
-          pointBackgroundColor: "#E51636",
+          pointBackgroundColor: nextWeek.map(proj => proj.hasFutureProjection ? "#E51636" : "#6366F1"),
           pointBorderColor: "#ffffff",
           pointBorderWidth: 2,
         }
@@ -404,39 +432,41 @@ const HomePage = () => {
             const currentDate = new Date(currentWeekProj.date);
             const nextDate = new Date(nextWeekProj.date);
 
-            // Only show both dates when hovering current week's dot AND sales are the same
+            const formatDate = (date, projection) => {
+              const formattedDate = date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+              });
+              return projection.hasFutureProjection
+                ? `${formattedDate} (Future Projection)`
+                : formattedDate;
+            };
+
             if (datasetIndex === 0 && currentWeekProj.sales === nextWeekProj.sales) {
               return [
-                `Current Week - ${currentDate.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric'
-                })}`,
-                `Next Week - ${nextDate.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric'
-                })}`
+                `Current Week - ${formatDate(currentDate, currentWeekProj)}`,
+                `Next Week - ${formatDate(nextDate, nextWeekProj)}`
               ];
             }
 
-            // For different sales or next week's dots, show only the relevant date
+            const projection = datasetIndex === 0 ? currentWeekProj : nextWeekProj;
             const date = datasetIndex === 0 ? currentDate : nextDate;
             const weekLabel = datasetIndex === 0 ? 'Current Week' : 'Next Week';
-            return `${weekLabel} - ${date.toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric'
-            })}`;
+            return `${weekLabel} - ${formatDate(date, projection)}`;
           },
           label: (context) => {
             const datasetIndex = context.datasetIndex;
             const index = context.dataIndex;
-            const currentWeekProj = salesProjection[index];
-            const nextWeekProj = salesProjection[index + 6];
+            const projection = datasetIndex === 0
+              ? salesProjection[index]
+              : salesProjection[index + 6];
 
-            // Only show one sales value since we're only showing tooltip when they're the same
-            return `Sales: $${context.raw.toLocaleString()}`;
+            const lines = [`Sales: $${context.raw.toLocaleString()}`];
+            if (projection.hasFutureProjection && projection.originalSales !== projection.sales) {
+              lines.push(`Default: $${projection.originalSales.toLocaleString()}`);
+            }
+            return lines;
           }
         }
       }
@@ -575,11 +605,16 @@ const HomePage = () => {
                       </Typography>
                       <Typography variant="h4" className="font-bold text-gray-800">
                         ${salesProjection.find(proj =>
-                          new Date(proj.date).getDay() === new Date().getDay()
+                          new Date(proj.date).toDateString() === new Date().toDateString()
                         )?.sales.toLocaleString() || '0'}
                       </Typography>
                       <Typography variant="small" className="text-gray-500">
                         {getTodayDayName()}
+                        {salesProjection.find(proj =>
+                          new Date(proj.date).toDateString() === new Date().toDateString()
+                        )?.hasFutureProjection && (
+                            <span className="ml-2 text-indigo-500 text-xs">(Future Projection)</span>
+                          )}
                       </Typography>
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
