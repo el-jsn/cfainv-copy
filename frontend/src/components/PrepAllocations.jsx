@@ -6,13 +6,27 @@ import { Clock, Maximize, Minimize } from "lucide-react";
 import axiosInstance from "./axiosInstance";
 import playbackVid from "../assets/background.mp4";
 import { ArrowBackIos } from "@mui/icons-material";
+import { useAuth } from "./AuthContext";
 console.log(playbackVid);
 
-const useCalculatePrepData = (salesData, utpData, bufferData, adjustments) => {
+const useCalculatePrepData = (salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections, isNextWeek) => {
     return useMemo(() => {
         if (!salesData || !utpData || !bufferData) return [];
 
         const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+        // Add default configuration if none exists
+        const defaultConfig = {
+            "Monday": { "Tuesday": 0, "Wednesday": 100, "Thursday": 0, "Friday": 0, "Saturday": 0 },
+            "Tuesday": { "Monday": 0, "Wednesday": 100, "Thursday": 0, "Friday": 0, "Saturday": 0 },
+            "Wednesday": { "Monday": 0, "Tuesday": 0, "Thursday": 100, "Friday": 0, "Saturday": 0 },
+            "Thursday": { "Monday": 0, "Tuesday": 0, "Wednesday": 0, "Friday": 100, "Saturday": 0 },
+            "Friday": { "Monday": 0, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Saturday": 100 },
+            "Saturday": { "Monday": 100, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Friday": 0 }
+        };
+
+        // Use provided config or fall back to default
+        const projectionConfig = salesProjectionConfig || defaultConfig;
 
         const calculateBufferMultiplier = (bufferPrcnt) => (100 + bufferPrcnt) / 100;
 
@@ -23,6 +37,8 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments) => {
             "Diet Lemonade": calculateBufferMultiplier(bufferData.find(item => item.productName === "Diet Lemonade")?.bufferPrcnt || 1),
             "Sunjoy Lemonade": calculateBufferMultiplier(bufferData.find(item => item.productName === "Sunjoy Lemonade")?.bufferPrcnt || 1),
             Romaine: calculateBufferMultiplier(bufferData.find(item => item.productName === "Romaine")?.bufferPrcnt || 1),
+            "Cobb Salad": calculateBufferMultiplier(bufferData.find(item => item.productName === "Cobb Salad")?.bufferPrcnt || 1),
+            "Southwest Salad": calculateBufferMultiplier(bufferData.find(item => item.productName === "Southwest Salad")?.bufferPrcnt || 1),
         };
 
         const utpValues = {
@@ -32,16 +48,79 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments) => {
             "Diet Lemonade": utpData.find(item => item.productName === "Diet Lemonade")?.utp || 1.0,
             "Sunjoy Lemonade": utpData.find(item => item.productName === "Sunjoy Lemonade")?.utp || 1.0,
             Romaine: utpData.find(item => item.productName === "Romaine")?.utp || 1.0,
+            "Cobb Salad": utpData.find(item => item.productName === "Cobb Salad")?.utp || 1.0,
+            "Southwest Salad": utpData.find(item => item.productName === "Southwest Salad")?.utp || 1.0,
         };
-
 
         return daysOrder.map((day, index) => {
             const entry = salesData.find(e => e.day === day) || { day, sales: 0 };
+            const today = new Date();
+
+            // Calculate projected sales based on configuration
+            const dayConfig = projectionConfig[day];
+            let nextDaySales = 0;
+            let salesCalculationDetails = [];
+
+            if (dayConfig) {
+                Object.entries(dayConfig).forEach(([sourceDay, percentage]) => {
+                    if (percentage > 0) {
+                        let sourceSales;
+                        let sourceDate;
+
+                        if (isNextWeek) {
+                            // For next week's view
+                            const nextMonday = new Date(today);
+                            nextMonday.setDate(today.getDate() + (8 - today.getDay()));
+
+                            sourceDate = new Date(nextMonday);
+                            const daysToAdd = daysOrder.indexOf(sourceDay);
+                            sourceDate.setDate(nextMonday.getDate() + daysToAdd);
+
+                            if (sourceDay === 'Monday') {
+                                sourceDate.setDate(sourceDate.getDate() + 7);
+                            }
+                        } else {
+                            if (sourceDay === 'Monday') {
+                                sourceDate = new Date(today);
+                                sourceDate.setDate(today.getDate() + (8 - today.getDay()));
+                            } else {
+                                const thisMonday = new Date(today);
+                                thisMonday.setDate(today.getDate() - today.getDay() + 1);
+
+                                sourceDate = new Date(thisMonday);
+                                const daysToAdd = daysOrder.indexOf(sourceDay);
+                                sourceDate.setDate(thisMonday.getDate() + daysToAdd);
+                            }
+                        }
+
+                        // Skip Sunday
+                        if (sourceDate.getDay() === 0) {
+                            sourceDate.setDate(sourceDate.getDate() + 1);
+                        }
+
+                        const dateStr = sourceDate.toISOString().split('T')[0];
+
+                        sourceSales = futureProjections.find(proj =>
+                            new Date(proj.date).toISOString().split('T')[0] === dateStr
+                        )?.amount || salesData.find(e => e.day === sourceDay)?.sales || 0;
+
+                        nextDaySales += (sourceSales * (percentage / 100));
+                        salesCalculationDetails.push({
+                            day: sourceDay,
+                            percentage,
+                            amount: sourceSales,
+                            contribution: sourceSales * (percentage / 100),
+                            isFromFutureProjection: sourceSales !== salesData.find(e => e.day === sourceDay)?.sales,
+                            date: sourceDate
+                        });
+                    }
+                });
+            }
+
             const dayAdjustments = adjustments.filter(msg => msg.day === day);
             const currentDaySales = entry.sales;
             const isSaturday = day === "Saturday"
             const drinkMultiplier = isSaturday ? 1 : 0.75;
-
 
             const applyMessage = (product, pans, buckets = 0) => {
                 const message = dayAdjustments.find(msg => msg.product === product);
@@ -65,13 +144,12 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments) => {
                 return { pans: Math.max(0, finalPans), buckets: Math.max(0, finalBuckets), modified: !!message };
             };
 
-
-            const calculateLettucePans = (utp, bufferMultiplier) => Math.round(((utp * (currentDaySales / 1000)) / 144) * bufferMultiplier);
-            const calculateTomatoPans = (utp, bufferMultiplier) => Math.round(((utp * (currentDaySales / 1000)) / 166) * bufferMultiplier);
-            const calculateRomainePans = (utp, bufferMultiplier) => Math.round(((utp * (currentDaySales / 1000)) / 2585.48) * bufferMultiplier);
-            const calculateBuckets = (utp, bufferMultiplier) => Math.ceil((((utp / 33.814) * currentDaySales) / 1000 / 12) * bufferMultiplier * drinkMultiplier);
-
-
+            const calculateLettucePans = (utp, bufferMultiplier) => Math.round(((utp * (nextDaySales / 1000)) / 144) * bufferMultiplier);
+            const calculateTomatoPans = (utp, bufferMultiplier) => Math.round(((utp * (nextDaySales / 1000)) / 166) * bufferMultiplier);
+            const calculateRomainePans = (utp, bufferMultiplier) => Math.round(((utp * (nextDaySales / 1000)) / 2585.48) * bufferMultiplier);
+            const calculateBuckets = (utp, bufferMultiplier) => Math.ceil((((utp / 33.814) * (nextDaySales * drinkMultiplier)) / 1000 / 12) * bufferMultiplier);
+            const calculateCobbSalads = (utp, bufferMultiplier) => Math.round(((utp * (nextDaySales / 1000))) * bufferMultiplier);
+            const calculateSouthwestSalads = (utp, bufferMultiplier) => Math.round(((utp * (nextDaySales / 1000))) * bufferMultiplier);
 
             const lettucePans = calculateLettucePans(utpValues.Lettuce, bufferMultipliers.Lettuce);
             const tomatoPans = calculateTomatoPans(utpValues.Tomato, bufferMultipliers.Tomato);
@@ -79,20 +157,24 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments) => {
             const dietLemonadeBuckets = calculateBuckets(utpValues["Diet Lemonade"], bufferMultipliers["Diet Lemonade"]);
             const sunjoyLemonadeBuckets = calculateBuckets(utpValues["Sunjoy Lemonade"], bufferMultipliers["Sunjoy Lemonade"]);
             const romainePans = calculateRomainePans(utpValues.Romaine, bufferMultipliers.Romaine)
-
-
+            const cobbSalads = calculateCobbSalads(utpValues["Cobb Salad"], bufferMultipliers["Cobb Salad"]);
+            const southwestSalads = calculateSouthwestSalads(utpValues["Southwest Salad"], bufferMultipliers["Southwest Salad"]);
 
             return {
                 day: entry.day,
+                sales: nextDaySales,
+                salesCalculation: salesCalculationDetails,
                 lettuce: applyMessage("Lettuce", lettucePans),
                 romaine: applyMessage("Romaine", romainePans),
                 tomato: applyMessage("Tomato", tomatoPans),
                 lemonade: applyMessage("Lemonade", 0, lemonadeBuckets),
                 dietLemonade: applyMessage("Diet Lemonade", 0, dietLemonadeBuckets),
                 sunjoyLemonade: applyMessage("Sunjoy Lemonade", 0, sunjoyLemonadeBuckets),
+                cobbSalads: applyMessage("Cobb Salad", cobbSalads),
+                southwestSalads: applyMessage("Southwest Salad", southwestSalads),
             };
         });
-    }, [salesData, utpData, bufferData, adjustments]);
+    }, [salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections, isNextWeek]);
 };
 
 const useFilteredClosures = (closures) => {
@@ -120,7 +202,7 @@ const useFilteredClosures = (closures) => {
     }, [closures]);
 };
 
-const DayCard = memo(({ entry, currentDay, closures, messages }) => {
+const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) => {
     const isToday = entry.day === currentDay;
 
     const closure = useMemo(() => {
@@ -169,15 +251,28 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
             "Lettuce": { name: "Lettuce", data: entry.lettuce, bg: "bg-green-200 text-gray-800", index: 0 },
             "Romaine": { name: "Romaine", data: entry.romaine, bg: "bg-green-300 text-gray-800", index: 1 },
             "Tomato": { name: "Tomato", data: entry.tomato, bg: "bg-red-200 text-gray-800", index: 2 },
-            "Lemonade": { name: "Lemonade", data: entry.lemonade, bg: "bg-yellow-200 text-gray-800", index: 3 },
-            "Diet Lemonade": { name: "Diet Lemonade", data: entry.dietLemonade, bg: "bg-yellow-100 text-gray-800", index: 4 },
-            "Sunjoy Lemonade": { name: "Sunjoy Lemonade", data: entry.sunjoyLemonade, bg: "bg-orange-200 text-gray-800", index: 5 },
+            "Cobb Salad": {
+                name: "Cobb Salad",
+                data: entry.cobbSalads,
+                bg: "bg-gradient-to-br from-green-100 to-green-200 relative overflow-hidden",
+                index: 3
+            },
+            "Southwest Salad": {
+                name: "Southwest Salad",
+                data: entry.southwestSalads,
+                bg: "bg-gradient-to-br from-green-200 to-green-300 relative overflow-hidden",
+                index: 4
+            },
+            "Lemonade": { name: "Lemonade", data: entry.lemonade, bg: "bg-yellow-200 text-gray-800", index: 5 },
+            "Diet Lemonade": { name: "Diet Lemonade", data: entry.dietLemonade, bg: "bg-yellow-100 text-gray-800", index: 6 },
+            "Sunjoy Lemonade": { name: "Sunjoy Lemonade", data: entry.sunjoyLemonade, bg: "bg-orange-200 text-gray-800", index: 7 },
         }
     }, [entry]);
 
 
     const renderProductBox = (productName) => {
         const productData = productsMap[productName];
+        const isSalad = productName.includes('Salad');
 
         const relevantMessages = productMessages.filter(msg => {
             const products = msg.products ? msg.products.split(',') : [];
@@ -185,36 +280,100 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
         })
 
         if (!productData) return null;
+
+        // Special formatting for salads
+        const renderSaladCount = (count, traySize) => {
+            return (
+                <div>
+                    {count} salads ({Math.ceil(count / traySize)} trays)
+                </div>
+            );
+        };
+
         return (
             <div
                 key={productData.index}
                 className={`flex-1 ${productData.bg} p-2 m-1 rounded-md transition-all duration-200
-                    hover:shadow-sm flex flex-col justify-center items-center`}
+                    hover:shadow-sm flex flex-col relative`}
             >
-                <div className="font-semibold text-center mb-0.5 text-l sm:text-base">{productData.name}</div>
-                <div className={`text-center text-l sm:text-base ${productData.data.modified ? "text-red-700 font-bold" : ""}`}>
-                    {productData.data.pans > 0 && <div>{productData.data.pans} pans</div>}
-                    {productData.data.buckets > 0 && <div>{productData.data.buckets} buckets (12qt)</div>}
-                </div>
-                {relevantMessages.map((msg, index) => (
-                    <div key={index} className="mt-1 text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200">
-                        {msg.message}
+                {isSalad && (
+                    <div className="absolute inset-0 opacity-10">
+                        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                            <pattern id="salad-pattern" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                                <path d="M0 5 L10 5 M5 0 L5 10"
+                                    stroke="currentColor"
+                                    strokeWidth="0.5"
+                                    className="text-green-800" />
+                            </pattern>
+                            <rect x="0" y="0" width="100%" height="100%" fill="url(#salad-pattern)" />
+                        </svg>
                     </div>
-                ))}
+                )}
+                <div className="relative z-10">
+                    <div className="font-semibold text-center mb-1 text-sm sm:text-base">{productData.name}</div>
+                    <div className={`text-center text-sm sm:text-base ${productData.data.modified ? "text-red-700 font-bold" : ""}`}>
+                        {productData.name === "Cobb Salad" ? (
+                            renderSaladCount(productData.data.pans, 8)
+                        ) : productData.name === "Southwest Salad" ? (
+                            renderSaladCount(productData.data.pans, 6)
+                        ) : (
+                            <>
+                                {productData.data.pans > 0 && <div>{productData.data.pans} pans</div>}
+                                {productData.data.buckets > 0 && <div>{productData.data.buckets} buckets (12qt)</div>}
+                            </>
+                        )}
+                    </div>
+                    {relevantMessages.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                            {relevantMessages.map((msg, index) => (
+                                <div
+                                    key={index}
+                                    className="text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200"
+                                >
+                                    {msg.message}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         );
     };
 
+    const renderSalesDetails = () => {
+        if (!showAdminView) return null;
+
+        return (
+            <div className="text-xs text-gray-600 mt-1 p-1 bg-gray-50 rounded">
+                <div>Sales: ${(entry.sales || 0).toLocaleString()}</div>
+                {entry.salesCalculation?.length > 0 && (
+                    <div className="mt-1">
+                        Calculation:
+                        {entry.salesCalculation.map((calc, idx) => (
+                            <div key={idx} className="ml-2">
+                                {calc.percentage}% of {calc.day}
+                                {calc.date && ` (${calc.date.toLocaleDateString()})`}
+                                (${calc.amount.toLocaleString()})
+                                = ${calc.contribution.toLocaleString()}
+                                {calc.isFromFutureProjection && (
+                                    <span className="ml-1 text-blue-600 font-medium">(Future Projection)</span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div
             key={entry.day}
-            className={`flex flex-col transition-all duration-200
-            ${isToday
+            className={`h-full w-full flex flex-col transition-all duration-200
+                ${isToday
                     ? 'ring-2 ring-blue-500 shadow-lg border-transparent'
                     : 'border border-gray-200 hover:shadow-md'
                 } rounded-lg md:rounded-xl`}
-            style={{ height: '100%', width: '100%' }}
         >
             <div
                 className={`p-2 sm:p-2 rounded-t-lg md:rounded-t-xl font-bold text-center text-sm sm:text-base
@@ -224,6 +383,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages }) => {
                     }`}
             >
                 <div className="p-1">{entry.day}</div>
+                {showAdminView && renderSalesDetails()}
                 {noProductMessages.map((msg, index) => (
                     <div key={index} className="mt-1 text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200">
                         {msg.message}
@@ -283,7 +443,11 @@ const PrepAllocations = () => {
     const adjustmentsRef = useRef(adjustments);
     const videoRef = useRef(null); // Ref for the video element
     const containerRef = useRef(null)
-
+    const { user } = useAuth();
+    const [showAdminView, setShowAdminView] = useState(false);
+    const [showNextWeek, setShowNextWeek] = useState(false);
+    const [salesProjectionConfig, setSalesProjectionConfig] = useState(null);
+    const [futureProjections, setFutureProjections] = useState([]);
 
     useEffect(() => {
         adjustmentsRef.current = adjustments;
@@ -373,6 +537,8 @@ const PrepAllocations = () => {
                 salesResponse,
                 utpResponse,
                 bufferResponse,
+                configResponse,
+                futureProjectionsResponse,
             ] = await Promise.all([
                 axiosInstance.get("/adjustment/data"),
                 axiosInstance.get("/closure/plans"),
@@ -380,6 +546,8 @@ const PrepAllocations = () => {
                 axiosInstance.get("/sales"),
                 axiosInstance.get("/upt"),
                 axiosInstance.get("/buffer"),
+                axiosInstance.get("/sales-projection-config"),
+                axiosInstance.get("/projections/future"),
             ]);
 
             const salesData = salesResponse.data;
@@ -395,6 +563,8 @@ const PrepAllocations = () => {
             setClosures(closuresResponse.data);
             setMessages(messagesResponse.data);
             setLastUpdated(new Date());
+            setSalesProjectionConfig(configResponse.data);
+            setFutureProjections(futureProjectionsResponse.data);
         } catch (error) {
             console.error("Error fetching data:", error);
             // Consider setting an error state to display an error message to the user
@@ -434,7 +604,15 @@ const PrepAllocations = () => {
     }, [fetchData, requestWakeLock]);
 
     const currentDay = getCurrentDay();
-    const calculatedData = useCalculatePrepData(data?.sales, data?.utp, data?.buffer, adjustments);
+    const calculatedData = useCalculatePrepData(
+        data?.sales,
+        data?.utp,
+        data?.buffer,
+        adjustments,
+        salesProjectionConfig,
+        futureProjections,
+        showNextWeek
+    );
     const filteredClosures = useFilteredClosures(closures);
 
 
@@ -447,13 +625,42 @@ const PrepAllocations = () => {
     }
 
     return (
-        <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100">
-            <div className="h-full w-full bg-white rounded-lg md:rounded-xl shadow-xl p-2 sm:p-4 border border-gray-100 flex flex-col">
+        <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
+            <div className="min-h-full w-full bg-white rounded-lg md:rounded-xl shadow-xl p-2 sm:p-4 border border-gray-100 flex flex-col">
                 <div className="flex items-center justify-between mb-2 sm:mb-3">
-                    <div>
-                        <Link to={"/"} className="text-lg sm:text-xl font-bold text-gray-800"><ArrowBackIos /> Prep Allocations</Link>
+                    <div className="flex items-center gap-2">
+                        <Link to={"/"} className="text-lg sm:text-xl font-bold text-gray-800">
+                            <ArrowBackIos /> Prep Allocations
+                        </Link>
+                        {showNextWeek && (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-md text-sm font-medium">
+                                Next Week's Projections
+                            </span>
+                        )}
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3">
+                        {user && user.isAdmin && (
+                            <>
+                                <button
+                                    onClick={() => setShowAdminView(!showAdminView)}
+                                    className={`px-3 py-1 rounded-lg text-sm transition-colors duration-200 ${showAdminView
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-gray-100 text-gray-600'
+                                        }`}
+                                >
+                                    {showAdminView ? 'Admin View' : 'User View'}
+                                </button>
+                                <button
+                                    onClick={() => setShowNextWeek(!showNextWeek)}
+                                    className={`px-3 py-1 rounded-lg text-sm transition-colors duration-200 ${showNextWeek
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-gray-100 text-gray-600'
+                                        }`}
+                                >
+                                    {showNextWeek ? 'Next Week' : 'Current Week'}
+                                </button>
+                            </>
+                        )}
                         <div className="flex items-center gap-1 sm:gap-2 bg-gray-50 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm">
                             <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
                             <span className="text-gray-600 font-medium whitespace-nowrap">
@@ -473,18 +680,26 @@ const PrepAllocations = () => {
                     </div>
                 </div>
 
-                <div ref={containerRef} className={`flex-1 flex gap-1 sm:gap-2 ${isFullScreen ? 'fullscreen' : ''} `} style={{ maxHeight: 'calc(100% - 50px)' }}>
+                <div
+                    ref={containerRef}
+                    className={`flex-1 flex gap-1 sm:gap-2 ${isFullScreen ? 'fullscreen' : ''}`}
+                    style={{ minHeight: '0' }}
+                >
                     {calculatedData.map((entry) => (
-                        <DayCard
-                            key={entry.day}
-                            entry={entry}
-                            currentDay={currentDay}
-                            closures={filteredClosures}
-                            messages={messages}
-                        />
+                        <div key={entry.day} className="flex-1 min-w-0">
+                            <DayCard
+                                entry={entry}
+                                currentDay={currentDay}
+                                closures={filteredClosures}
+                                messages={messages}
+                                showAdminView={showAdminView}
+                            />
+                        </div>
                     ))}
                 </div>
-                <div className="mt-2 text-xs text-gray-500 text-right">*Drink Allocations for Monday - Friday are for 75% of daily sales, Saturday allocations are for 100%.</div>
+                <div className="mt-2 text-xs text-gray-500 text-right">
+                    *Drink Allocations for Monday - Friday are for 75% of daily sales, Saturday allocations are for 100%.
+                </div>
             </div>
         </div>
     );

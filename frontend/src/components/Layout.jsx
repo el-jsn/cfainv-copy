@@ -55,7 +55,7 @@ const Layout = memo(({ children }) => {
           icon: BarChart,
           hasDropdown: true,
           dropdownLinks: [
-            { to: "/update-sales-projection", label: "Update Sales Data" },
+            { to: "/update-sales-projection", label: "Update Sales Projections" },
             { to: "/thawing-cabinet/config", label: "Projection Rules" },
           ]
         },
