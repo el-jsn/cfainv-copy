@@ -1,18 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
-import { Line, Pie } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  Title,
-  Tooltip,
-  Legend,
-  LineElement,
-  PointElement,
-  ArcElement,
-} from "chart.js";
-import { RefreshCw } from "lucide-react";
-import { styled } from "@mui/material/styles";
+import React, { useState, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -21,240 +7,190 @@ import {
   TableBody,
   TableCell,
   TableContainer,
+  TableHead,
   TableRow,
-  Button,
-  MenuItem,
-  Select,
   FormControl,
   InputLabel,
-} from "@mui/material";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  Title,
+  Select,
+  MenuItem,
+  tableCellClasses,
+  Chip,
+  IconButton,
   Tooltip,
-  Legend,
-  LineElement,
-  PointElement,
-  ArcElement
-);
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { Info, TrendingUp, TrendingDown } from "lucide-react";
 
-const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
-  borderRadius: theme.shape.borderRadius,
-  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-  overflowX: "auto",
+const StyledTableCell = styled(TableCell)(({ theme }) => ({
+  [`&.${tableCellClasses.head}`]: {
+    backgroundColor: 'transparent',
+    color: theme.palette.grey[600],
+    fontWeight: 500,
+    fontSize: '0.875rem',
+    borderBottom: `1px solid ${theme.palette.grey[200]}`,
+    padding: '12px 16px',
+  },
+  [`&.${tableCellClasses.body}`]: {
+    fontSize: '0.875rem',
+    padding: '16px',
+    color: theme.palette.grey[800],
+  },
 }));
 
-const StyledTypography = styled(Typography)(({ theme }) => ({
-  fontFamily: "SF Pro Text, Helvetica Neue, sans-serif",
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  '&:hover': {
+    backgroundColor: theme.palette.grey[50],
+  },
+  '& td': {
+    borderBottom: `1px solid ${theme.palette.grey[100]}`,
+  },
+  transition: 'all 150ms ease-in-out',
 }));
 
-// Function to generate a random hex color
-const getRandomColor = () => {
-  const letters = '0123456789ABCDEF';
-  let color = '#';
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
-};
+const CategoryChip = styled(Chip)(({ theme, selected }) => ({
+  borderRadius: '6px',
+  padding: '8px 4px',
+  backgroundColor: selected ? theme.palette.primary.main : 'transparent',
+  color: selected ? 'white' : theme.palette.grey[700],
+  border: `1px solid ${selected ? 'transparent' : theme.palette.grey[300]}`,
+  '&:hover': {
+    backgroundColor: selected ? theme.palette.primary.dark : theme.palette.grey[100],
+  },
+  marginRight: '8px',
+  cursor: 'pointer',
+}));
 
 const EnhancedChart = ({
   data,
-  title = "Data Visualization",
-  subtitle = "Interactive Insights",
-  yAxisLabel = "UTP",
-  primaryColor = "#6366F1",
-  gridColor = "rgba(229, 231, 235, 0.5)",
+  title = "Units Per Thousand",
+  subtitle = "Product Performance Metrics",
   loading = false,
-  height = 400,
 }) => {
-  const [view, setView] = useState("table");
-  const [category, setCategory] = useState("chicken"); // Default category is Chicken
-  const chartRef = useRef(null);
+  const [category, setCategory] = useState("chicken");
 
-  // Categorize data into Chicken, Drinks, and Prep
+  // Categorize data with trend indicators
   const categorizedData = useMemo(() => {
     if (!data) return { chicken: [], drinks: [], prep: [] };
 
-    const chicken = [
-      "Spicy Filets",
-      "Grilled Filets",
-      "Grilled Nuggets",
-      "Nuggets",
-      "Filets",
-      "Spicy Strips",
-    ];
-
+    const chicken = ["Spicy Filets", "Grilled Filets", "Grilled Nuggets", "Nuggets", "Filets", "Spicy Strips"];
     const drinks = ["Sunjoy Lemonade", "Diet Lemonade", "Lemonade"];
 
     const categorized = {
-      chicken: [],
-      drinks: [],
-      prep: [],
+      chicken: data.filter(item => chicken.includes(item.productName)),
+      drinks: data.filter(item => drinks.includes(item.productName)),
+      prep: data.filter(item => !chicken.includes(item.productName) && !drinks.includes(item.productName)),
     };
-
-    data.forEach((item) => {
-      if (chicken.includes(item.productName)) {
-        categorized.chicken.push(item);
-      } else if (drinks.includes(item.productName)) {
-        categorized.drinks.push(item);
-      } else {
-        categorized.prep.push(item);
-      }
-    });
 
     return categorized;
   }, [data]);
 
-  // Prepare data for chart and table based on the selected category
-  const selectedData = useMemo(() => {
-    return categorizedData[category] || [];
-  }, [categorizedData, category]);
+  const selectedData = useMemo(() => categorizedData[category] || [], [categorizedData, category]);
 
-
-  const chartData = useMemo(() => {
-    if (selectedData.length === 0) {
-      return { labels: [], datasets: [] };
-    }
-
-    const labels = selectedData.map((item) => item.productName);
-    let datasets;
-
-    if (view === 'pie') {
-      // Generate random colors for pie chart
-      const backgroundColor = selectedData.map(() => getRandomColor());
-
-      datasets = [{
-        label: yAxisLabel,
-        data: selectedData.map((item) => item.utp),
-        backgroundColor: backgroundColor,
-        borderColor: backgroundColor.map(color => color.replace("0.8", "1")),
-        borderWidth: 2,
-      }];
-    } else {
-      // Default line chart settings
-      datasets = [{
-        label: yAxisLabel,
-        data: selectedData.map((item) => item.utp),
-        backgroundColor: primaryColor,
-        borderColor: primaryColor.replace("0.8", "1"),
-        borderWidth: 2,
-        tension: 0.4,
-      }]
-    }
-
-    return { labels, datasets };
-  }, [selectedData, primaryColor, yAxisLabel, view]);
-
-
-  // Chart options
-  const options = useMemo(() => {
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: view === 'pie' }, // Show legend only for pie chart
-        title: {
-          display: true,
-          text: title,
-          font: { size: 16, weight: "bold" },
-        },
-      },
-      scales: {
-        x: {
-          grid: { color: gridColor, display: view !== 'pie' }, // Hide grid for pie chart
-        },
-        y: {
-          display: view !== 'pie',
-          title: {
-            display: view !== 'pie',
-            text: yAxisLabel,
-          },
-          grid: { color: gridColor },
-          beginAtZero: true,
-        },
-      },
-    };
-  }, [title, yAxisLabel, gridColor, view]);
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height={400}>
+        <Typography>Loading...</Typography>
+      </Box>
+    );
+  }
 
   return (
-    <Paper elevation={2} className="rounded-lg overflow-hidden">
+    <Paper
+      elevation={0}
+      sx={{
+        borderRadius: 3,
+        overflow: 'hidden',
+        border: '1px solid',
+        borderColor: 'grey.200',
+        background: '#ffffff',
+      }}
+    >
       <Box p={3}>
-        <Box textAlign="center" mb={2}>
-          <StyledTypography variant="h6" fontWeight="medium">
-            {title}
-          </StyledTypography>
-          <StyledTypography variant="body2" color="textSecondary">
-            {subtitle}
-          </StyledTypography>
+        <Box mb={4} display="flex" justifyContent="space-between" alignItems="flex-start">
+          <Box>
+            <Typography variant="h5" fontWeight="600" color="grey.900" gutterBottom>
+              {title}
+            </Typography>
+            <Typography variant="body2" color="grey.600">
+              {subtitle}
+            </Typography>
+          </Box>
+          <Tooltip title="UTP values help determine product usage per thousand dollars in sales">
+            <IconButton size="small">
+              <Info size={18} />
+            </IconButton>
+          </Tooltip>
         </Box>
 
-        {/* Dropdown for categories */}
-        <Box display="flex" justifyContent="center" mb={2}>
-          <FormControl variant="outlined" size="small">
-            <InputLabel>Category</InputLabel>
-            <Select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              label="Category"
-            >
-              <MenuItem value="chicken">Chicken</MenuItem>
-              <MenuItem value="drinks">Drinks</MenuItem>
-              <MenuItem value="prep">Prep</MenuItem>
-            </Select>
-          </FormControl>
+        <Box mb={4} display="flex" alignItems="center">
+          <CategoryChip
+            label="Chicken"
+            selected={category === 'chicken'}
+            onClick={() => setCategory('chicken')}
+          />
+          <CategoryChip
+            label="Drinks"
+            selected={category === 'drinks'}
+            onClick={() => setCategory('drinks')}
+          />
+          <CategoryChip
+            label="Prep"
+            selected={category === 'prep'}
+            onClick={() => setCategory('prep')}
+          />
         </Box>
 
-        {/* Toggle for table or chart view */}
-        <Box display="flex" justifyContent="center" gap={1} mb={2}>
-          <Button
-            onClick={() => setView("table")}
-            variant={view === "table" ? "contained" : "outlined"}
-          >
-            Table
-          </Button>
-          <Button
-            onClick={() => setView("pie")}
-            variant={view === "pie" ? "contained" : "outlined"}
-          >
-            Pie
-          </Button>
-          <Button
-            onClick={() => setView("line")}
-            variant={view === "line" ? "contained" : "outlined"}
-          >
-            Line
-          </Button>
-        </Box>
-
-        {/* Main Content */}
-        <Box style={{ height }}>
-          {loading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-              <RefreshCw className="animate-spin" />
-              <StyledTypography>Loading...</StyledTypography>
-            </Box>
-          ) : view === "table" ? (
-            <StyledTableContainer>
-              <Table>
-                <TableBody>
-                  {selectedData.map((item) => (
-                    <TableRow key={item._id}>
-                      <TableCell>{item.productName}</TableCell>
-                      <TableCell>{item.utp.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </StyledTableContainer>
-          ) : view === "pie" ? (
-            <Pie ref={chartRef} data={chartData} options={options} />
-          ) : (
-            <Line ref={chartRef} data={chartData} options={options} />
-          )}
-        </Box>
+        <TableContainer sx={{ borderRadius: 2, backgroundColor: '#ffffff' }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <StyledTableCell>Product Name</StyledTableCell>
+                <StyledTableCell align="right">UTP Value</StyledTableCell>
+                <StyledTableCell align="right">Trend</StyledTableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {selectedData.map((item) => (
+                <StyledTableRow key={item._id}>
+                  <StyledTableCell component="th" scope="row">
+                    {item.productName}
+                  </StyledTableCell>
+                  <StyledTableCell align="right">
+                    {item.utp.toFixed(3)}
+                  </StyledTableCell>
+                  <StyledTableCell align="right">
+                    <Box display="flex" alignItems="center" justifyContent="flex-end" gap={1}>
+                      {item.trend === 'up' ? (
+                        <TrendingUp size={16} color="#10B981" />
+                      ) : item.trend === 'down' ? (
+                        <TrendingDown size={16} color="#EF4444" />
+                      ) : (
+                        <span>-</span>
+                      )}
+                      {item.trend !== 'none' && (
+                        <Typography
+                          variant="body2"
+                          color={item.trend === 'up' ? 'success.main' : 'error.main'}
+                        >
+                          {item.change}%
+                        </Typography>
+                      )}
+                    </Box>
+                  </StyledTableCell>
+                </StyledTableRow>
+              ))}
+              {selectedData.length === 0 && (
+                <StyledTableRow>
+                  <StyledTableCell colSpan={3} align="center">
+                    <Box py={4}>
+                      <Typography color="grey.600">No data available</Typography>
+                    </Box>
+                  </StyledTableCell>
+                </StyledTableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Box>
     </Paper>
   );
