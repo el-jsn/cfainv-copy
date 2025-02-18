@@ -29,9 +29,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import EditIcon from '@mui/icons-material/Edit';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
-import { format, eachDayOfInterval, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
+import { format, eachDayOfInterval, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -698,69 +696,29 @@ const TruckItems = () => {
                     <div className="relative min-w-[400px] bg-white rounded-xl p-4 flex flex-col gap-4">
                         <div className="relative flex items-center justify-center gap-4">
                             <div className="relative">
-                                <DatePicker
-                                    selected={startDate}
-                                    onChange={(date) => {
+                                <input
+                                    type="date"
+                                    value={format(startDate, 'yyyy-MM-dd')}
+                                    onChange={(e) => {
+                                        const date = parseISO(e.target.value);
                                         setStartDate(date);
                                         setDateRange([date, endDate]);
                                     }}
-                                    selectsStart
-                                    startDate={startDate}
-                                    endDate={endDate}
-                                    placeholderText="Start Date"
-                                    className="px-4 py-2 border border-gray-200 rounded-xl text-sm w-32 cursor-pointer bg-white hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
-                                    popperClassName="!absolute !transform !translate-y-2"
-                                    popperPlacement="bottom-start"
-                                    popperModifiers={[
-                                        {
-                                            name: "offset",
-                                            options: {
-                                                offset: [0, 8]
-                                            }
-                                        },
-                                        {
-                                            name: "preventOverflow",
-                                            options: {
-                                                boundary: 'viewport',
-                                                padding: 16
-                                            }
-                                        }
-                                    ]}
-                                    calendarClassName="!border-0 !rounded-xl !shadow-lg !font-sans"
+                                    className="px-4 py-2 border border-gray-200 rounded-xl text-sm cursor-pointer bg-white hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
                                 />
                             </div>
                             <span className="text-gray-600">to</span>
                             <div className="relative">
-                                <DatePicker
-                                    selected={endDate}
-                                    onChange={(date) => {
+                                <input
+                                    type="date"
+                                    value={format(endDate, 'yyyy-MM-dd')}
+                                    min={format(startDate, 'yyyy-MM-dd')}
+                                    onChange={(e) => {
+                                        const date = parseISO(e.target.value);
                                         setEndDate(date);
                                         setDateRange([startDate, date]);
                                     }}
-                                    selectsEnd
-                                    startDate={startDate}
-                                    endDate={endDate}
-                                    minDate={startDate}
-                                    placeholderText="End Date"
-                                    className="px-4 py-2 border border-gray-200 rounded-xl text-sm w-32 cursor-pointer bg-white hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
-                                    popperClassName="!absolute !transform !translate-y-2"
-                                    popperPlacement="bottom-start"
-                                    popperModifiers={[
-                                        {
-                                            name: "offset",
-                                            options: {
-                                                offset: [0, 8]
-                                            }
-                                        },
-                                        {
-                                            name: "preventOverflow",
-                                            options: {
-                                                boundary: 'viewport',
-                                                padding: 16
-                                            }
-                                        }
-                                    ]}
-                                    calendarClassName="!border-0 !rounded-xl !shadow-lg !font-sans"
+                                    className="px-4 py-2 border border-gray-200 rounded-xl text-sm cursor-pointer bg-white hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
                                 />
                             </div>
                         </div>
