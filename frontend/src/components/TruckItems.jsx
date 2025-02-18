@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
+import axiosInstance from './axiosInstance';
 import {
     Button,
     Dialog,
@@ -31,32 +31,7 @@ import * as XLSX from 'xlsx';
 import EditIcon from '@mui/icons-material/Edit';
 import { format, eachDayOfInterval, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-// Configure axios defaults
-axios.defaults.withCredentials = true;
-
-// Create axios instance with default config
-const axiosInstance = axios.create({
-    baseURL: API_URL,
-    withCredentials: true
-});
-
-// Add request interceptor to include token
-axiosInstance.interceptors.request.use(
-    (config) => {
-        const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
 
 const TruckItems = () => {
     const { user } = useAuth();
@@ -81,6 +56,34 @@ const TruckItems = () => {
     const [endDate, setEndDate] = useState(endOfWeek(new Date()));
     const [dateRange, setDateRange] = useState([startOfWeek(new Date()), endOfWeek(new Date())]);
     const [expandedRows, setExpandedRows] = useState({});
+
+    // Add useEffect hooks for data fetching
+    useEffect(() => {
+        const fetchInitialData = async () => {
+            try {
+                await Promise.all([
+                    fetchSalesProjections(),
+                    fetchFutureProjections(),
+                    fetchTruckItems()
+                ]);
+            } catch (err) {
+                console.error('Error fetching initial data:', err);
+                setError('Failed to fetch initial data. Please try refreshing the page.');
+            }
+        };
+
+        if (user) {
+            fetchInitialData();
+        }
+    }, [user]);
+
+    // Add useEffect to refetch data when date range changes
+    useEffect(() => {
+        if (user && dateRange[0] && dateRange[1]) {
+            fetchSalesProjections();
+            fetchFutureProjections();
+        }
+    }, [dateRange, user]);
 
     const parseUOM = (uom) => {
         // Get everything before the first space
@@ -193,19 +196,12 @@ const TruckItems = () => {
         }
     });
 
-    // Fetch sales projections
+    // Update fetchSalesProjections
     const fetchSalesProjections = async () => {
         try {
-            const token = localStorage.getItem('authToken');
-            const response = await axios.get(`${API_URL}/api/sales`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                withCredentials: true
-            });
+            const response = await axiosInstance.get('/sales');
             console.log('Sales Projections Response:', response.data);
 
-            // Process the sales data
             const projectionsByDay = {};
             response.data.forEach(projection => {
                 if (projection.day && projection.sales) {
@@ -221,22 +217,14 @@ const TruckItems = () => {
         }
     };
 
-    // Update the fetchFutureProjections function
+    // Update fetchFutureProjections
     const fetchFutureProjections = async () => {
         try {
-            const token = localStorage.getItem('authToken');
-            const response = await axios.get(`${API_URL}/api/projections/future`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                withCredentials: true
-            });
+            const response = await axiosInstance.get('/projections/future');
             console.log('Future Projections Response:', response.data);
 
-            // Process the future projections data
             const projections = {};
             response.data.forEach(proj => {
-                // Convert the UTC date to local date string
                 const date = new Date(proj.date);
                 const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
                 const dateStr = localDate.toISOString().split('T')[0];
@@ -251,17 +239,7 @@ const TruckItems = () => {
         }
     };
 
-    // Update the useEffect to fetch both projections
-    useEffect(() => {
-        if (!user) {
-            navigate('/login');
-            return;
-        }
-        fetchTruckItems();
-        fetchSalesProjections();
-        fetchFutureProjections();
-    }, [user, navigate]);
-
+    // Update fetchTruckItems
     const fetchTruckItems = async () => {
         try {
             if (!user) {
@@ -270,19 +248,7 @@ const TruckItems = () => {
                 return;
             }
 
-            const token = localStorage.getItem('authToken');
-            if (!token) {
-                setError('Authentication token not found. Please log in again.');
-                navigate('/login');
-                return;
-            }
-
-            const response = await axios.get(`${API_URL}/api/truck-items`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                withCredentials: true
-            });
+            const response = await axiosInstance.get('/truck-items');
             console.log('Fetched truck items:', response.data);
             setTruckItems(Array.isArray(response.data) ? response.data : []);
         } catch (err) {
@@ -294,6 +260,113 @@ const TruckItems = () => {
                 setError('Failed to fetch truck items. Please try again.');
             }
             setTruckItems([]);
+        }
+    };
+
+    // Update handleSaveItem
+    const handleSaveItem = async () => {
+        try {
+            if (!user) {
+                setError('Please log in to save items.');
+                navigate('/login');
+                return;
+            }
+
+            // Validate required fields
+            if (!currentItem.description) {
+                setError('Description is required');
+                return;
+            }
+
+            if (!currentItem.uom) {
+                setError('UOM is required');
+                return;
+            }
+
+            if (!currentItem.totalUnits || currentItem.totalUnits <= 0) {
+                setError('Total units must be greater than 0');
+                return;
+            }
+
+            if (!currentItem.unitType) {
+                setError('Unit type is required');
+                return;
+            }
+
+            if (!currentItem.cost || currentItem.cost <= 0) {
+                setError('Cost must be greater than 0');
+                return;
+            }
+
+            // Validate associated items if they exist
+            if (currentItem.associatedItems && currentItem.associatedItems.length > 0) {
+                for (const item of currentItem.associatedItems) {
+                    if (!item.name) {
+                        setError('All associated items must have a name');
+                        return;
+                    }
+                    if (!item.usage || item.usage <= 0) {
+                        setError('All associated items must have a usage amount greater than 0');
+                        return;
+                    }
+                }
+            }
+
+            const itemData = {
+                description: currentItem.description,
+                uom: currentItem.uom,
+                totalUnits: Number(currentItem.totalUnits),
+                unitType: currentItem.unitType,
+                cost: Number(currentItem.cost),
+                associatedItems: currentItem.associatedItems || []
+            };
+
+            console.log('Sending item data:', itemData);
+
+            if (currentItem._id) {
+                const response = await axiosInstance.put(`/truck-items/${currentItem._id}`, itemData);
+                console.log('Update response:', response.data);
+            } else {
+                const response = await axiosInstance.post('/truck-items', itemData);
+                console.log('Create response:', response.data);
+            }
+
+            setSuccess('Item saved successfully');
+            setOpenDialog(false);
+            fetchTruckItems();
+        } catch (err) {
+            console.error('Error saving item:', err);
+            if (err.response?.data?.message) {
+                setError(`Failed to save item: ${err.response.data.message}`);
+            } else if (err.response?.status === 401) {
+                setError('Your session has expired. Please log in again.');
+                navigate('/login');
+            } else {
+                setError('Failed to save item. Please ensure all fields are filled correctly.');
+            }
+        }
+    };
+
+    // Update handleDeleteItem
+    const handleDeleteItem = async (id) => {
+        try {
+            if (!user) {
+                setError('Please log in to delete items.');
+                navigate('/login');
+                return;
+            }
+
+            await axiosInstance.delete(`/truck-items/${id}`);
+            setSuccess('Item deleted successfully');
+            fetchTruckItems();
+        } catch (err) {
+            console.error('Error deleting item:', err);
+            if (err.response?.status === 401) {
+                setError('Your session has expired. Please log in again.');
+                navigate('/login');
+            } else {
+                setError('Failed to delete item. Please try again.');
+            }
         }
     };
 
@@ -403,139 +476,6 @@ const TruckItems = () => {
             associatedItems: []
         });
         setOpenDialog(true);
-    };
-
-    const handleSaveItem = async () => {
-        try {
-            if (!user) {
-                setError('Please log in to save items.');
-                navigate('/login');
-                return;
-            }
-
-            // Validate required fields
-            if (!currentItem.description) {
-                setError('Description is required');
-                return;
-            }
-
-            if (!currentItem.uom) {
-                setError('UOM is required');
-                return;
-            }
-
-            if (!currentItem.totalUnits || currentItem.totalUnits <= 0) {
-                setError('Total units must be greater than 0');
-                return;
-            }
-
-            if (!currentItem.unitType) {
-                setError('Unit type is required');
-                return;
-            }
-
-            if (!currentItem.cost || currentItem.cost <= 0) {
-                setError('Cost must be greater than 0');
-                return;
-            }
-
-            // Validate associated items if they exist
-            if (currentItem.associatedItems && currentItem.associatedItems.length > 0) {
-                for (const item of currentItem.associatedItems) {
-                    if (!item.name) {
-                        setError('All associated items must have a name');
-                        return;
-                    }
-                    if (!item.usage || item.usage <= 0) {
-                        setError('All associated items must have a usage amount greater than 0');
-                        return;
-                    }
-                }
-            }
-
-            const token = localStorage.getItem('authToken');
-            if (!token) {
-                setError('Authentication token not found. Please log in again.');
-                navigate('/login');
-                return;
-            }
-
-            // Prepare the data to be sent
-            const itemData = {
-                description: currentItem.description,
-                uom: currentItem.uom,
-                totalUnits: Number(currentItem.totalUnits),
-                unitType: currentItem.unitType,
-                cost: Number(currentItem.cost),
-                associatedItems: currentItem.associatedItems || []
-            };
-
-            console.log('Sending item data:', itemData);
-
-            const config = {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                withCredentials: true
-            };
-
-            if (currentItem._id) {
-                const response = await axios.put(`${API_URL}/api/truck-items/${currentItem._id}`, itemData, config);
-                console.log('Update response:', response.data);
-            } else {
-                const response = await axios.post(`${API_URL}/api/truck-items`, itemData, config);
-                console.log('Create response:', response.data);
-            }
-
-            setSuccess('Item saved successfully');
-            setOpenDialog(false);
-            fetchTruckItems();
-        } catch (err) {
-            console.error('Error saving item:', err);
-            if (err.response?.data?.message) {
-                setError(`Failed to save item: ${err.response.data.message}`);
-            } else if (err.response?.status === 401) {
-                setError('Your session has expired. Please log in again.');
-                navigate('/login');
-            } else {
-                setError('Failed to save item. Please ensure all fields are filled correctly.');
-            }
-        }
-    };
-
-    const handleDeleteItem = async (id) => {
-        try {
-            if (!user) {
-                setError('Please log in to delete items.');
-                navigate('/login');
-                return;
-            }
-
-            const token = localStorage.getItem('authToken');
-            if (!token) {
-                setError('Authentication token not found. Please log in again.');
-                navigate('/login');
-                return;
-            }
-
-            await axios.delete(`${API_URL}/api/truck-items/${id}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                withCredentials: true
-            });
-            setSuccess('Item deleted successfully');
-            fetchTruckItems();
-        } catch (err) {
-            console.error('Error deleting item:', err);
-            if (err.response?.status === 401) {
-                setError('Your session has expired. Please log in again.');
-                navigate('/login');
-            } else {
-                setError('Failed to delete item. Please try again.');
-            }
-        }
     };
 
     const handleAddAssociatedItem = () => {
