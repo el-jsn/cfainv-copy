@@ -62,6 +62,25 @@ const HomePage = () => {
   const [nextWeekTotal, setNextWeekTotal] = useState(0);
   const [nextWeekAverage, setNextWeekAverage] = useState(0);
 
+  // Calculate UTP trend percentage
+  const calculateUtpTrend = (utp, oldUtp) => {
+    if (!oldUtp) return 0;
+    return ((utp - oldUtp) / oldUtp) * 100;
+  };
+
+  // Get trend color based on value
+  const getTrendColor = (trend) => {
+    if (trend > 0) return 'text-green-500';
+    if (trend < 0) return 'text-red-500';
+    return 'text-gray-500';
+  };
+
+  // Format trend display
+  const formatTrend = (trend) => {
+    if (trend === 0) return '0%';
+    return `${trend > 0 ? '+' : ''}${trend.toFixed(1)}%`;
+  };
+
   useEffect(() => {
     if (!user) {
       navigate("/login");

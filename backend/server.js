@@ -23,6 +23,7 @@ import salesProjectionConfigRoutes from './routes/salesProjectionConfig.route.js
 import futureProjectionRoutes from "./routes/futureProjection.route.js";
 import { applyFutureProjections } from './controllers/futureProjection.controller.js';
 import truckItemRoutes from './routes/truckItem.route.js';
+import dailyBufferRoutes from './routes/dailyBuffer.route.js';
 
 
 dotenv.config();
@@ -91,6 +92,7 @@ app.use('/api/messages', authenticateToken ,messageRoutes);
 app.use('/api', salesProjectionConfigRoutes);
 app.use("/api", futureProjectionRoutes);
 app.use("/api/truck-items", authenticateToken, truckItemRoutes);
+app.use('/api/daily-buffer', dailyBufferRoutes);
 
 
 // Serve frontend in production mode

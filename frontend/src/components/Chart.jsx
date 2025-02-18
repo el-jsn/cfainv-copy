@@ -68,6 +68,18 @@ const EnhancedChart = ({
 }) => {
   const [category, setCategory] = useState("chicken");
 
+  // Calculate trend percentage
+  const calculateTrend = (current, previous) => {
+    if (!previous) return 0;
+    return ((current - previous) / previous) * 100;
+  };
+
+  // Format trend display
+  const formatTrend = (trend) => {
+    if (trend === 0) return '0%';
+    return `${trend > 0 ? '+' : ''}${trend.toFixed(1)}%`;
+  };
+
   // Categorize data with trend indicators
   const categorizedData = useMemo(() => {
     if (!data) return { chicken: [], drinks: [], prep: [] };
@@ -75,10 +87,19 @@ const EnhancedChart = ({
     const chicken = ["Spicy Filets", "Grilled Filets", "Grilled Nuggets", "Nuggets", "Filets", "Spicy Strips"];
     const drinks = ["Sunjoy Lemonade", "Diet Lemonade", "Lemonade"];
 
+    const processData = (items) => {
+      return items.map(item => ({
+        ...item,
+        trendValue: calculateTrend(item.utp, item.oldUtp),
+        trendDisplay: formatTrend(calculateTrend(item.utp, item.oldUtp)),
+        trend: item.oldUtp ? (item.utp > item.oldUtp ? 'up' : item.utp < item.oldUtp ? 'down' : 'none') : 'none'
+      }));
+    };
+
     const categorized = {
-      chicken: data.filter(item => chicken.includes(item.productName)),
-      drinks: data.filter(item => drinks.includes(item.productName)),
-      prep: data.filter(item => !chicken.includes(item.productName) && !drinks.includes(item.productName)),
+      chicken: processData(data.filter(item => chicken.includes(item.productName))),
+      drinks: processData(data.filter(item => drinks.includes(item.productName))),
+      prep: processData(data.filter(item => !chicken.includes(item.productName) && !drinks.includes(item.productName))),
     };
 
     return categorized;
@@ -172,7 +193,7 @@ const EnhancedChart = ({
                           variant="body2"
                           color={item.trend === 'up' ? 'success.main' : 'error.main'}
                         >
-                          {item.change}%
+                          {item.trendDisplay}
                         </Typography>
                       )}
                     </Box>

@@ -6,9 +6,18 @@ export const bulkCreateOrUpdateSalesData = async (req, res) => {
 
   try {
     const updates = Object.entries(salesData).map(async ([productName, utp]) => {
+      // First find the existing document to get current UTP
+      const existingData = await SalesData.findOne({ productName });
+      
+      // If exists, use current UTP as oldUtp, otherwise use new UTP as both
+      const oldUtp = existingData ? existingData.utp : utp;
+
       return SalesData.findOneAndUpdate(
-        { productName}, // Match by productName
-        { utp}, // Update UTP
+        { productName }, // Match by productName
+        { 
+          utp,
+          oldUtp 
+        }, // Update both UTP and oldUtp
         { upsert: true, new: true } // Create if not exists, return updated document
       );
     });

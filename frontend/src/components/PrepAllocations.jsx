@@ -2,43 +2,111 @@
 
 import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Clock, Maximize, Minimize } from "lucide-react";
+import { Clock, Maximize, Minimize, Settings } from "lucide-react";
 import axiosInstance from "./axiosInstance";
 import playbackVid from "../assets/background.mp4";
 import { ArrowBackIos } from "@mui/icons-material";
 import { useAuth } from "./AuthContext";
 console.log(playbackVid);
 
-const useCalculatePrepData = (salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections, isNextWeek) => {
+const BufferAdjustmentModal = memo(({ isOpen, onClose, day, dailyBuffers, onSave }) => {
+    const [buffers, setBuffers] = useState({
+        Lettuce: '',
+        Tomato: '',
+        Romaine: '',
+        "Cobb Salad": '',
+        "Southwest Salad": ''
+    });
+
+    useEffect(() => {
+        if (dailyBuffers) {
+            const newBuffers = { ...buffers };
+            dailyBuffers.forEach(buffer => {
+                newBuffers[buffer.productName] = buffer.bufferPrcnt.toString();
+            });
+            setBuffers(newBuffers);
+        }
+    }, [dailyBuffers]);
+
+    const handleSave = () => {
+        // Convert all values to numbers, empty strings become 0
+        const numericBuffers = Object.entries(buffers).reduce((acc, [key, value]) => {
+            acc[key] = value === '' ? 0 : parseFloat(value);
+            return acc;
+        }, {});
+        onSave(day, numericBuffers);
+        onClose();
+    };
+
+    const handleInputChange = (product, value) => {
+        // Allow empty string, minus sign, decimal point, and numbers
+        if (value === '' || value === '-' || /^-?\d*\.?\d*$/.test(value)) {
+            setBuffers(prev => ({
+                ...prev,
+                [product]: value
+            }));
+        }
+    };
+
+    return isOpen ? (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                <h2 className="text-xl font-bold mb-4">{day} Buffer Adjustments</h2>
+                <div className="space-y-4">
+                    {Object.entries(buffers).map(([product, value]) => (
+                        <div key={product} className="flex items-center justify-between">
+                            <label className="font-medium">{product}:</label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    value={value}
+                                    onChange={(e) => handleInputChange(product, e.target.value)}
+                                    className="border rounded px-2 py-1 w-20 text-right"
+                                    placeholder="0"
+                                />
+                                <span>%</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-2 text-sm text-gray-600">
+                    Note: Use negative values (e.g., -10) to decrease the buffer percentage. Leave empty for 0%.
+                </div>
+                <div className="mt-6 flex justify-end gap-2">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 border rounded hover:bg-gray-100"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    ) : null;
+});
+
+const useCalculatePrepData = (salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections, isNextWeek, dailyBuffers) => {
     return useMemo(() => {
         if (!salesData || !utpData || !bufferData) return [];
 
         const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-        // Add default configuration if none exists
-        const defaultConfig = {
-            "Monday": { "Tuesday": 0, "Wednesday": 100, "Thursday": 0, "Friday": 0, "Saturday": 0 },
-            "Tuesday": { "Monday": 0, "Wednesday": 100, "Thursday": 0, "Friday": 0, "Saturday": 0 },
-            "Wednesday": { "Monday": 0, "Tuesday": 0, "Thursday": 100, "Friday": 0, "Saturday": 0 },
-            "Thursday": { "Monday": 0, "Tuesday": 0, "Wednesday": 0, "Friday": 100, "Saturday": 0 },
-            "Friday": { "Monday": 0, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Saturday": 100 },
-            "Saturday": { "Monday": 100, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Friday": 0 }
-        };
-
-        // Use provided config or fall back to default
-        const projectionConfig = salesProjectionConfig || defaultConfig;
-
         const calculateBufferMultiplier = (bufferPrcnt) => (100 + bufferPrcnt) / 100;
 
-        const bufferMultipliers = {
-            Lettuce: calculateBufferMultiplier(bufferData.find(item => item.productName === "Lettuce")?.bufferPrcnt || 1),
-            Tomato: calculateBufferMultiplier(bufferData.find(item => item.productName === "Tomato")?.bufferPrcnt || 1),
-            Lemonade: calculateBufferMultiplier(bufferData.find(item => item.productName === "Lemonade")?.bufferPrcnt || 1),
-            "Diet Lemonade": calculateBufferMultiplier(bufferData.find(item => item.productName === "Diet Lemonade")?.bufferPrcnt || 1),
-            "Sunjoy Lemonade": calculateBufferMultiplier(bufferData.find(item => item.productName === "Sunjoy Lemonade")?.bufferPrcnt || 1),
-            Romaine: calculateBufferMultiplier(bufferData.find(item => item.productName === "Romaine")?.bufferPrcnt || 1),
-            "Cobb Salad": calculateBufferMultiplier(bufferData.find(item => item.productName === "Cobb Salad")?.bufferPrcnt || 1),
-            "Southwest Salad": calculateBufferMultiplier(bufferData.find(item => item.productName === "Southwest Salad")?.bufferPrcnt || 1),
+        const getBufferMultiplier = (productName, day) => {
+            // Check for daily buffer first
+            const dailyBuffer = dailyBuffers?.find(b => b.day === day && b.productName === productName);
+            if (dailyBuffer) {
+                return calculateBufferMultiplier(dailyBuffer.bufferPrcnt);
+            }
+            // Fall back to global buffer
+            return calculateBufferMultiplier(bufferData.find(item => item.productName === productName)?.bufferPrcnt || 1);
         };
 
         const utpValues = {
@@ -53,79 +121,41 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments, sales
         };
 
         return daysOrder.map((day, index) => {
-            const entry = salesData.find(e => e.day === day) || { day, sales: 0 };
             const today = new Date();
+            let targetDate;
 
-            // Calculate projected sales based on configuration
-            const dayConfig = projectionConfig[day];
-            let nextDaySales = 0;
-            let salesCalculationDetails = [];
-
-            if (dayConfig) {
-                Object.entries(dayConfig).forEach(([sourceDay, percentage]) => {
-                    if (percentage > 0) {
-                        let sourceSales;
-                        let sourceDate;
-
-                        if (isNextWeek) {
-                            // For next week's view
-                            const nextMonday = new Date(today);
-                            nextMonday.setDate(today.getDate() + (8 - today.getDay()));
-
-                            sourceDate = new Date(nextMonday);
-                            const daysToAdd = daysOrder.indexOf(sourceDay);
-                            sourceDate.setDate(nextMonday.getDate() + daysToAdd);
-
-                            if (sourceDay === 'Monday') {
-                                sourceDate.setDate(sourceDate.getDate() + 7);
-                            }
-                        } else {
-                            if (sourceDay === 'Monday') {
-                                sourceDate = new Date(today);
-                                sourceDate.setDate(today.getDate() + (8 - today.getDay()));
-                            } else {
-                                const thisMonday = new Date(today);
-                                thisMonday.setDate(today.getDate() - today.getDay() + 1);
-
-                                sourceDate = new Date(thisMonday);
-                                const daysToAdd = daysOrder.indexOf(sourceDay);
-                                sourceDate.setDate(thisMonday.getDate() + daysToAdd);
-                            }
-                        }
-
-                        // Skip Sunday
-                        if (sourceDate.getDay() === 0) {
-                            sourceDate.setDate(sourceDate.getDate() + 1);
-                        }
-
-                        const dateStr = sourceDate.toISOString().split('T')[0];
-
-                        sourceSales = futureProjections.find(proj =>
-                            new Date(proj.date).toISOString().split('T')[0] === dateStr
-                        )?.amount || salesData.find(e => e.day === sourceDay)?.sales || 0;
-
-                        nextDaySales += (sourceSales * (percentage / 100));
-                        salesCalculationDetails.push({
-                            day: sourceDay,
-                            percentage,
-                            amount: sourceSales,
-                            contribution: sourceSales * (percentage / 100),
-                            isFromFutureProjection: sourceSales !== salesData.find(e => e.day === sourceDay)?.sales,
-                            date: sourceDate
-                        });
-                    }
-                });
+            if (isNextWeek) {
+                // For next week's view
+                const nextMonday = new Date(today);
+                nextMonday.setDate(today.getDate() + (8 - today.getDay()));
+                targetDate = new Date(nextMonday);
+                targetDate.setDate(nextMonday.getDate() + daysOrder.indexOf(day));
+            } else {
+                // For current week's view
+                const thisMonday = new Date(today);
+                thisMonday.setDate(today.getDate() - today.getDay() + 1);
+                targetDate = new Date(thisMonday);
+                targetDate.setDate(thisMonday.getDate() + daysOrder.indexOf(day));
             }
 
+            // Skip Sunday
+            if (targetDate.getDay() === 0) {
+                targetDate.setDate(targetDate.getDate() + 1);
+            }
+
+            const dateStr = targetDate.toISOString().split('T')[0];
+            const projectedSales = futureProjections.find(proj =>
+                new Date(proj.date).toISOString().split('T')[0] === dateStr
+            )?.amount || salesData.find(e => e.day === day)?.sales || 0;
+
             const dayAdjustments = adjustments.filter(msg => msg.day === day);
-            const currentDaySales = entry.sales;
-            const isSaturday = day === "Saturday"
+            const isSaturday = day === "Saturday";
             const drinkMultiplier = isSaturday ? 1 : 0.75;
 
             const applyMessage = (product, pans, buckets = 0) => {
                 const message = dayAdjustments.find(msg => msg.product === product);
                 let finalPans = pans;
-                let finalBuckets = buckets
+                let finalBuckets = buckets;
 
                 if (message) {
                     const parts = message.message.split(' and ');
@@ -136,7 +166,7 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments, sales
                             if (unit === 'pans') {
                                 finalPans += value;
                             } else if (unit === 'buckets') {
-                                finalBuckets += value
+                                finalBuckets += value;
                             }
                         }
                     });
@@ -144,26 +174,33 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments, sales
                 return { pans: Math.max(0, finalPans), buckets: Math.max(0, finalBuckets), modified: !!message };
             };
 
-            const calculateLettucePans = (utp, bufferMultiplier) => Math.round(((utp * (nextDaySales / 1000)) / 144) * bufferMultiplier);
-            const calculateTomatoPans = (utp, bufferMultiplier) => Math.round(((utp * (nextDaySales / 1000)) / 166) * bufferMultiplier);
-            const calculateRomainePans = (utp, bufferMultiplier) => Math.round(((utp * (nextDaySales / 1000)) / 2585.48) * bufferMultiplier);
-            const calculateBuckets = (utp, bufferMultiplier) => Math.ceil((((utp / 33.814) * (nextDaySales * drinkMultiplier)) / 1000 / 12) * bufferMultiplier);
-            const calculateCobbSalads = (utp, bufferMultiplier) => Math.round(((utp * (nextDaySales / 1000))) * bufferMultiplier);
-            const calculateSouthwestSalads = (utp, bufferMultiplier) => Math.round(((utp * (nextDaySales / 1000))) * bufferMultiplier);
+            const calculateLettucePans = (utp) => Math.round(((utp * (projectedSales / 1000)) / 144) * getBufferMultiplier("Lettuce", day));
+            const calculateTomatoPans = (utp) => Math.round(((utp * (projectedSales / 1000)) / 166) * getBufferMultiplier("Tomato", day));
+            const calculateRomainePans = (utp) => Math.round(((utp * (projectedSales / 1000)) / 2585.48) * getBufferMultiplier("Romaine", day));
+            const calculateBuckets = (utp, bufferMultiplier) => Math.ceil((((utp / 33.814) * (projectedSales * drinkMultiplier)) / 1000 / 12) * bufferMultiplier);
+            const calculateCobbSalads = (utp) => Math.round(((utp * (projectedSales / 1000))) * getBufferMultiplier("Cobb Salad", day));
+            const calculateSouthwestSalads = (utp) => Math.round(((utp * (projectedSales / 1000))) * getBufferMultiplier("Southwest Salad", day));
 
-            const lettucePans = calculateLettucePans(utpValues.Lettuce, bufferMultipliers.Lettuce);
-            const tomatoPans = calculateTomatoPans(utpValues.Tomato, bufferMultipliers.Tomato);
-            const lemonadeBuckets = calculateBuckets(utpValues.Lemonade, bufferMultipliers.Lemonade);
-            const dietLemonadeBuckets = calculateBuckets(utpValues["Diet Lemonade"], bufferMultipliers["Diet Lemonade"]);
-            const sunjoyLemonadeBuckets = calculateBuckets(utpValues["Sunjoy Lemonade"], bufferMultipliers["Sunjoy Lemonade"]);
-            const romainePans = calculateRomainePans(utpValues.Romaine, bufferMultipliers.Romaine)
-            const cobbSalads = calculateCobbSalads(utpValues["Cobb Salad"], bufferMultipliers["Cobb Salad"]);
-            const southwestSalads = calculateSouthwestSalads(utpValues["Southwest Salad"], bufferMultipliers["Southwest Salad"]);
+            const lettucePans = calculateLettucePans(utpValues.Lettuce);
+            const tomatoPans = calculateTomatoPans(utpValues.Tomato);
+            const lemonadeBuckets = calculateBuckets(utpValues.Lemonade, getBufferMultiplier("Lemonade", day));
+            const dietLemonadeBuckets = calculateBuckets(utpValues["Diet Lemonade"], getBufferMultiplier("Diet Lemonade", day));
+            const sunjoyLemonadeBuckets = calculateBuckets(utpValues["Sunjoy Lemonade"], getBufferMultiplier("Sunjoy Lemonade", day));
+            const romainePans = calculateRomainePans(utpValues.Romaine);
+            const cobbSalads = calculateCobbSalads(utpValues["Cobb Salad"]);
+            const southwestSalads = calculateSouthwestSalads(utpValues["Southwest Salad"]);
 
             return {
-                day: entry.day,
-                sales: nextDaySales,
-                salesCalculation: salesCalculationDetails,
+                day: day,
+                sales: projectedSales,
+                salesCalculation: [{
+                    day: day,
+                    percentage: 100,
+                    amount: projectedSales,
+                    contribution: projectedSales,
+                    isFromFutureProjection: projectedSales !== salesData.find(e => e.day === day)?.sales,
+                    date: targetDate
+                }],
                 lettuce: applyMessage("Lettuce", lettucePans),
                 romaine: applyMessage("Romaine", romainePans),
                 tomato: applyMessage("Tomato", tomatoPans),
@@ -174,7 +211,7 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments, sales
                 southwestSalads: applyMessage("Southwest Salad", southwestSalads),
             };
         });
-    }, [salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections, isNextWeek]);
+    }, [salesData, utpData, bufferData, adjustments, futureProjections, isNextWeek, dailyBuffers]);
 };
 
 const useFilteredClosures = (closures) => {
@@ -202,7 +239,9 @@ const useFilteredClosures = (closures) => {
     }, [closures]);
 };
 
-const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) => {
+const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, onAdjustBuffer, dailyBuffers }) => {
+    const [isBufferModalOpen, setIsBufferModalOpen] = useState(false);
+
     const isToday = entry.day === currentDay;
 
     const closure = useMemo(() => {
@@ -279,6 +318,11 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
             return products.includes(productName)
         })
 
+        // Get daily buffer adjustment if it exists
+        const dailyBuffer = dailyBuffers?.find(b => b.day === entry.day && b.productName === productName);
+        const hasBufferAdjustment = !!dailyBuffer;
+        const isBufferReduced = hasBufferAdjustment && dailyBuffer.bufferPrcnt < 0;
+
         if (!productData) return null;
 
         // Special formatting for salads
@@ -310,7 +354,14 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
                     </div>
                 )}
                 <div className="relative z-10">
-                    <div className="font-semibold text-center mb-1 text-sm sm:text-base">{productData.name}</div>
+                    <div className="font-semibold text-center mb-1 text-sm sm:text-base">
+                        {productData.name}
+                        {showAdminView && hasBufferAdjustment && (
+                            <span className={`ml-1 text-xs ${isBufferReduced ? 'text-red-600' : 'text-green-600'}`}>
+                                ({dailyBuffer.bufferPrcnt > 0 ? '+' : ''}{dailyBuffer.bufferPrcnt}%)
+                            </span>
+                        )}
+                    </div>
                     <div className={`text-center text-sm sm:text-base ${productData.data.modified ? "text-red-700 font-bold" : ""}`}>
                         {productData.name === "Cobb Salad" ? (
                             renderSaladCount(productData.data.pans, 8)
@@ -382,7 +433,18 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
                         : 'bg-gradient-to-r from-gray-100 to-gray-200'
                     }`}
             >
-                <div className="p-1">{entry.day}</div>
+                <div className="p-1 flex items-center justify-center gap-2">
+                    {entry.day}
+                    {showAdminView && (
+                        <button
+                            onClick={() => setIsBufferModalOpen(true)}
+                            className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                            title="Adjust Daily Buffers"
+                        >
+                            <Settings className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
                 {showAdminView && renderSalesDetails()}
                 {noProductMessages.map((msg, index) => (
                     <div key={index} className="mt-1 text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200">
@@ -427,6 +489,14 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
                     {Object.keys(productsMap).map(productName => renderProductBox(productName))}
                 </div>
             )}
+
+            <BufferAdjustmentModal
+                isOpen={isBufferModalOpen}
+                onClose={() => setIsBufferModalOpen(false)}
+                day={entry.day}
+                dailyBuffers={dailyBuffers?.filter(b => b.day === entry.day)}
+                onSave={onAdjustBuffer}
+            />
         </div>
     );
 });
@@ -448,6 +518,7 @@ const PrepAllocations = () => {
     const [showNextWeek, setShowNextWeek] = useState(false);
     const [salesProjectionConfig, setSalesProjectionConfig] = useState(null);
     const [futureProjections, setFutureProjections] = useState([]);
+    const [dailyBuffers, setDailyBuffers] = useState([]);
 
     useEffect(() => {
         adjustmentsRef.current = adjustments;
@@ -573,11 +644,39 @@ const PrepAllocations = () => {
         }
     }, []);
 
+    const fetchDailyBuffers = useCallback(async () => {
+        try {
+            const response = await axiosInstance.get("/daily-buffer");
+            setDailyBuffers(response.data);
+        } catch (error) {
+            console.error("Error fetching daily buffers:", error);
+        }
+    }, []);
+
+    const handleAdjustBuffer = async (day, buffers) => {
+        try {
+            const promises = Object.entries(buffers).map(([productName, bufferPrcnt]) =>
+                axiosInstance.post("/daily-buffer", {
+                    day,
+                    productName,
+                    bufferPrcnt
+                })
+            );
+
+            await Promise.all(promises);
+            await fetchDailyBuffers();
+        } catch (error) {
+            console.error("Error updating daily buffers:", error);
+        }
+    };
+
     useEffect(() => {
         fetchData();
+        fetchDailyBuffers();
         requestWakeLock();
 
         const fetchInterval = setInterval(fetchData, 10 * 60 * 1000);
+        const dailyBuffersInterval = setInterval(fetchDailyBuffers, 10 * 60 * 1000);
         const adjustmentsInterval = setInterval(() => axiosInstance.get("/adjustment/data").then(res => setAdjustments(res.data)).catch(err => console.error("Error fetching adjustments:", err)), 5 * 60 * 1000);
         const closuresInterval = setInterval(() => axiosInstance.get("/closure/plans").then(res => setClosures(res.data)).catch(err => console.error("Error fetching closures:", err)), 10 * 60 * 1000);
         const messagesInterval = setInterval(() => axiosInstance.get("/messages").then(res => setMessages(res.data)).catch(err => console.error("Error fetching messages:", err)), 5 * 60 * 1000);
@@ -596,12 +695,13 @@ const PrepAllocations = () => {
 
         return () => {
             clearInterval(fetchInterval);
+            clearInterval(dailyBuffersInterval);
             clearInterval(adjustmentsInterval);
             clearInterval(closuresInterval);
             clearInterval(messagesInterval);
             document.removeEventListener('fullscreenchange', handleFullScreenChange);
         };
-    }, [fetchData, requestWakeLock]);
+    }, [fetchData, fetchDailyBuffers, requestWakeLock]);
 
     const currentDay = getCurrentDay();
     const calculatedData = useCalculatePrepData(
@@ -611,7 +711,8 @@ const PrepAllocations = () => {
         adjustments,
         salesProjectionConfig,
         futureProjections,
-        showNextWeek
+        showNextWeek,
+        dailyBuffers
     );
     const filteredClosures = useFilteredClosures(closures);
 
@@ -693,6 +794,8 @@ const PrepAllocations = () => {
                                 closures={filteredClosures}
                                 messages={messages}
                                 showAdminView={showAdminView}
+                                onAdjustBuffer={handleAdjustBuffer}
+                                dailyBuffers={dailyBuffers}
                             />
                         </div>
                     ))}

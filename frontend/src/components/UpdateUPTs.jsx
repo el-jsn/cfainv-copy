@@ -174,8 +174,7 @@ const PREP_ITEM_CATEGORIES = {
     "Salad - Signature Cobb w/Spicy Grilled Fil",
     "Salad – Signature Cobb w/ Grilled Nuggets",
     "Salad Base - Signature Cobb",
-    "Test - Salad - Signature Cobb w/Spicy",
-    "Test - Salad - Spicy SW w/Spcy Strips",
+    "Test - Salad - Signature Cobb w/Spicy"
   ],
   "Southwest Salad": [
     "Salad - Spicy SW Base",
@@ -185,9 +184,6 @@ const PREP_ITEM_CATEGORIES = {
     "Salad - Spicy SW w/ Nuggets",
     "Salad - Spicy SW w/ Spicy Filet",
     "Salad - Spicy SW w/ Spicy Grld Filet",
-    "Salad – Signature Cobb w/ Grilled Nuggets",
-    "Salad Base - Signature Cobb",
-    "Test - Salad - Signature Cobb w/Spicy",
     "Test - Salad - Spicy SW w/Spcy Strips",
   ],
   "Tomato": [
