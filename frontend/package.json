@@ -38,7 +38,6 @@
     "node-cron": "^3.0.3",
     "react": "^19.0.0",
     "react-chartjs-2": "^5.2.0",
-    "react-datepicker": "^4.25.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.5",
     "react-router-dom": "^6.28.1",
