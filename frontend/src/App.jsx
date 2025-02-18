@@ -19,6 +19,7 @@ import HowToUse from "./components/HowToUse";
 import { Navigate } from "react-router-dom";
 import SalesProjectionConfig from './components/SalesProjectionConfig';
 import DeveloperInfo from './components/DeveloperInfo';
+import TruckItems from './components/TruckItems';
 
 const App = () => {
 
@@ -147,6 +148,11 @@ const App = () => {
             <Route path="/thawing-cabinet/config" element={
               <ProtectedRoute adminOnly>
                 <SalesProjectionConfig />
+              </ProtectedRoute>
+            } />
+            <Route path="/truck-items" element={
+              <ProtectedRoute adminOnly>
+                <TruckItems />
               </ProtectedRoute>
             } />
           </Routes>

@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { cn } from "../../lib/utils";
 
-export const NavBar = ({ items, activeRoute, onNavigate, className }) => {
+export const NavBar = ({ items, onNavigate, className }) => {
     const [isMobile, setIsMobile] = useState(false);
     const [openDropdown, setOpenDropdown] = useState(null);
     const closeTimeoutRef = useRef(null);
+    const location = useLocation();
 
     useEffect(() => {
         const handleResize = () => {
@@ -22,9 +23,14 @@ export const NavBar = ({ items, activeRoute, onNavigate, className }) => {
     // Function to determine if an item is active based on the current route
     const isItemActive = (item) => {
         if (item.url === "#") {
-            return item.dropdownLinks?.some(link => link.to === activeRoute);
+            return item.dropdownLinks?.some(link => link.to === location.pathname);
         }
-        return item.url === activeRoute;
+        return item.url === location.pathname;
+    };
+
+    // Function to determine if a dropdown link is active
+    const isDropdownLinkActive = (to) => {
+        return location.pathname === to;
     };
 
     const handleMouseEnter = (itemName) => {
@@ -39,7 +45,7 @@ export const NavBar = ({ items, activeRoute, onNavigate, className }) => {
     const handleMouseLeave = () => {
         closeTimeoutRef.current = setTimeout(() => {
             setOpenDropdown(null);
-        }, 300); // 300ms delay before closing
+        }, 300);
     };
 
     return (
@@ -61,11 +67,7 @@ export const NavBar = ({ items, activeRoute, onNavigate, className }) => {
                                     className={cn(
                                         "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors flex items-center",
                                         "text-gray-600 hover:text-red-600",
-                                        isActive && "bg-gray-100 text-red-600",
-                                        activeRoute === item.url ||
-                                            item.dropdownLinks?.some(link => link.to === activeRoute)
-                                            ? 'active'
-                                            : ''
+                                        isActive && "bg-gray-100 text-red-600"
                                     )}
                                 >
                                     <span className="hidden md:inline">{item.name}</span>
@@ -97,13 +99,12 @@ export const NavBar = ({ items, activeRoute, onNavigate, className }) => {
                                     to={item.url}
                                     onClick={() => {
                                         setOpenDropdown(null);
-                                        onNavigate(item.url);
+                                        onNavigate?.(item.url);
                                     }}
                                     className={cn(
                                         "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors flex items-center",
                                         "text-gray-600 hover:text-red-600",
-                                        isActive && "bg-gray-100 text-red-600",
-                                        activeRoute === item.url ? 'active' : ''
+                                        isActive && "bg-gray-100 text-red-600"
                                     )}
                                 >
                                     <span className="hidden md:inline">{item.name}</span>
@@ -144,11 +145,11 @@ export const NavBar = ({ items, activeRoute, onNavigate, className }) => {
                                             to={dropdownLink.to}
                                             onClick={() => {
                                                 setOpenDropdown(null);
-                                                onNavigate(dropdownLink.to);
+                                                onNavigate?.(dropdownLink.to);
                                             }}
                                             className={cn(
                                                 "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-red-600",
-                                                activeRoute === dropdownLink.to && "bg-gray-50 text-red-600"
+                                                isDropdownLinkActive(dropdownLink.to) && "bg-gray-50 text-red-600"
                                             )}
                                         >
                                             {dropdownLink.label}
@@ -162,4 +163,4 @@ export const NavBar = ({ items, activeRoute, onNavigate, className }) => {
             </div>
         </div>
     );
-} 
+}; 

@@ -44,6 +44,7 @@ const Layout = React.memo(({ children }) => {
         dropdownLinks: [
           { to: "/update-sales-projection", label: "Update Sales Projections" },
           { to: "/thawing-cabinet/config", label: "Projection Rules" },
+          { to: "/truck-items", label: "Truck Order Calculator" },
         ]
       },
       {

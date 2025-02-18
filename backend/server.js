@@ -22,6 +22,7 @@ import cookieParser from 'cookie-parser';
 import salesProjectionConfigRoutes from './routes/salesProjectionConfig.route.js';
 import futureProjectionRoutes from "./routes/futureProjection.route.js";
 import { applyFutureProjections } from './controllers/futureProjection.controller.js';
+import truckItemRoutes from './routes/truckItem.route.js';
 
 
 dotenv.config();
@@ -89,6 +90,7 @@ app.use('/api/closure',authenticateToken, closureRoutes);
 app.use('/api/messages', authenticateToken ,messageRoutes);
 app.use('/api', salesProjectionConfigRoutes);
 app.use("/api", futureProjectionRoutes);
+app.use("/api/truck-items", authenticateToken, truckItemRoutes);
 
 
 // Serve frontend in production mode
