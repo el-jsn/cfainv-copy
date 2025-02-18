@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from './axiosInstance';
@@ -56,6 +56,14 @@ const TruckItems = () => {
     const [endDate, setEndDate] = useState(endOfWeek(new Date()));
     const [dateRange, setDateRange] = useState([startOfWeek(new Date()), endOfWeek(new Date())]);
     const [expandedRows, setExpandedRows] = useState({});
+    const [openBulkDialog, setOpenBulkDialog] = useState(false);
+    const [bulkInput, setBulkInput] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const searchRef = useRef();
+    const [associatedItemSearch, setAssociatedItemSearch] = useState('');
+    const [selectedItems, setSelectedItems] = useState(new Set());
 
     // Add useEffect hooks for data fetching
     useEffect(() => {
@@ -357,8 +365,12 @@ const TruckItems = () => {
             }
 
             await axiosInstance.delete(`/truck-items/${id}`);
+
+            // Immediately update the UI
+            setTruckItems(prevItems => prevItems.filter(item => item._id !== id));
+            setSearchResults(prevResults => prevResults.filter(item => item._id !== id));
+
             setSuccess('Item deleted successfully');
-            fetchTruckItems();
         } catch (err) {
             console.error('Error deleting item:', err);
             if (err.response?.status === 401) {
@@ -475,18 +487,33 @@ const TruckItems = () => {
             cost: '',
             associatedItems: []
         });
+        setSelectedItems(new Set());
         setOpenDialog(true);
     };
 
-    const handleAddAssociatedItem = () => {
-        setCurrentItem({
-            ...currentItem,
-            associatedItems: [...currentItem.associatedItems, {
-                name: '',
-                usage: 0,
-                unit: currentItem.unitType || 'ct'  // Include the unit type from parent item
-            }]
-        });
+    const handleAssociatedItemSelect = (itemName) => {
+        const newSelectedItems = new Set(selectedItems);
+        if (newSelectedItems.has(itemName)) {
+            newSelectedItems.delete(itemName);
+            setCurrentItem({
+                ...currentItem,
+                associatedItems: currentItem.associatedItems.filter(item => item.name !== itemName)
+            });
+        } else {
+            newSelectedItems.add(itemName);
+            setCurrentItem({
+                ...currentItem,
+                associatedItems: [
+                    ...currentItem.associatedItems,
+                    {
+                        name: itemName,
+                        usage: 1,
+                        unit: currentItem.unitType || 'ct'
+                    }
+                ]
+            });
+        }
+        setSelectedItems(newSelectedItems);
     };
 
     const handleAssociatedItemChange = (index, field, value) => {
@@ -517,6 +544,81 @@ const TruckItems = () => {
         }));
     };
 
+    const handleBulkImport = async () => {
+        try {
+            const lines = bulkInput.trim().split('\n');
+            const items = [];
+
+            for (const line of lines) {
+                const [description, uom, cost] = line.split('\t');
+                if (description && uom && cost) {
+                    const parsed = parseUOM(uom);
+                    if (parsed) {
+                        items.push({
+                            description: description.trim(),
+                            uom: uom.trim(),
+                            totalUnits: parsed.totalUnits,
+                            unitType: parsed.unitType,
+                            cost: Number(cost.trim()),
+                            associatedItems: []
+                        });
+                    }
+                }
+            }
+
+            // Save all items
+            for (const item of items) {
+                await axiosInstance.post('/truck-items', item);
+            }
+
+            setSuccess(`Successfully imported ${items.length} items`);
+            setOpenBulkDialog(false);
+            setBulkInput('');
+            fetchTruckItems();
+        } catch (err) {
+            console.error('Error importing items:', err);
+            setError('Failed to import items. Please check your input format.');
+        }
+    };
+
+    const handleSearch = (query) => {
+        setSearchQuery(query);
+        if (!query.trim()) {
+            setSearchResults([]);
+            return;
+        }
+
+        const results = truckItems.filter(item => {
+            const matchesDescription = item.description.toLowerCase().includes(query.toLowerCase());
+            const matchesUOM = item.uom.toLowerCase().includes(query.toLowerCase());
+            const matchesAssociatedItems = item.associatedItems.some(assoc =>
+                assoc.name.toLowerCase().includes(query.toLowerCase())
+            );
+
+            // Prioritize matches in truck item description
+            if (matchesDescription) return true;
+            if (matchesUOM) return true;
+            return matchesAssociatedItems;
+        });
+
+        setSearchResults(results);
+    };
+
+    const handleSearchFocus = () => {
+        setIsSearchFocused(true);
+        searchRef.current.style.display = "none";
+    };
+
+    const handleSearchBlur = () => {
+        setIsSearchFocused(false);
+        searchRef.current.style.display = "block";
+    };
+
+    // Filter function for associated items search
+    const filteredSalesMixItems = salesMixItems.filter(name =>
+        name.toLowerCase().includes(associatedItemSearch.toLowerCase())
+    );
+
     return (
         <Box sx={{
             padding: '32px',
@@ -543,24 +645,74 @@ const TruckItems = () => {
                     >
                         Truck Order Calculator
                     </Typography>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleAddItem}
-                        sx={{
-                            borderRadius: '12px',
-                            textTransform: 'none',
-                            px: 3,
-                            py: 1.5,
-                            backgroundColor: '#007FFF',
-                            '&:hover': {
-                                backgroundColor: '#0066CC'
-                            }
-                        }}
-                    >
-                        Add Truck Item
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<AddIcon />}
+                            onClick={() => setOpenBulkDialog(true)}
+                            sx={{
+                                borderRadius: '12px',
+                                textTransform: 'none',
+                                px: 3,
+                                py: 1.5,
+                            }}
+                        >
+                            Bulk Import
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<AddIcon />}
+                            onClick={handleAddItem}
+                            sx={{
+                                borderRadius: '12px',
+                                textTransform: 'none',
+                                px: 3,
+                                py: 1.5,
+                                backgroundColor: '#007FFF',
+                                '&:hover': {
+                                    backgroundColor: '#0066CC'
+                                }
+                            }}
+                        >
+                            Add Truck Item
+                        </Button>
+                    </Box>
+                </Box>
+
+                {/* Search Bar */}
+                <Box sx={{ mb: 4 }}>
+                    <div className="items-center px-4 flex justify-center">
+                        <div className="relative w-full max-w-2xl">
+                            <div className="absolute top-3 left-3 items-center" ref={searchRef}>
+                                <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"></path>
+                                </svg>
+                            </div>
+                            <input
+                                type="text"
+                                className="block w-full p-2 pl-10 text-gray-900 bg-white rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all duration-200 focus:pl-3"
+                                placeholder="Search by description, UOM, or associated items..."
+                                value={searchQuery}
+                                onChange={(e) => handleSearch(e.target.value)}
+                                onFocus={handleSearchFocus}
+                                onBlur={handleSearchBlur}
+                            />
+                            {searchQuery && (
+                                <div className="absolute right-3 top-3">
+                                    <button
+                                        onClick={() => handleSearch('')}
+                                        className="text-gray-400 hover:text-gray-600"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </Box>
 
                 {/* Alerts */}
@@ -703,8 +855,8 @@ const TruckItems = () => {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {Array.isArray(truckItems) && truckItems.length > 0 ? (
-                                    truckItems.map((item) => {
+                                {Array.isArray(searchQuery ? searchResults : truckItems) && (searchQuery ? searchResults : truckItems).length > 0 ? (
+                                    (searchQuery ? searchResults : truckItems).map((item) => {
                                         const usage = calculateUsage(item, salesMixData, dateRange);
                                         return (
                                             <TableRow
@@ -892,19 +1044,21 @@ const TruckItems = () => {
                                                     variant="body1"
                                                     sx={{ color: '#666' }}
                                                 >
-                                                    No truck items available
+                                                    {searchQuery ? 'No matching items found' : 'No truck items available'}
                                                 </Typography>
-                                                <Button
-                                                    variant="outlined"
-                                                    startIcon={<AddIcon />}
-                                                    onClick={handleAddItem}
-                                                    sx={{
-                                                        borderRadius: '12px',
-                                                        textTransform: 'none'
-                                                    }}
-                                                >
-                                                    Add Your First Item
-                                                </Button>
+                                                {!searchQuery && (
+                                                    <Button
+                                                        variant="outlined"
+                                                        startIcon={<AddIcon />}
+                                                        onClick={handleAddItem}
+                                                        sx={{
+                                                            borderRadius: '12px',
+                                                            textTransform: 'none'
+                                                        }}
+                                                    >
+                                                        Add Your First Item
+                                                    </Button>
+                                                )}
                                             </Box>
                                         </TableCell>
                                     </TableRow>
@@ -978,6 +1132,76 @@ const TruckItems = () => {
                         />
 
                         <Typography variant="h6" sx={{ fontWeight: 600, mt: 2 }}>Associated Items</Typography>
+
+                        {/* Search and Selection Section */}
+                        <Box sx={{
+                            border: '1px solid #e0e0e0',
+                            borderRadius: '12px',
+                            p: 2,
+                            mb: 2
+                        }}>
+                            <TextField
+                                fullWidth
+                                variant="outlined"
+                                placeholder="Search items..."
+                                value={associatedItemSearch}
+                                onChange={(e) => setAssociatedItemSearch(e.target.value)}
+                                sx={{
+                                    mb: 2,
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: '12px'
+                                    }
+                                }}
+                            />
+                            <Box sx={{
+                                maxHeight: '200px',
+                                overflowY: 'auto',
+                                border: '1px solid #f0f0f0',
+                                borderRadius: '8px',
+                                p: 1
+                            }}>
+                                {filteredSalesMixItems.map((name) => (
+                                    <Box
+                                        key={name}
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            p: 1,
+                                            '&:hover': {
+                                                backgroundColor: '#f5f5f5',
+                                                borderRadius: '8px'
+                                            }
+                                        }}
+                                    >
+                                        <FormControl>
+                                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedItems.has(name)}
+                                                    onChange={() => handleAssociatedItemSelect(name)}
+                                                    style={{ marginRight: '8px' }}
+                                                />
+                                                <Typography>
+                                                    {name}
+                                                    <Typography
+                                                        component="span"
+                                                        sx={{
+                                                            ml: 1,
+                                                            color: 'text.secondary',
+                                                            fontSize: '0.875rem'
+                                                        }}
+                                                    >
+                                                        (UPT: {salesMixData[name]?.toFixed(2) || '0.00'})
+                                                    </Typography>
+                                                </Typography>
+                                            </label>
+                                        </FormControl>
+                                    </Box>
+                                ))}
+                            </Box>
+                        </Box>
+
+                        {/* Selected Items with Usage Amounts */}
                         {currentItem.associatedItems.map((item, index) => (
                             <Paper
                                 key={index}
@@ -991,39 +1215,41 @@ const TruckItems = () => {
                                     alignItems: 'center'
                                 }}
                             >
-                                <FormControl fullWidth>
-                                    <InputLabel>Item Name</InputLabel>
-                                    <Select
-                                        value={item.name}
-                                        onChange={(e) => handleAssociatedItemChange(index, 'name', e.target.value)}
-                                        label="Item Name"
+                                <Typography sx={{ flex: 1 }}>
+                                    {item.name}
+                                    <Typography
+                                        component="span"
                                         sx={{
-                                            borderRadius: '12px'
+                                            ml: 1,
+                                            color: 'text.secondary',
+                                            fontSize: '0.875rem'
                                         }}
                                     >
-                                        <MenuItem value="">Select an item</MenuItem>
-                                        {salesMixItems.map((name) => (
-                                            <MenuItem key={name} value={name}>
-                                                {name} (UPT: {salesMixData[name]?.toFixed(2) || '0.00'})
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
+                                        (UPT: {salesMixData[item.name]?.toFixed(2) || '0.00'})
+                                    </Typography>
+                                </Typography>
                                 <TextField
                                     label={`Usage Amount (${currentItem.unitType || 'units'})`}
                                     type="number"
                                     inputProps={{ step: "0.01" }}
                                     value={item.usage}
                                     onChange={(e) => handleAssociatedItemChange(index, 'usage', e.target.value)}
-                                    fullWidth
                                     sx={{
+                                        width: '200px',
                                         '& .MuiOutlinedInput-root': {
                                             borderRadius: '12px'
                                         }
                                     }}
                                 />
                                 <IconButton
-                                    onClick={() => handleRemoveAssociatedItem(index)}
+                                    onClick={() => {
+                                        handleRemoveAssociatedItem(index);
+                                        setSelectedItems(prev => {
+                                            const newSet = new Set(prev);
+                                            newSet.delete(item.name);
+                                            return newSet;
+                                        });
+                                    }}
                                     sx={{
                                         color: '#d32f2f',
                                         '&:hover': {
@@ -1035,18 +1261,6 @@ const TruckItems = () => {
                                 </IconButton>
                             </Paper>
                         ))}
-                        <Button
-                            variant="outlined"
-                            startIcon={<AddIcon />}
-                            onClick={handleAddAssociatedItem}
-                            sx={{
-                                borderRadius: '12px',
-                                textTransform: 'none',
-                                mt: 2
-                            }}
-                        >
-                            Add Associated Item
-                        </Button>
 
                         <Box sx={{
                             display: 'flex',
@@ -1079,6 +1293,95 @@ const TruckItems = () => {
                                 }}
                             >
                                 Save
+                            </Button>
+                        </Box>
+                    </Box>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Import Dialog */}
+            <Dialog
+                open={openBulkDialog}
+                onClose={() => setOpenBulkDialog(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: '16px',
+                        padding: '16px'
+                    }
+                }}
+            >
+                <DialogTitle sx={{
+                    pb: 2,
+                    fontWeight: 600
+                }}>
+                    Bulk Import Truck Items
+                </DialogTitle>
+                <DialogContent>
+                    <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 3,
+                        pt: 2
+                    }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Paste your data in tab-separated format (Description, UOM, Cost). Each item on a new line.
+                            <br />
+                            Example format:
+                            <br />
+                            Bag, Cookie Small CFA - CA    1000 Ct Case    66.98
+                            <br />
+                            Bag, Foil CFA - CA    1000 Ct Case    69.99
+                        </Typography>
+                        <TextField
+                            multiline
+                            rows={10}
+                            value={bulkInput}
+                            onChange={(e) => setBulkInput(e.target.value)}
+                            placeholder="Paste your data here..."
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: '12px',
+                                    fontFamily: 'monospace'
+                                }
+                            }}
+                        />
+                        <Box sx={{
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: 2,
+                            mt: 2
+                        }}>
+                            <Button
+                                onClick={() => {
+                                    setOpenBulkDialog(false);
+                                    setBulkInput('');
+                                }}
+                                sx={{
+                                    borderRadius: '12px',
+                                    textTransform: 'none',
+                                    px: 3
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={handleBulkImport}
+                                disabled={!bulkInput.trim()}
+                                sx={{
+                                    borderRadius: '12px',
+                                    textTransform: 'none',
+                                    px: 3,
+                                    backgroundColor: '#007FFF',
+                                    '&:hover': {
+                                        backgroundColor: '#0066CC'
+                                    }
+                                }}
+                            >
+                                Import
                             </Button>
                         </Box>
                     </Box>
