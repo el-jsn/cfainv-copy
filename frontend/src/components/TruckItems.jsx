@@ -879,12 +879,27 @@ const TruckItems = () => {
                                             setStartDate(date);
                                             setDateRange([date, endDate]);
                                         }}
-                                        className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm cursor-pointer bg-white hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 14px',
+                                            borderRadius: '12px',
+                                            border: '1px solid #e2e8f0',
+                                            fontSize: '0.875rem',
+                                            color: '#0f172a',
+                                            backgroundColor: '#ffffff',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            outline: 'none',
+                                        }}
+                                        onFocus={(e) => e.target.style.borderColor = '#0284c7'}
+                                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                                     />
                                 </Box>
                                 <Box sx={{
                                     color: '#64748b',
-                                    fontSize: '0.9rem'
+                                    fontSize: '0.9rem',
+                                    fontWeight: 500,
+                                    padding: '0 8px'
                                 }}>
                                     to
                                 </Box>
@@ -907,7 +922,20 @@ const TruckItems = () => {
                                             setEndDate(date);
                                             setDateRange([startDate, date]);
                                         }}
-                                        className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm cursor-pointer bg-white hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 14px',
+                                            borderRadius: '12px',
+                                            border: '1px solid #e2e8f0',
+                                            fontSize: '0.875rem',
+                                            color: '#0f172a',
+                                            backgroundColor: '#ffffff',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            outline: 'none',
+                                        }}
+                                        onFocus={(e) => e.target.style.borderColor = '#0284c7'}
+                                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                                     />
                                 </Box>
                             </Box>
