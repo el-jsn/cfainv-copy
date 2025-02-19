@@ -45,16 +45,18 @@ import { styled } from "@mui/material/styles";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as ChartTooltip } from 'recharts';
 
 
-// Theming and Consistent Styling (Adapted for White Theme)
-const primaryColor = "#90a4ae"; // Light Gray
-const secondaryColor = "#dc004e"; // A vibrant accent
-const successColor = "#4caf50";
-const warningColor = "#ff9800";
-const errorColor = "#f44336";
-const textColorPrimary = "#37474f"; // Dark gray text
-const textColorSecondary = "#78909c"; // Gray for supporting text
-const backgroundColor = "#fafafa"; // Very light gray background
-const tableRowEvenColor = "#f2f2f2"; // Light Gray for Even Rows
+// Theming and Consistent Styling (Modern Theme)
+const primaryColor = "#1976d2"; // Modern blue
+const secondaryColor = "#f50057"; // Vibrant pink
+const successColor = "#2e7d32"; // Forest green
+const warningColor = "#ed6c02"; // Warm orange
+const errorColor = "#d32f2f"; // Deep red
+const textColorPrimary = "#1a2027"; // Near black
+const textColorSecondary = "#637381"; // Slate gray
+const backgroundColor = "#ffffff"; // Pure white
+const tableRowEvenColor = "#f9fafb"; // Very light gray for even rows
+const cardBackgroundColor = "#ffffff"; // White for cards
+const borderColor = "#e0e0e0"; // Light gray for borders
 
 // Styled File Input (Keep this)
 const Input = styled("input")({
@@ -69,29 +71,61 @@ const Input = styled("input")({
   width: 1,
 });
 
-// Styled Card Header (Adapted for White Theme)
+// Styled Card Header (Modern Theme)
 const StyledCardHeader = styled(CardHeader)(({ theme }) => ({
-  backgroundColor: "#f0f0f0",
+  backgroundColor: cardBackgroundColor,
   color: textColorPrimary,
-  padding: theme.spacing(2, 2),
+  padding: theme.spacing(3),
   '& .MuiCardHeader-title': {
-    fontSize: '1.2rem',
-    fontWeight: 500,
+    fontSize: '1.25rem',
+    fontWeight: 600,
+    letterSpacing: '-0.025em',
+  },
+  borderBottom: `1px solid ${borderColor}`,
+}));
+
+// Modern Table Styling
+const StyledTableCell = styled(TableCell)(({ theme }) => ({
+  color: textColorPrimary,
+  borderBottom: `1px solid ${borderColor}`,
+  padding: theme.spacing(2),
+  fontSize: '0.875rem',
+}));
+
+// Modern Table Row
+const StyledTableRow = styled(TableRow)(({ theme, iseven }) => ({
+  backgroundColor: iseven ? tableRowEvenColor : 'inherit',
+  '&:hover': {
+    backgroundColor: '#f5f5f5',
+    transition: 'background-color 0.2s ease',
   },
 }));
 
-// Styled TableCell for better readability (Adapted for White Theme)
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  color: textColorPrimary,
-  borderBottom: `1px solid ${theme.palette.divider}`, // Subtle divider between cells
-  padding: theme.spacing(1, 2),
+// Modern Card Styling
+const StyledCard = styled(Card)(({ theme }) => ({
+  borderRadius: '12px',
+  boxShadow: '0 2px 12px 0 rgba(0,0,0,0.05)',
+  border: `1px solid ${borderColor}`,
+  overflow: 'hidden',
+  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)',
+  },
 }));
 
-// Styled TableRow for alternating background (Adapted for White Theme)
-const StyledTableRow = styled(TableRow)(({ theme, iseven }) => ({
-  backgroundColor: iseven ? tableRowEvenColor : 'inherit',
+// Modern Button Styling
+const StyledButton = styled(Button)(({ theme }) => ({
+  borderRadius: '8px',
+  textTransform: 'none',
+  fontWeight: 600,
+  padding: '8px 20px',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    transform: 'translateY(-1px)',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  },
 }));
-
 
 const ITEM_CATEGORIES = {
   Filets: [
@@ -707,11 +741,27 @@ const EnhancedUTPUpdate = () => {
   };
 
   return (
-    <Box sx={{ p: 4, backgroundColor, color: textColorPrimary }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 500, textAlign: 'left' }}>
+    <Box sx={{ p: 4, backgroundColor, minHeight: '100vh' }}>
+      <Typography
+        variant="h4"
+        component="h1"
+        gutterBottom
+        sx={{
+          fontWeight: 700,
+          textAlign: 'left',
+          color: textColorPrimary,
+          mb: 3,
+          letterSpacing: '-0.025em'
+        }}
+      >
         Sales Data Analytics Suite
       </Typography>
-      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+      <Typography
+        variant="subtitle1"
+        color="text.secondary"
+        gutterBottom
+        sx={{ mb: 4 }}
+      >
         Upload your sales report to analyze Unit Per Thousand (UPT) and gain valuable insights.
       </Typography>
 
@@ -719,24 +769,38 @@ const EnhancedUTPUpdate = () => {
         open={isSnackbarOpen}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
-        message={successMessage}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      />
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="success"
+          sx={{
+            width: '100%',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={4}>
         <Grid item xs={12} md={6}>
-          <Card elevation={1}>
+          <StyledCard>
             <CardContent>
               <Box
                 sx={{
                   p: 4,
                   border: `2px dashed ${primaryColor}`,
-                  borderRadius: 2,
+                  borderRadius: '12px',
                   textAlign: "center",
                   cursor: "pointer",
-                  backgroundColor: dragActive ? "#f5f5f5" : 'transparent',
-                  transition: 'background-color 0.3s ease',
-                  '&:hover': { backgroundColor: '#f5f5f5' },
+                  backgroundColor: dragActive ? "rgba(25, 118, 210, 0.04)" : 'transparent',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                    transform: 'translateY(-2px)',
+                  },
                 }}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
@@ -744,26 +808,76 @@ const EnhancedUTPUpdate = () => {
               >
                 <label htmlFor="file-upload">
                   <Box>
-                    <CloudUpload color="primary" sx={{ fontSize: 50, display: "block", margin: "0 auto 15px" }} />
-                    <Typography variant="h6" color={textColorPrimary}>
+                    <CloudUpload
+                      sx={{
+                        fontSize: 64,
+                        color: primaryColor,
+                        mb: 2,
+                        opacity: 0.8
+                      }}
+                    />
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        color: textColorPrimary,
+                        fontWeight: 600,
+                        mb: 1
+                      }}
+                    >
                       Drag and drop your sales matrix
                     </Typography>
-                    <Typography variant="body2" color={textColorSecondary}>
-                      (Accepts .xlsx and .xls formats)
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: textColorSecondary,
+                        mb: 3
+                      }}
+                    >
+                      Accepts .xlsx and .xls formats
                     </Typography>
-                    <Button component="span" variant="contained" color="primary" size="large" sx={{ mt: 2 }}>
+                    <StyledButton
+                      variant="contained"
+                      color="primary"
+                      size="large"
+                      component="span"
+                    >
                       Select File
-                    </Button>
+                    </StyledButton>
                   </Box>
                 </label>
                 <Input accept=".xlsx, .xls" id="file-upload" type="file" onChange={handleFileChange} />
                 {selectedFile && (
-                  <Box mt={2} display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="subtitle2" color={textColorSecondary} noWrap style={{ overflowX: 'hidden', marginRight: 8 }}>
+                  <Box
+                    mt={3}
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    sx={{
+                      backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        color: textColorPrimary,
+                        fontWeight: 500
+                      }}
+                      noWrap
+                    >
                       {selectedFile.name}
                     </Typography>
                     <Tooltip title="Remove">
-                      <IconButton size="small" onClick={() => setSelectedFile(null)}>
+                      <IconButton
+                        size="small"
+                        onClick={() => setSelectedFile(null)}
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                          },
+                        }}
+                      >
                         <Close fontSize="small" color="error" />
                       </IconButton>
                     </Tooltip>
@@ -776,421 +890,443 @@ const EnhancedUTPUpdate = () => {
                   icon={<ErrorOutline />}
                   severity="error"
                   onClose={() => setErrorMessage("")}
-                  sx={{ mt: 2 }}
+                  sx={{
+                    mt: 3,
+                    borderRadius: '8px',
+                  }}
                 >
                   {errorMessage}
                 </Alert>
               </Collapse>
-
-
             </CardContent>
-          </Card>
+          </StyledCard>
         </Grid>
 
         <Grid item xs={12} md={6}>
           {reportMetadata && (
-            <Card elevation={1}>
-              <StyledCardHeader title="Report Summary" />
-              <CardContent>
-                <Typography variant="subtitle1" color={textColorPrimary}>
-                  <Box fontWeight="bold" display="inline">Store Location:</Box> {reportMetadata.storeName}
-                </Typography>
-                <Typography variant="subtitle1" color={textColorPrimary}>
-                  <Box fontWeight="bold" display="inline">Generation Time:</Box> {reportMetadata.reportTime}
-                </Typography>
-                <Typography variant="subtitle1" color={textColorPrimary}>
-                  <Box fontWeight="bold" display="inline">Reporting Period Start:</Box> {reportMetadata.reportStartDate}
-                </Typography>
-                <Typography variant="subtitle1" color={textColorPrimary}>
-                  <Box fontWeight="bold" display="inline">Reporting Period End:</Box> {reportMetadata.reportEndDate}
-                </Typography>
+            <StyledCard>
+              <StyledCardHeader
+                title={
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Report Summary
+                  </Typography>
+                }
+              />
+              <CardContent sx={{ p: 3 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: '8px',
+                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                        border: '1px solid rgba(25, 118, 210, 0.1)',
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                        Store Location: {reportMetadata.storeName}
+                      </Typography>
+                      <Typography variant="body2" color={textColorSecondary}>
+                        Generated: {reportMetadata.reportTime}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: '8px',
+                        backgroundColor: '#f8f9fa',
+                      }}
+                    >
+                      <Typography variant="subtitle2" color={textColorSecondary}>
+                        Period Start
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {reportMetadata.reportStartDate}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: '8px',
+                        backgroundColor: '#f8f9fa',
+                      }}
+                    >
+                      <Typography variant="subtitle2" color={textColorSecondary}>
+                        Period End
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {reportMetadata.reportEndDate}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
               </CardContent>
-            </Card>
+            </StyledCard>
           )}
 
           {overallSalesMetrics && (
-            <Card elevation={1} sx={{ mt: 3 }}>
-              <StyledCardHeader title="Aggregate Sales Metrics" />
-              <CardContent>
-                <Typography variant="h6" color={textColorPrimary} gutterBottom sx={{ fontWeight: 500 }}>Key Performance Indicators</Typography>
-                <Divider sx={{ mb: 1 }} />
-                <Typography variant="body1" color={textColorPrimary}>
-                  Total Items Sold: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalSold}</Box>
-                </Typography>
-                <Typography variant="body1" color={textColorPrimary}>
-                  Total Promotional Engagements: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalPromo}</Box>
-                </Typography>
-                <Typography variant="body1" color={textColorPrimary}>
-                  Total Digital Transactions: <Box fontWeight="bold" display="inline">{overallSalesMetrics.totalDigital}</Box>
-                </Typography>
+            <StyledCard sx={{ mt: 3 }}>
+              <StyledCardHeader
+                title={
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Sales Overview
+                  </Typography>
+                }
+              />
+              <CardContent sx={{ p: 3 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: '8px',
+                        backgroundColor: 'rgba(46, 125, 50, 0.04)',
+                        border: '1px solid rgba(46, 125, 50, 0.1)',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography variant="h4" sx={{ color: successColor, fontWeight: 700 }}>
+                        {overallSalesMetrics.totalSold}
+                      </Typography>
+                      <Typography variant="body2" color={textColorSecondary}>
+                        Total Items Sold
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: '8px',
+                        backgroundColor: 'rgba(237, 108, 2, 0.04)',
+                        border: '1px solid rgba(237, 108, 2, 0.1)',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography variant="h4" sx={{ color: warningColor, fontWeight: 700 }}>
+                        {overallSalesMetrics.totalPromo}
+                      </Typography>
+                      <Typography variant="body2" color={textColorSecondary}>
+                        Promotional Items
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: '8px',
+                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                        border: '1px solid rgba(25, 118, 210, 0.1)',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography variant="h4" sx={{ color: primaryColor, fontWeight: 700 }}>
+                        {overallSalesMetrics.totalDigital}
+                      </Typography>
+                      <Typography variant="body2" color={textColorSecondary}>
+                        Digital Transactions
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
               </CardContent>
-            </Card>
+            </StyledCard>
           )}
         </Grid>
 
         {Object.keys(utpData).length > 0 && (
           <Grid item xs={12}>
-            <Card elevation={1}>
+            <StyledCard>
               <StyledCardHeader
-                title="Unit Per Thousand Analysis"
+                title={
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Unit Per Thousand Analysis
+                  </Typography>
+                }
                 action={
-                  <Button
+                  <StyledButton
                     variant="contained"
                     color="primary"
                     onClick={handleSubmit}
                     disabled={isLoading}
                     startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : <CheckCircleOutline />}
-                    sx={{ ml: 2 }}
                   >
                     {isLoading ? "Submitting..." : "Submit UPT Data"}
-                  </Button>
+                  </StyledButton>
                 }
               />
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={utpChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <ChartTooltip />
-                    <Bar dataKey="UPT" fill={primaryColor} />
-                  </BarChart>
-                </ResponsiveContainer>
-                <TableContainer component={Paper} elevation={1} sx={{ mt: 2 }}>
-                  <Table aria-label="calculated upts table">
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ height: 400, mb: 4 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={utpChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fill: textColorSecondary }}
+                        axisLine={{ stroke: borderColor }}
+                      />
+                      <YAxis
+                        tick={{ fill: textColorSecondary }}
+                        axisLine={{ stroke: borderColor }}
+                      />
+                      <ChartTooltip
+                        contentStyle={{
+                          backgroundColor: '#fff',
+                          border: `1px solid ${borderColor}`,
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        }}
+                      />
+                      <Bar
+                        dataKey="UPT"
+                        fill={primaryColor}
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+                <TableContainer
+                  component={Paper}
+                  elevation={0}
+                  sx={{
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: '12px',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <Table>
                     <TableHead>
                       <TableRow>
-                        <StyledTableCell sx={{ fontWeight: 'bold' }}>Item Category</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>UPT</StyledTableCell>
+                        <StyledTableCell sx={{ fontWeight: 600, backgroundColor: 'rgba(25, 118, 210, 0.04)' }}>
+                          Item Category
+                        </StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 600, backgroundColor: 'rgba(25, 118, 210, 0.04)' }}>
+                          UPT
+                        </StyledTableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {Object.entries(utpData).map(([key, value], index) => (
                         <StyledTableRow key={key} iseven={index % 2 === 0}>
-                          <StyledTableCell component="th" scope="row">
-                            {key}
+                          <StyledTableCell>{key}</StyledTableCell>
+                          <StyledTableCell align="right">
+                            <Typography sx={{ fontWeight: 500 }}>
+                              {value.toFixed(2)}
+                            </Typography>
                           </StyledTableCell>
-                          <StyledTableCell align="right">{value.toFixed(2)}</StyledTableCell>
                         </StyledTableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </TableContainer>
               </CardContent>
-            </Card>          </Grid>
+            </StyledCard>
+          </Grid>
         )}
 
         {Object.keys(prepUtpData).length > 0 && (
           <Grid item xs={12}>
-            <Card elevation={1}>
+            <StyledCard>
               <StyledCardHeader
-                title="Prep Unit Per Thousand Analysis"
+                title={
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Prep Unit Per Thousand Analysis
+                  </Typography>
+                }
                 action={
-                  <Button
+                  <StyledButton
                     variant="contained"
                     color="primary"
                     onClick={handlePrepSubmit}
                     disabled={isLoading}
                     startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : <CheckCircleOutline />}
-                    sx={{ ml: 2 }}
                   >
                     {isLoading ? "Submitting..." : "Submit Prep UPT Data"}
-                  </Button>
+                  </StyledButton>
                 }
               />
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={prepUtpChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <ChartTooltip />
-                    <Bar dataKey="UPT" fill={primaryColor} />
-                  </BarChart>
-                </ResponsiveContainer>
-                <TableContainer component={Paper} elevation={1} sx={{ mt: 2 }}>
-                  <Table aria-label="calculated prep upts table">
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ height: 400, mb: 4 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={prepUtpChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fill: textColorSecondary }}
+                        axisLine={{ stroke: borderColor }}
+                      />
+                      <YAxis
+                        tick={{ fill: textColorSecondary }}
+                        axisLine={{ stroke: borderColor }}
+                      />
+                      <ChartTooltip
+                        contentStyle={{
+                          backgroundColor: '#fff',
+                          border: `1px solid ${borderColor}`,
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        }}
+                      />
+                      <Bar
+                        dataKey="UPT"
+                        fill={primaryColor}
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+                <TableContainer
+                  component={Paper}
+                  elevation={0}
+                  sx={{
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: '12px',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <Table>
                     <TableHead>
                       <TableRow>
-                        <StyledTableCell sx={{ fontWeight: 'bold' }}>Item Category</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>UPT</StyledTableCell>
+                        <StyledTableCell sx={{ fontWeight: 600, backgroundColor: 'rgba(25, 118, 210, 0.04)' }}>
+                          Item Category
+                        </StyledTableCell>
+                        <StyledTableCell align="right" sx={{ fontWeight: 600, backgroundColor: 'rgba(25, 118, 210, 0.04)' }}>
+                          UPT
+                        </StyledTableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {Object.entries(prepUtpData).map(([key, value], index) => (
                         <StyledTableRow key={key} iseven={index % 2 === 0}>
-                          <StyledTableCell component="th" scope="row">
-                            {key}
+                          <StyledTableCell>{key}</StyledTableCell>
+                          <StyledTableCell align="right">
+                            <Typography sx={{ fontWeight: 500 }}>
+                              {formatPrepUtpDisplay(key, value)}
+                            </Typography>
                           </StyledTableCell>
-                          <StyledTableCell align="right">{formatPrepUtpDisplay(key, value)}</StyledTableCell>
                         </StyledTableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </TableContainer>
               </CardContent>
-            </Card>
+            </StyledCard>
           </Grid>
         )}
 
         {analysisResults && (
           <Grid item xs={12}>
-            <Card elevation={1}>
-              <StyledCardHeader title="Key Insights and Recommendations" />
-              <CardContent>
-
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 500 }}>Menu Item Performance</Typography>
-                <Divider sx={{ mb: 2 }} />
-                <Grid container spacing={2} mb={3}>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle1" color={successColor} gutterBottom sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
-                      <ArrowUpwardIcon sx={{ mr: 0.5 }} /> Top Performing Items
-                    </Typography>
-                    <TableContainer component={Paper} elevation={1}>
-                      <Table size="small">
-                        <TableHead sx={{ backgroundColor: successColor }}>
-                          <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>Item</StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}># Sold Per 1000</StyledTableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {topPerformingItems.map((item, index) => (
-                            <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
-                              <StyledTableCell>{item['Item Name']}</StyledTableCell>
-                              <StyledTableCell align="right">{item['# Sold Per 1000']}</StyledTableCell>
-                            </StyledTableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
+            <StyledCard>
+              <StyledCardHeader
+                title={
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Sales Insights & Analysis
+                  </Typography>
+                }
+              />
+              <CardContent sx={{ p: 3 }}>
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <Box sx={{ mb: 4 }}>
+                      <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: textColorPrimary }}>
+                        Performance Overview
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <Box
+                            sx={{
+                              p: 3,
+                              borderRadius: '12px',
+                              backgroundColor: 'rgba(46, 125, 50, 0.04)',
+                              border: '1px solid rgba(46, 125, 50, 0.1)',
+                            }}
+                          >
+                            <Typography variant="subtitle1" sx={{ color: successColor, fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center' }}>
+                              <ArrowUpwardIcon sx={{ mr: 1 }} /> Top Performing Items
+                            </Typography>
+                            <TableContainer component={Paper} elevation={0} sx={{ backgroundColor: 'transparent' }}>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow>
+                                    <StyledTableCell sx={{ fontWeight: 600, border: 'none' }}>Item</StyledTableCell>
+                                    <StyledTableCell align="right" sx={{ fontWeight: 600, border: 'none' }}># Sold Per 1000</StyledTableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {topPerformingItems.map((item, index) => (
+                                    <StyledTableRow key={item['Item Name']}>
+                                      <StyledTableCell sx={{ border: 'none' }}>{item['Item Name']}</StyledTableCell>
+                                      <StyledTableCell align="right" sx={{ border: 'none', fontWeight: 500 }}>
+                                        {item['# Sold Per 1000']}
+                                      </StyledTableCell>
+                                    </StyledTableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <Box
+                            sx={{
+                              p: 3,
+                              borderRadius: '12px',
+                              backgroundColor: 'rgba(237, 108, 2, 0.04)',
+                              border: '1px solid rgba(237, 108, 2, 0.1)',
+                            }}
+                          >
+                            <Typography variant="subtitle1" sx={{ color: warningColor, fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center' }}>
+                              <ArrowDownwardIcon sx={{ mr: 1 }} /> Items Needing Attention
+                            </Typography>
+                            <TableContainer component={Paper} elevation={0} sx={{ backgroundColor: 'transparent' }}>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow>
+                                    <StyledTableCell sx={{ fontWeight: 600, border: 'none' }}>Item</StyledTableCell>
+                                    <StyledTableCell align="right" sx={{ fontWeight: 600, border: 'none' }}># Sold Per 1000</StyledTableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {bottomPerformingItems.map((item, index) => (
+                                    <StyledTableRow key={item['Item Name']}>
+                                      <StyledTableCell sx={{ border: 'none' }}>{item['Item Name']}</StyledTableCell>
+                                      <StyledTableCell align="right" sx={{ border: 'none', fontWeight: 500 }}>
+                                        {item['# Sold Per 1000']}
+                                      </StyledTableCell>
+                                    </StyledTableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </Box>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle1" color={warningColor} gutterBottom sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
-                      <ArrowDownwardIcon sx={{ mr: 0.5 }} /> Bottom Performing Items
-                    </Typography>
-                    <TableContainer component={Paper} elevation={1}>
-                      <Table size="small">
-                        <TableHead sx={{ backgroundColor: warningColor }}>
-                          <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>Item</StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}># Sold Per 1000</StyledTableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {bottomPerformingItems.map((item, index) => (
-                            <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
-                              <StyledTableCell>{item['Item Name']}</StyledTableCell>
-                              <StyledTableCell align="right">{item['# Sold Per 1000']}</StyledTableCell>
-                            </StyledTableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Grid>
-                </Grid>
 
-                {analysisResults.negativeCountItems.length > 0 && (
-                  <Box mb={3}>
-                    <Typography variant="h6" color={errorColor} gutterBottom sx={{ display: 'flex', alignItems: 'center', fontWeight: 500 }}>
-                      <Warning sx={{ mr: 1 }} /> Potential Inventory Discrepancies
-                      <Tooltip title="Items with a negative '# Sold Per 1000' count may indicate overstock or potential waste. Investigate these items for possible adjustments.">
-                        <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
-                      </Tooltip>
-                    </Typography>
-                    <TextField
-                      label="Filter Items"
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      margin="dense"
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": {
-                            borderColor: textColorSecondary,
-                          },
-                          "&:hover fieldset": {
-                            borderColor: textColorPrimary,
-                          },
-                          "&.Mui-focused fieldset": {
-                            borderColor: primaryColor,
-                          },
-                        },
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SearchIcon color="inherit" />
-                          </InputAdornment>
-                        ),
-                      }}
-                      value={negativeSearchTerm}
-                      onChange={(e) => setNegativeSearchTerm(e.target.value)}
-                    />
-                    <TableContainer component={Paper} elevation={1}>
-                      <Table size="small" aria-label="overstock items">
-                        <TableHead sx={{ backgroundColor: errorColor }}>
-                          <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>
-                              Item
-                            </StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>
-                              Count (# per 1000 Sold)
-                            </StyledTableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {sortedNegativeItems.map((item, index) => (
-                            <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
-                              <StyledTableCell component="th" scope="row">{item['Item Name']}</StyledTableCell>
-                              <StyledTableCell align="right">{item['# Sold Per 1000']}</StyledTableCell>
-                            </StyledTableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Box>
-                )}
-
-                {analysisResults.lowSoldCountItems.length > 0 && (
-                  <Box mb={3}>
-                    <Typography variant="h6" color={warningColor} gutterBottom sx={{ display: 'flex', alignItems: 'center', fontWeight: 500 }}>
-                      <Warning sx={{ mr: 1 }} /> Items with Lower Sales Volume
-                      <Tooltip title="Items with low 'Sold Count' may require attention. Consider promotional activities or menu adjustments.">
-                        <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
-                      </Tooltip>
-                    </Typography>
-                    <TextField
-                      label="Filter Items"
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      margin="dense"
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": {
-                            borderColor: textColorSecondary,
-                          },
-                          "&:hover fieldset": {
-                            borderColor: textColorPrimary,
-                          },
-                          "&.Mui-focused fieldset": {
-                            borderColor: primaryColor,
-                          },
-                        },
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SearchIcon color="inherit" />
-                          </InputAdornment>
-                        ),
-                      }}
-                      value={lowSalesSearchTerm}
-                      onChange={(e) => setLowSalesSearchTerm(e.target.value)}
-                    />
-                    <TableContainer component={Paper} elevation={1}>
-                      <Table size="small" aria-label="low sold count items">
-                        <TableHead sx={{ backgroundColor: warningColor }}>
-                          <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>
-                              Item
-                            </StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>
-                              Sold Count
-                            </StyledTableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {sortedLowSalesItems.map((item, index) => (
-                            <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
-                              <StyledTableCell component="th" scope="row">{item['Item Name']}</StyledTableCell>
-                              <StyledTableCell align="right">{item['Sold Count']}</StyledTableCell>
-                            </StyledTableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Box>
-                )}
-
-                {analysisResults.highPromoCountItems.length > 0 && (
-                  <Box mb={3}>
-                    <Typography variant="h6" color={primaryColor} gutterBottom sx={{ display: 'flex', alignItems: 'center', fontWeight: 500 }}>
-                      <Lightbulb sx={{ mr: 1 }} /> High Promotional Redemption Items
-                      <Tooltip title="Review items with a high 'Promo Count'. Understand the reasons behind the high promotion usage.">
-                        <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
-                      </Tooltip>
-                    </Typography>
-                    <TextField
-                      label="Filter Items"
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      margin="dense"
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": {
-                            borderColor: textColorSecondary,
-                          },
-                          "&:hover fieldset": {
-                            borderColor: textColorPrimary,
-                          },
-                          "&.Mui-focused fieldset": {
-                            borderColor: primaryColor,
-                          },
-                        },
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SearchIcon color="inherit" />
-                          </InputAdornment>
-                        ),
-                      }}
-                      value={highPromoSearchTerm}
-                      onChange={(e) => setHighPromoSearchTerm(e.target.value)}
-                    />
-                    <TableContainer component={Paper} elevation={1}>
-                      <Table size="small" aria-label="high promo count items">
-                        <TableHead sx={{ backgroundColor: primaryColor }}>
-                          <TableRow>
-                            <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>
-                              Item
-                            </StyledTableCell>
-                            <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>
-                              Promo Count
-                            </StyledTableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {sortedHighPromoItems.map((item, index) => (
-                            <StyledTableRow key={item['Item Name']} iseven={index % 2 === 0}>
-                              <StyledTableCell component="th" scope="row">{item['Item Name']}</StyledTableCell>
-                              <StyledTableCell align="right">{item['Promo Count']}</StyledTableCell>
-                            </StyledTableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Box>
-                )}
-
-                {analysisResults.promoEffectiveness.length > 0 && (
-                  <Box mb={3}>
-                    <Accordion>
-                      <AccordionSummary
-                        expandIcon={<ExpandMore />}
-                        aria-controls="promo-effectiveness-content"
-                        id="promo-effectiveness-header"
+                  {analysisResults.negativeCountItems.length > 0 && (
+                    <Grid item xs={12}>
+                      <Box
+                        sx={{
+                          p: 3,
+                          borderRadius: '12px',
+                          backgroundColor: 'rgba(211, 47, 47, 0.04)',
+                          border: '1px solid rgba(211, 47, 47, 0.1)',
+                          mb: 3,
+                        }}
                       >
-                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', fontWeight: 500 }}>
-                          <Lightbulb sx={{ mr: 1 }} /> Promotion Effectiveness
-                        </Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Typography color={textColorSecondary} variant="body2" gutterBottom>
-                          Analyze the effectiveness of promotions by reviewing items frequently offered with discounts.
+                        <Typography variant="subtitle1" sx={{ color: errorColor, fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center' }}>
+                          <Warning sx={{ mr: 1 }} /> Inventory Discrepancies
+                          <Tooltip title="Items with negative counts require immediate attention">
+                            <IconButton size="small" sx={{ ml: 1 }}>
+                              <Lightbulb fontSize="small" color="info" />
+                            </IconButton>
+                          </Tooltip>
                         </Typography>
                         <TextField
                           label="Filter Items"
@@ -1199,125 +1335,833 @@ const EnhancedUTPUpdate = () => {
                           fullWidth
                           margin="dense"
                           sx={{
-                            "& .MuiOutlinedInput-root": {
-                              "& fieldset": {
-                                borderColor: textColorSecondary,
-                              },
-                              "&:hover fieldset": {
-                                borderColor: textColorPrimary,
-                              },
-                              "&.Mui-focused fieldset": {
-                                borderColor: primaryColor,
-                              },
+                            mb: 2,
+                            '& .MuiOutlinedInput-root': {
+                              backgroundColor: '#fff',
                             },
                           }}
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <SearchIcon color="inherit" />
+                                <SearchIcon color="action" />
                               </InputAdornment>
                             ),
                           }}
-                          value={promoEffectivenessSearchTerm}
-                          onChange={(e) => setPromoEffectivenessSearchTerm(e.target.value)}
+                          value={negativeSearchTerm}
+                          onChange={(e) => setNegativeSearchTerm(e.target.value)}
                         />
-                        <TableContainer component={Paper} elevation={1}>
-                          <Table size="small" aria-label="promotion effectiveness">
+                        <TableContainer component={Paper} elevation={0} sx={{ backgroundColor: 'transparent' }}>
+                          <Table size="small">
                             <TableHead>
                               <TableRow>
-                                <StyledTableCell sx={{ fontWeight: 'bold' }}>Item</StyledTableCell>
-                                <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Total Sold</StyledTableCell>
-                                <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Promo Count</StyledTableCell>
-                                <StyledTableCell align="right" sx={{ fontWeight: 'bold' }}>Digital Offer</StyledTableCell>
+                                <StyledTableCell sx={{ fontWeight: 600, border: 'none' }}>Item</StyledTableCell>
+                                <StyledTableCell align="right" sx={{ fontWeight: 600, border: 'none' }}>Count (per 1000)</StyledTableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
-                              {sortedPromoEffectiveness.map((item, index) => (
-                                <StyledTableRow key={item.item} iseven={index % 2 === 0}>
-                                  <StyledTableCell component="th" scope="row">{item.item}</StyledTableCell>
-                                  <StyledTableCell align="right">{item.totalSold}</StyledTableCell>
-                                  <StyledTableCell align="right">{item.promoFree}</StyledTableCell>
-                                  <StyledTableCell align="right">{item.digitalOffer}</StyledTableCell>
+                              {sortedNegativeItems.map((item, index) => (
+                                <StyledTableRow key={item['Item Name']}>
+                                  <StyledTableCell sx={{ border: 'none' }}>{item['Item Name']}</StyledTableCell>
+                                  <StyledTableCell align="right" sx={{ border: 'none', color: errorColor, fontWeight: 500 }}>
+                                    {item['# Sold Per 1000']}
+                                  </StyledTableCell>
                                 </StyledTableRow>
                               ))}
                             </TableBody>
                           </Table>
                         </TableContainer>
-                      </AccordionDetails>
-                    </Accordion>
-                  </Box>
-                )}
+                      </Box>
+                    </Grid>
+                  )}
+
+                  {analysisResults.lowSoldCountItems.length > 0 && (
+                    <Grid item xs={12}>
+                      <Box
+                        sx={{
+                          p: 3,
+                          borderRadius: '12px',
+                          backgroundColor: 'rgba(237, 108, 2, 0.04)',
+                          border: '1px solid rgba(237, 108, 2, 0.1)',
+                          mb: 3,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            mb: 3,
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Warning sx={{ color: warningColor, mr: 1 }} />
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: warningColor }}>
+                              Items with Lower Sales Volume
+                            </Typography>
+                            <Tooltip title="Items with low 'Sold Count' may require attention. Consider promotional activities or menu adjustments.">
+                              <IconButton size="small" sx={{ ml: 1 }}>
+                                <Lightbulb fontSize="small" color="info" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                          <TextField
+                            placeholder="Filter low sales items..."
+                            variant="outlined"
+                            size="small"
+                            sx={{
+                              width: '240px',
+                              '& .MuiOutlinedInput-root': {
+                                backgroundColor: '#fff',
+                                borderRadius: '8px',
+                                '& fieldset': {
+                                  borderColor: 'transparent',
+                                  boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
+                                },
+                                '&:hover fieldset': {
+                                  borderColor: 'transparent',
+                                  boxShadow: '0 0 0 1px rgba(0,0,0,0.2)',
+                                },
+                                '&.Mui-focused fieldset': {
+                                  borderColor: primaryColor,
+                                  boxShadow: 'none',
+                                },
+                              },
+                            }}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <SearchIcon color="action" fontSize="small" />
+                                </InputAdornment>
+                              ),
+                            }}
+                            value={lowSalesSearchTerm}
+                            onChange={(e) => setLowSalesSearchTerm(e.target.value)}
+                          />
+                        </Box>
+                        <TableContainer component={Paper} elevation={0} sx={{ backgroundColor: 'transparent' }}>
+                          <Table size="medium">
+                            <TableHead>
+                              <TableRow>
+                                <StyledTableCell
+                                  sx={{
+                                    fontWeight: 600,
+                                    border: 'none',
+                                    backgroundColor: 'rgba(237, 108, 2, 0.08)',
+                                    py: 2
+                                  }}
+                                >
+                                  Item
+                                </StyledTableCell>
+                                <StyledTableCell
+                                  align="right"
+                                  sx={{
+                                    fontWeight: 600,
+                                    border: 'none',
+                                    backgroundColor: 'rgba(237, 108, 2, 0.08)',
+                                    py: 2
+                                  }}
+                                >
+                                  Sold Count
+                                </StyledTableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {sortedLowSalesItems.map((item, index) => (
+                                <StyledTableRow
+                                  key={item['Item Name']}
+                                  sx={{
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(237, 108, 2, 0.04)',
+                                    },
+                                  }}
+                                >
+                                  <StyledTableCell sx={{ border: 'none', py: 2 }}>{item['Item Name']}</StyledTableCell>
+                                  <StyledTableCell
+                                    align="right"
+                                    sx={{
+                                      border: 'none',
+                                      py: 2,
+                                    }}
+                                  >
+                                    <Box
+                                      sx={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'flex-end',
+                                        backgroundColor: 'rgba(237, 108, 2, 0.1)',
+                                        borderRadius: '16px',
+                                        px: 1.5,
+                                        py: 0.5,
+                                        fontWeight: 500,
+                                        color: warningColor,
+                                      }}
+                                    >
+                                      {item['Sold Count']}
+                                    </Box>
+                                  </StyledTableCell>
+                                </StyledTableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    </Grid>
+                  )}
+
+                  {analysisResults.highPromoCountItems.length > 0 && (
+                    <Grid item xs={12}>
+                      <Box
+                        sx={{
+                          p: 3,
+                          borderRadius: '12px',
+                          backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                          border: '1px solid rgba(25, 118, 210, 0.1)',
+                          mb: 3,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            mb: 3,
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Lightbulb sx={{ color: primaryColor, mr: 1 }} />
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: primaryColor }}>
+                              High Promotional Redemption Items
+                            </Typography>
+                            <Tooltip title="Review items with a high 'Promo Count'. Understand the reasons behind the high promotion usage.">
+                              <IconButton size="small" sx={{ ml: 1 }}>
+                                <Lightbulb fontSize="small" color="info" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                          <TextField
+                            placeholder="Filter promo items..."
+                            variant="outlined"
+                            size="small"
+                            sx={{
+                              width: '240px',
+                              '& .MuiOutlinedInput-root': {
+                                backgroundColor: '#fff',
+                                borderRadius: '8px',
+                                '& fieldset': {
+                                  borderColor: 'transparent',
+                                  boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
+                                },
+                                '&:hover fieldset': {
+                                  borderColor: 'transparent',
+                                  boxShadow: '0 0 0 1px rgba(0,0,0,0.2)',
+                                },
+                                '&.Mui-focused fieldset': {
+                                  borderColor: primaryColor,
+                                  boxShadow: 'none',
+                                },
+                              },
+                            }}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <SearchIcon color="action" fontSize="small" />
+                                </InputAdornment>
+                              ),
+                            }}
+                            value={highPromoSearchTerm}
+                            onChange={(e) => setHighPromoSearchTerm(e.target.value)}
+                          />
+                        </Box>
+                        <TableContainer component={Paper} elevation={0} sx={{ backgroundColor: 'transparent' }}>
+                          <Table size="medium">
+                            <TableHead>
+                              <TableRow>
+                                <StyledTableCell
+                                  sx={{
+                                    fontWeight: 600,
+                                    border: 'none',
+                                    backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                                    py: 2
+                                  }}
+                                >
+                                  Item
+                                </StyledTableCell>
+                                <StyledTableCell
+                                  align="right"
+                                  sx={{
+                                    fontWeight: 600,
+                                    border: 'none',
+                                    backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                                    py: 2
+                                  }}
+                                >
+                                  Promo Count
+                                </StyledTableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {sortedHighPromoItems.map((item, index) => (
+                                <StyledTableRow
+                                  key={item['Item Name']}
+                                  sx={{
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                                    },
+                                  }}
+                                >
+                                  <StyledTableCell sx={{ border: 'none', py: 2 }}>{item['Item Name']}</StyledTableCell>
+                                  <StyledTableCell
+                                    align="right"
+                                    sx={{
+                                      border: 'none',
+                                      py: 2,
+                                    }}
+                                  >
+                                    <Box
+                                      sx={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'flex-end',
+                                        backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                                        borderRadius: '16px',
+                                        px: 1.5,
+                                        py: 0.5,
+                                        fontWeight: 500,
+                                        color: primaryColor,
+                                      }}
+                                    >
+                                      {item['Promo Count']}
+                                    </Box>
+                                  </StyledTableCell>
+                                </StyledTableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    </Grid>
+                  )}
+
+                  {analysisResults.promoEffectiveness.length > 0 && (
+                    <Grid item xs={12}>
+                      <Box
+                        sx={{
+                          p: 3,
+                          borderRadius: '12px',
+                          backgroundColor: '#fff',
+                          border: `1px solid ${borderColor}`,
+                          mb: 3,
+                        }}
+                      >
+                        <Accordion
+                          elevation={0}
+                          sx={{
+                            '&:before': {
+                              display: 'none',
+                            },
+                            backgroundColor: 'transparent',
+                          }}
+                        >
+                          <AccordionSummary
+                            expandIcon={<ExpandMore />}
+                            sx={{
+                              padding: 0,
+                              '& .MuiAccordionSummary-content': {
+                                margin: 0,
+                              },
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Lightbulb sx={{ color: primaryColor, mr: 1 }} />
+                              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: primaryColor }}>
+                                Promotion Effectiveness Analysis
+                              </Typography>
+                            </Box>
+                          </AccordionSummary>
+                          <AccordionDetails sx={{ padding: 0, mt: 2 }}>
+                            <Typography color={textColorSecondary} variant="body2" paragraph>
+                              Analyze the effectiveness of promotions by reviewing items frequently offered with discounts.
+                            </Typography>
+
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                mb: 3,
+                              }}
+                            >
+                              <TextField
+                                placeholder="Filter promotions..."
+                                variant="outlined"
+                                size="small"
+                                sx={{
+                                  width: '240px',
+                                  '& .MuiOutlinedInput-root': {
+                                    backgroundColor: '#fff',
+                                    borderRadius: '8px',
+                                    '& fieldset': {
+                                      borderColor: 'transparent',
+                                      boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
+                                    },
+                                    '&:hover fieldset': {
+                                      borderColor: 'transparent',
+                                      boxShadow: '0 0 0 1px rgba(0,0,0,0.2)',
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                      borderColor: primaryColor,
+                                      boxShadow: 'none',
+                                    },
+                                  },
+                                }}
+                                InputProps={{
+                                  startAdornment: (
+                                    <InputAdornment position="start">
+                                      <SearchIcon color="action" fontSize="small" />
+                                    </InputAdornment>
+                                  ),
+                                }}
+                                value={promoEffectivenessSearchTerm}
+                                onChange={(e) => setPromoEffectivenessSearchTerm(e.target.value)}
+                              />
+                            </Box>
+
+                            <TableContainer
+                              component={Paper}
+                              elevation={0}
+                              sx={{
+                                border: `1px solid ${borderColor}`,
+                                borderRadius: '12px',
+                                overflow: 'hidden'
+                              }}
+                            >
+                              <Table size="medium">
+                                <TableHead>
+                                  <TableRow>
+                                    <StyledTableCell
+                                      sx={{
+                                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                                        fontWeight: 600,
+                                        py: 2
+                                      }}
+                                    >
+                                      Item
+                                    </StyledTableCell>
+                                    <StyledTableCell
+                                      align="right"
+                                      sx={{
+                                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                                        fontWeight: 600,
+                                        py: 2
+                                      }}
+                                    >
+                                      Total Sold
+                                    </StyledTableCell>
+                                    <StyledTableCell
+                                      align="right"
+                                      sx={{
+                                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                                        fontWeight: 600,
+                                        py: 2
+                                      }}
+                                    >
+                                      Promo Count
+                                    </StyledTableCell>
+                                    <StyledTableCell
+                                      align="right"
+                                      sx={{
+                                        backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                                        fontWeight: 600,
+                                        py: 2
+                                      }}
+                                    >
+                                      Digital Offer
+                                    </StyledTableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {sortedPromoEffectiveness.map((item, index) => (
+                                    <StyledTableRow
+                                      key={item.item}
+                                      iseven={index % 2 === 0}
+                                      sx={{
+                                        '&:hover': {
+                                          backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                                        },
+                                      }}
+                                    >
+                                      <StyledTableCell sx={{ py: 2 }}>{item.item}</StyledTableCell>
+                                      <StyledTableCell align="right" sx={{ py: 2 }}>
+                                        <Typography sx={{ fontWeight: 500 }}>
+                                          {item.totalSold}
+                                        </Typography>
+                                      </StyledTableCell>
+                                      <StyledTableCell align="right" sx={{ py: 2 }}>
+                                        <Box
+                                          sx={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'flex-end',
+                                            backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                                            borderRadius: '16px',
+                                            px: 1.5,
+                                            py: 0.5,
+                                            fontWeight: 500,
+                                            color: primaryColor,
+                                          }}
+                                        >
+                                          {item.promoFree}
+                                        </Box>
+                                      </StyledTableCell>
+                                      <StyledTableCell align="right" sx={{ py: 2 }}>
+                                        <Box
+                                          sx={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'flex-end',
+                                            backgroundColor: item.digitalOffer > 0 ? 'rgba(46, 125, 50, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                                            borderRadius: '16px',
+                                            px: 1.5,
+                                            py: 0.5,
+                                            fontWeight: 500,
+                                            color: item.digitalOffer > 0 ? successColor : textColorSecondary,
+                                          }}
+                                        >
+                                          {item.digitalOffer}
+                                        </Box>
+                                      </StyledTableCell>
+                                    </StyledTableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </AccordionDetails>
+                        </Accordion>
+                      </Box>
+                    </Grid>
+                  )}
+                </Grid>
               </CardContent>
-            </Card>
+            </StyledCard>
           </Grid>
         )}
 
         {salesVariance && salesVariance.length > 0 && (
           <Grid item xs={12}>
-            <Card elevation={1}>
-              <StyledCardHeader title="Sales Variance Analysis" />
-              <CardContent>
-                <Typography variant="h6" color={warningColor} gutterBottom sx={{ display: 'flex', alignItems: 'center', fontWeight: 500 }}>
-                  <Warning sx={{ mr: 1 }} /> Significant Sales Variances
-                  <Tooltip title="Items with notable differences between 'Total Count' and 'Sold Count'. Investigate potential issues in inventory management or sales tracking.">
-                    <Lightbulb color="info" sx={{ ml: 1, fontSize: 'small' }} />
-                  </Tooltip>
-                </Typography>
-                <TextField
-                  label="Filter Items"
-                  variant="outlined"
-                  size="small"
-                  fullWidth
-                  margin="dense"
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      "& fieldset": {
-                        borderColor: textColorSecondary,
+            <StyledCard>
+              <StyledCardHeader
+                title={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Sales Variance Analysis
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        backgroundColor: 'rgba(237, 108, 2, 0.1)',
+                        color: warningColor,
+                        borderRadius: '20px',
+                        px: 2,
+                        py: 0.5,
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {salesVariance.length} items need attention
+                    </Box>
+                  </Box>
+                }
+              />
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ mb: 4 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: { xs: 'column', md: 'row' },
+                      alignItems: { xs: 'stretch', md: 'center' },
+                      justifyContent: 'space-between',
+                      gap: 2,
+                      mb: 3,
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Warning sx={{ color: warningColor }} />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: warningColor }}>
+                          Significant Sales Variances
+                        </Typography>
+                        <Tooltip
+                          title="Items with notable differences between 'Total Count' and 'Sold Count'. Investigate potential issues in inventory management or sales tracking."
+                          placement="right"
+                        >
+                          <IconButton size="small">
+                            <Lightbulb fontSize="small" sx={{ color: 'rgba(0, 0, 0, 0.54)' }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 600 }}>
+                        Monitor items with significant variances between total and sold counts. High variances may indicate inventory discrepancies or tracking issues.
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                      <TextField
+                        placeholder="Search items..."
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          minWidth: '280px',
+                          '& .MuiOutlinedInput-root': {
+                            backgroundColor: '#fff',
+                            borderRadius: '12px',
+                            transition: 'all 0.2s ease',
+                            '& fieldset': {
+                              borderColor: 'transparent',
+                              boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
+                            },
+                            '&:hover fieldset': {
+                              borderColor: 'transparent',
+                              boxShadow: '0 0 0 1px rgba(0,0,0,0.2)',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: primaryColor,
+                              boxShadow: 'none',
+                            },
+                          },
+                        }}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <SearchIcon color="action" fontSize="small" />
+                            </InputAdornment>
+                          ),
+                        }}
+                        value={varianceSearchTerm}
+                        onChange={(e) => setVarianceSearchTerm(e.target.value)}
+                      />
+                    </Box>
+                  </Box>
+
+                  <TableContainer
+                    component={Paper}
+                    elevation={0}
+                    sx={{
+                      border: `1px solid ${borderColor}`,
+                      borderRadius: '16px',
+                      overflow: 'hidden',
+                      backgroundColor: '#fff',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
                       },
-                      "&:hover fieldset": {
-                        borderColor: textColorPrimary,
-                      },
-                      "&.Mui-focused fieldset": {
-                        borderColor: primaryColor,
-                      },
-                    },
-                  }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon color="inherit" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  value={varianceSearchTerm}
-                  onChange={(e) => setVarianceSearchTerm(e.target.value)}
-                />
-                <TableContainer component={Paper} elevation={1}>
-                  <Table size="small" aria-label="sales variance table">
-                    <TableHead sx={{ backgroundColor: warningColor }}>
-                      <TableRow>
-                        <StyledTableCell sx={{ fontWeight: 'bold', color: 'white' }}>Item</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>Total Count</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>Sold Count</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>Variance</StyledTableCell>
-                        <StyledTableCell align="right" sx={{ fontWeight: 'bold', color: 'white' }}>Variance (%)</StyledTableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {sortedVariance.map((item, index) => (
-                        <StyledTableRow key={item.name} iseven={index % 2 === 0}>
-                          <StyledTableCell component="th" scope="row">{item.name}</StyledTableCell>
-                          <StyledTableCell align="right">{item.totalCount}</StyledTableCell>
-                          <StyledTableCell align="right">{item.soldCount}</StyledTableCell>
-                          <StyledTableCell align="right">{item.variance}</StyledTableCell>
-                          <StyledTableCell align="right">{item.variancePercentage.toFixed(2)}%</StyledTableCell>
-                        </StyledTableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                    }}
+                  >
+                    <Table size="medium">
+                      <TableHead>
+                        <TableRow>
+                          <StyledTableCell
+                            sx={{
+                              backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                              fontWeight: 600,
+                              py: 2.5,
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            Item Name
+                          </StyledTableCell>
+                          <StyledTableCell
+                            align="center"
+                            sx={{
+                              backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                              fontWeight: 600,
+                              py: 2.5,
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            Total Count
+                          </StyledTableCell>
+                          <StyledTableCell
+                            align="center"
+                            sx={{
+                              backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                              fontWeight: 600,
+                              py: 2.5,
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            Sold Count
+                          </StyledTableCell>
+                          <StyledTableCell
+                            align="center"
+                            sx={{
+                              backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                              fontWeight: 600,
+                              py: 2.5,
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            Variance
+                          </StyledTableCell>
+                          <StyledTableCell
+                            align="right"
+                            sx={{
+                              backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                              fontWeight: 600,
+                              py: 2.5,
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            Trend
+                          </StyledTableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {sortedVariance.map((item, index) => (
+                          <StyledTableRow
+                            key={item.name}
+                            sx={{
+                              position: 'relative',
+                              '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.01)',
+                                '& .variance-details': {
+                                  opacity: 1,
+                                },
+                              },
+                            }}
+                          >
+                            <StyledTableCell
+                              sx={{
+                                py: 2.5,
+                                pl: 3,
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                <Typography sx={{ fontWeight: 500, color: textColorPrimary, mb: 0.5 }}>
+                                  {item.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  ID: {index + 1}
+                                </Typography>
+                              </Box>
+                            </StyledTableCell>
+                            <StyledTableCell align="center" sx={{ py: 2.5 }}>
+                              <Box
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                  borderRadius: '8px',
+                                  px: 2,
+                                  py: 1,
+                                  minWidth: '80px',
+                                }}
+                              >
+                                <Typography sx={{ fontWeight: 500, color: textColorPrimary }}>
+                                  {item.totalCount}
+                                </Typography>
+                              </Box>
+                            </StyledTableCell>
+                            <StyledTableCell align="center" sx={{ py: 2.5 }}>
+                              <Box
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                  borderRadius: '8px',
+                                  px: 2,
+                                  py: 1,
+                                  minWidth: '80px',
+                                }}
+                              >
+                                <Typography sx={{ fontWeight: 500, color: textColorPrimary }}>
+                                  {item.soldCount}
+                                </Typography>
+                              </Box>
+                            </StyledTableCell>
+                            <StyledTableCell align="center" sx={{ py: 2.5 }}>
+                              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                                <Box
+                                  sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: item.variance > 0
+                                      ? 'rgba(46, 125, 50, 0.1)'
+                                      : 'rgba(211, 47, 47, 0.1)',
+                                    color: item.variance > 0 ? successColor : errorColor,
+                                    borderRadius: '20px',
+                                    px: 2,
+                                    py: 0.5,
+                                    fontWeight: 600,
+                                    fontSize: '0.875rem',
+                                    minWidth: '90px',
+                                  }}
+                                >
+                                  {item.variance > 0 ? '+' : ''}{item.variance}
+                                </Box>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: item.variance > 0 ? successColor : errorColor,
+                                    fontWeight: 500
+                                  }}
+                                >
+                                  {Math.abs(item.variancePercentage).toFixed(1)}% {item.variance > 0 ? 'Over' : 'Under'}
+                                </Typography>
+                              </Box>
+                            </StyledTableCell>
+                            <StyledTableCell align="right" sx={{ py: 2.5, pr: 3 }}>
+                              <Box
+                                className="variance-details"
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'flex-end',
+                                  gap: 1,
+                                  opacity: 0.8,
+                                  transition: 'opacity 0.2s ease',
+                                }}
+                              >
+                                {item.variance > 0 ? (
+                                  <ArrowUpwardIcon sx={{ color: successColor }} />
+                                ) : (
+                                  <ArrowDownwardIcon sx={{ color: errorColor }} />
+                                )}
+                                <Box
+                                  sx={{
+                                    width: 60,
+                                    height: 24,
+                                    backgroundColor: item.variance > 0
+                                      ? 'rgba(46, 125, 50, 0.1)'
+                                      : 'rgba(211, 47, 47, 0.1)',
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      color: item.variance > 0 ? successColor : errorColor,
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {Math.abs(item.variancePercentage).toFixed(0)}%
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </StyledTableCell>
+                          </StyledTableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
               </CardContent>
-            </Card>
+            </StyledCard>
           </Grid>
         )}
       </Grid>

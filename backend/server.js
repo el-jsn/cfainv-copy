@@ -24,6 +24,7 @@ import futureProjectionRoutes from "./routes/futureProjection.route.js";
 import { applyFutureProjections } from './controllers/futureProjection.controller.js';
 import truckItemRoutes from './routes/truckItem.route.js';
 import dailyBufferRoutes from './routes/dailyBuffer.route.js';
+import salesMixRoutes from './routes/salesMix.routes.js';
 
 
 dotenv.config();
@@ -82,17 +83,18 @@ app.use(
 app.use(express.json({ limit: '10kb' })); // Limit request body size
 
 // Routes
-app.use("/api/upt", authenticateToken,salesRoutes);
-app.use("/api/sales", authenticateToken,ProjectedSalesRoutes);
+app.use("/api/upt", authenticateToken, salesRoutes);
+app.use("/api/sales", authenticateToken, ProjectedSalesRoutes);
 app.use("/api/auth", userRoutes);
-app.use('/api/adjustment', authenticateToken,DayDataRoutes);
+app.use('/api/adjustment', authenticateToken, DayDataRoutes);
 app.use('/api/buffer', ProductBufferRoutes);
-app.use('/api/closure',authenticateToken, closureRoutes);
-app.use('/api/messages', authenticateToken ,messageRoutes);
+app.use('/api/closure', authenticateToken, closureRoutes);
+app.use('/api/messages', authenticateToken, messageRoutes);
 app.use('/api', salesProjectionConfigRoutes);
 app.use("/api", futureProjectionRoutes);
 app.use("/api/truck-items", authenticateToken, truckItemRoutes);
 app.use('/api/daily-buffer', dailyBufferRoutes);
+app.use('/api/salesmix', authenticateToken, salesMixRoutes);
 
 
 // Serve frontend in production mode

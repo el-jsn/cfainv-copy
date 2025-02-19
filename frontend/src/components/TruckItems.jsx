@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from './axiosInstance';
@@ -23,6 +23,7 @@ import {
     MenuItem,
     FormControl,
     InputLabel,
+    Grid,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -64,6 +65,8 @@ const TruckItems = () => {
     const searchRef = useRef();
     const [associatedItemSearch, setAssociatedItemSearch] = useState('');
     const [selectedItems, setSelectedItems] = useState(new Set());
+    const [salesMixUploadDate, setSalesMixUploadDate] = useState(null);
+    const [salesMixReportingPeriod, setSalesMixReportingPeriod] = useState(null);
 
     // Add useEffect hooks for data fetching
     useEffect(() => {
@@ -93,6 +96,25 @@ const TruckItems = () => {
         }
     }, [dateRange, user]);
 
+    // Fetch current sales mix data on component mount
+    useEffect(() => {
+        const fetchSalesMixData = async () => {
+            try {
+                const response = await axiosInstance.get('/salesmix/current');
+                setSalesMixData(response.data.data);
+                setSalesMixItems(Object.keys(response.data.data));
+                setSalesMixUploadDate(new Date(response.data.uploadDate));
+                setSalesMixReportingPeriod(response.data.reportingPeriod);
+            } catch (error) {
+                if (error.response?.status !== 404) {
+                    setError('Error fetching sales mix data');
+                }
+            }
+        };
+
+        fetchSalesMixData();
+    }, []);
+
     const parseUOM = (uom) => {
         // Get everything before the first space
         const [numberPart, ...rest] = uom.split(' ');
@@ -119,45 +141,83 @@ const TruckItems = () => {
         return null;
     };
 
-    const parseExcelData = (jsonData) => {
-        // Clean and Structure Data
-        const data_rows = [];
-        for (const row_index in jsonData) {
-            const row = jsonData[row_index];
-            if (row_index < 7 || [41, 42, 43, 44, 45, 553, 554, 555, 556, 557, 772, 773, 774, 775, 776, 961, 962, 963, 964, 965, 1074, 1075, 1076, 1077, 1078, 1363, 1364].includes(parseInt(row_index))) {
-                continue;
+    const parseExcelData = async (jsonData) => {
+        try {
+            // Log the first few rows to understand the structure
+            console.log('First few rows of data:', jsonData.slice(0, 10));
+
+            // Extract reporting period from the Excel file
+            const reportPeriod = jsonData[0]?.['Sales Mix Report - Item Summary'];
+            if (!reportPeriod) {
+                throw new Error('Could not find report period in the Excel file');
             }
-            let itemName = row['__EMPTY'];
-            if (itemName !== undefined && itemName !== null) {
-                data_rows.push({
-                    'Item Name': itemName,
-                    'Total Count': row['__EMPTY_4'] || 0,
-                    'Promo Count': row['__EMPTY_8'] || 0,
-                    'Digital Count': row['__EMPTY_10'] || 0,
-                    'Sold Count': row['__EMPTY_13'] || 0,
-                    '# Sold Per 1000': row['__EMPTY_17'] || 0
-                });
+            console.log('Report period raw:', reportPeriod);
+
+            // Parse the date range more robustly
+            const dateMatch = reportPeriod.match(/From\s+(.*?)\s+through\s+(.*?)(?:\s|$)/i);
+            if (!dateMatch) {
+                throw new Error('Could not parse date range from report header');
             }
+            const [_, startDate, endDate] = dateMatch;
+            console.log('Parsed dates:', { startDate, endDate });
+
+            // Clean and Structure Data
+            const data_rows = [];
+            for (const row_index in jsonData) {
+                const row = jsonData[row_index];
+                // Skip header rows and summary rows
+                if (row_index < 7 || [41, 42, 43, 44, 45, 553, 554, 555, 556, 557, 772, 773, 774, 775, 776, 961, 962, 963, 964, 965, 1074, 1075, 1076, 1077, 1078, 1363, 1364].includes(parseInt(row_index))) {
+                    continue;
+                }
+
+                // Check if this is a valid item row
+                const itemName = row['__EMPTY'];
+                const soldPer1000 = row['__EMPTY_17'];
+
+                if (itemName && typeof soldPer1000 !== 'undefined') {
+                    console.log('Processing row:', { itemName, soldPer1000 });
+                    data_rows.push({
+                        'Item Name': itemName,
+                        '# Sold Per 1000': soldPer1000 || 0
+                    });
+                }
+            }
+
+            if (data_rows.length === 0) {
+                throw new Error('No valid data rows found in the Excel file');
+            }
+
+            // Convert to the format we need
+            const processedData = {};
+            data_rows.forEach(row => {
+                if (row['Item Name'] && row['# Sold Per 1000']) {
+                    const value = parseFloat(row['# Sold Per 1000']);
+                    if (!isNaN(value)) {
+                        processedData[row['Item Name']] = value;
+                    }
+                }
+            });
+
+            if (Object.keys(processedData).length === 0) {
+                throw new Error('No valid items found after processing');
+            }
+
+            console.log('Processed data sample:', Object.entries(processedData).slice(0, 5));
+
+            // Include reporting period in the upload
+            const response = await axiosInstance.post('/salesmix/upload', {
+                data: processedData,
+                reportingPeriod: {
+                    startDate: startDate.trim(),
+                    endDate: endDate.trim()
+                }
+            });
+
+            return processedData;
+        } catch (error) {
+            console.error('Error in parseExcelData:', error);
+            throw new Error(`Failed to parse Excel file: ${error.message}`);
         }
-
-        // Data Type Conversion
-        const numeric_columns = ['Total Count', 'Promo Count', 'Digital Count', 'Sold Count'];
-        const cleaned_data = data_rows.map(item => {
-            const convertedItem = { ...item };
-            for (const col of numeric_columns) {
-                convertedItem[col] = parseInt(item[col], 10) || 0;
-            }
-            convertedItem['# Sold Per 1000'] = parseFloat(item['# Sold Per 1000']) || 0;
-            return convertedItem;
-        });
-
-        // Log all items and their UPT values for debugging
-        console.log("All items from sales mix report:");
-        cleaned_data.forEach(item => {
-            console.log(`${item['Item Name']}: ${item['# Sold Per 1000']}`);
-        });
-
-        return cleaned_data;
     };
 
     const { getRootProps, getInputProps } = useDropzone({
@@ -167,40 +227,32 @@ const TruckItems = () => {
         },
         onDrop: async (acceptedFiles) => {
             const file = acceptedFiles[0];
-            const reader = new FileReader();
-
-            reader.onload = (e) => {
+            if (file) {
                 try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-                    const parsedData = parseExcelData(jsonData);
-                    console.log("Parsed Sales Mix Data:", parsedData);
-
-                    // Extract unique items and their UPT values
-                    const itemsData = {};
-                    parsedData.forEach(row => {
-                        if (row['Item Name'] && row['# Sold Per 1000']) {
-                            itemsData[row['Item Name']] = row['# Sold Per 1000'];
+                            const response = await parseExcelData(jsonData);
+                            setSalesMixData(response);
+                            setSalesMixItems(Object.keys(response));
+                            setSalesMixUploadDate(new Date());
+                            setSuccess('Sales mix data uploaded successfully');
+                        } catch (error) {
+                            console.error('Error processing file:', error);
+                            setError(error.message || 'Error processing sales mix file. Please ensure it is a valid sales mix report.');
                         }
-                    });
-
-                    setSalesMixData(itemsData);
-                    setSalesMixItems(Object.keys(itemsData));
-                    setSuccess('Sales mix data uploaded successfully');
+                    };
+                    reader.readAsArrayBuffer(file);
                 } catch (error) {
-                    console.error("Error processing Excel file:", error);
-                    setError('Error processing the Excel file. Please ensure it is a valid sales mix report.');
+                    console.error('Error reading file:', error);
+                    setError('Error reading sales mix file');
                 }
-            };
-
-            reader.onerror = () => {
-                setError('Error reading the file.');
-            };
-
-            reader.readAsArrayBuffer(file);
+            }
         }
     });
 
@@ -208,16 +260,12 @@ const TruckItems = () => {
     const fetchSalesProjections = async () => {
         try {
             const response = await axiosInstance.get('/sales');
-            console.log('Sales Projections Response:', response.data);
-
             const projectionsByDay = {};
             response.data.forEach(projection => {
                 if (projection.day && projection.sales) {
                     projectionsByDay[projection.day] = Number(projection.sales);
                 }
             });
-
-            console.log('Processed Sales Projections:', projectionsByDay);
             setSalesProjections(projectionsByDay);
         } catch (err) {
             console.error('Error fetching sales projections:', err);
@@ -229,8 +277,6 @@ const TruckItems = () => {
     const fetchFutureProjections = async () => {
         try {
             const response = await axiosInstance.get('/projections/future');
-            console.log('Future Projections Response:', response.data);
-
             const projections = {};
             response.data.forEach(proj => {
                 const date = new Date(proj.date);
@@ -238,8 +284,6 @@ const TruckItems = () => {
                 const dateStr = localDate.toISOString().split('T')[0];
                 projections[dateStr] = proj.amount;
             });
-
-            console.log('Processed Future Projections:', projections);
             setFutureProjections(projections);
         } catch (err) {
             console.error('Error fetching future projections:', err);
@@ -257,7 +301,6 @@ const TruckItems = () => {
             }
 
             const response = await axiosInstance.get('/truck-items');
-            console.log('Fetched truck items:', response.data);
             setTruckItems(Array.isArray(response.data) ? response.data : []);
         } catch (err) {
             console.error('Error fetching truck items:', err);
@@ -329,14 +372,10 @@ const TruckItems = () => {
                 associatedItems: currentItem.associatedItems || []
             };
 
-            console.log('Sending item data:', itemData);
-
             if (currentItem._id) {
-                const response = await axiosInstance.put(`/truck-items/${currentItem._id}`, itemData);
-                console.log('Update response:', response.data);
+                await axiosInstance.put(`/truck-items/${currentItem._id}`, itemData);
             } else {
-                const response = await axiosInstance.post('/truck-items', itemData);
-                console.log('Create response:', response.data);
+                await axiosInstance.post('/truck-items', itemData);
             }
 
             setSuccess('Item saved successfully');
@@ -402,7 +441,6 @@ const TruckItems = () => {
     };
 
     const calculateUsage = (item, salesMix, dateRange) => {
-        // If no associated items, return default values
         if (!item.associatedItems || item.associatedItems.length === 0) {
             return {
                 casesNeeded: 0,
@@ -414,57 +452,30 @@ const TruckItems = () => {
         let totalUsage = 0;
         let projectedSales = 0;
 
-        console.log('Calculating usage for:', item.description);
-        console.log('Item total units per case:', item.totalUnits);
-        console.log('Associated items:', item.associatedItems);
-        console.log('Date range:', dateRange);
-
         if (dateRange[0] && dateRange[1]) {
             const days = eachDayOfInterval({
                 start: startOfDay(dateRange[0]),
                 end: endOfDay(dateRange[1])
             });
 
-            // Sum up sales for selected date range
             projectedSales = days.reduce((sum, date) => {
                 const dateStr = format(date, 'yyyy-MM-dd');
-                // First check if we have a future projection for this date
                 if (futureProjections[dateStr]) {
                     return sum + Number(futureProjections[dateStr]);
                 }
-                // If no future projection, fall back to default day projection
                 const dayName = format(date, 'EEEE');
                 return sum + Number(salesProjections[dayName] || 0);
             }, 0);
         }
 
-        console.log('Total projected sales:', projectedSales);
-
-        // Calculate usage based on UPT and sales projection
         item.associatedItems.forEach(assoc => {
-            console.log('Looking for UPT for item:', assoc.name);
             const upt = salesMix[assoc.name] || 0;
-            console.log(`${assoc.name} UPT:`, upt);
-            console.log(`${assoc.name} Usage per item:`, assoc.usage);
-
-            // Calculate raw usage: (UPT * sales) / 1000 * usage amount
             const rawUsage = (upt * projectedSales * assoc.usage) / 1000;
-            console.log(`${assoc.name} Raw Usage calculation:`);
-            console.log(`(${upt} * ${projectedSales} * ${assoc.usage}) / 1000 = ${rawUsage}`);
-
             totalUsage += rawUsage;
         });
 
-        console.log('Total Raw Usage:', totalUsage);
-        console.log('Units per case:', item.totalUnits);
-
-        // Calculate exact cases by dividing total usage by units per case
         const exactCases = totalUsage / item.totalUnits;
-        console.log('Exact Cases calculation:');
-        console.log(`${totalUsage} / ${item.totalUnits} = ${exactCases}`);
-
         const casesNeeded = Math.ceil(exactCases);
-        console.log('Final rounded Cases Needed:', casesNeeded);
 
         return {
             casesNeeded,
@@ -622,7 +633,7 @@ const TruckItems = () => {
     return (
         <Box sx={{
             padding: '32px',
-            backgroundColor: '#f5f5f7',
+            backgroundColor: '#f8fafc',
             minHeight: '100vh'
         }}>
             <Box sx={{
@@ -634,17 +645,57 @@ const TruckItems = () => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    mb: 4
+                    mb: 4,
+                    backgroundColor: 'white',
+                    p: 4,
+                    borderRadius: '16px',
+                    boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
                 }}>
-                    <Typography
-                        variant="h4"
-                        sx={{
-                            fontWeight: 600,
-                            color: '#1a1a1a'
-                        }}
-                    >
-                        Truck Order Calculator
-                    </Typography>
+                    <Box>
+                        <Typography
+                            variant="h4"
+                            sx={{
+                                fontWeight: 600,
+                                color: '#0f172a',
+                                mb: 1
+                            }}
+                        >
+                            Truck Order Calculator
+                        </Typography>
+                        <Typography
+                            variant="body1"
+                            sx={{
+                                color: '#64748b',
+                                fontSize: '1.1rem'
+                            }}
+                        >
+                            Manage your truck items and calculate order quantities
+                        </Typography>
+                        {salesMixReportingPeriod && (
+                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        color: '#64748b',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    Sales Mix Period: {salesMixReportingPeriod.startDate} through {salesMixReportingPeriod.endDate}
+                                </Typography>
+                                {salesMixUploadDate && (
+                                    <Typography
+                                        variant="body2"
+                                        sx={{
+                                            color: '#64748b',
+                                            fontSize: '0.9rem'
+                                        }}
+                                    >
+                                        Last Updated: {format(salesMixUploadDate, 'MMM d, yyyy h:mm a')}
+                                    </Typography>
+                                )}
+                            </Box>
+                        )}
+                    </Box>
                     <Box sx={{ display: 'flex', gap: 2 }}>
                         <Button
                             variant="outlined"
@@ -656,6 +707,12 @@ const TruckItems = () => {
                                 textTransform: 'none',
                                 px: 3,
                                 py: 1.5,
+                                borderColor: '#e2e8f0',
+                                color: '#64748b',
+                                '&:hover': {
+                                    borderColor: '#cbd5e1',
+                                    backgroundColor: '#f8fafc'
+                                }
                             }}
                         >
                             Bulk Import
@@ -670,9 +727,9 @@ const TruckItems = () => {
                                 textTransform: 'none',
                                 px: 3,
                                 py: 1.5,
-                                backgroundColor: '#007FFF',
+                                backgroundColor: '#0284c7',
                                 '&:hover': {
-                                    backgroundColor: '#0066CC'
+                                    backgroundColor: '#0369a1'
                                 }
                             }}
                         >
@@ -681,37 +738,232 @@ const TruckItems = () => {
                     </Box>
                 </Box>
 
+                {/* Controls Section */}
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: 4,
+                        mb: 4,
+                        borderRadius: '16px',
+                        backgroundColor: 'white',
+                        boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                    }}
+                >
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: 4,
+                        alignItems: 'start'
+                    }}>
+                        {/* Upload Box */}
+                        <Box>
+                            <Box
+                                {...getRootProps()}
+                                sx={{
+                                    border: '2px dashed #e2e8f0',
+                                    borderRadius: '12px',
+                                    padding: '24px',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    backgroundColor: '#f8fafc',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: 2,
+                                    '&:hover': {
+                                        borderColor: '#0284c7',
+                                        backgroundColor: '#f0f9ff'
+                                    }
+                                }}
+                            >
+                                <input {...getInputProps()} />
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M7 10V9C7 6.23858 9.23858 4 12 4C14.7614 4 17 6.23858 17 9V10C19.2091 10 21 11.7909 21 14C21 16.2091 19.2091 18 17 18H7C4.79086 18 3 16.2091 3 14C3 11.7909 4.79086 10 7 10Z" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M12 12L12 15" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M10 14L12 12L14 14" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                <Box>
+                                    <Typography
+                                        sx={{
+                                            color: '#0f172a',
+                                            fontSize: '1.1rem',
+                                            fontWeight: 500,
+                                            mb: 1
+                                        }}
+                                    >
+                                        Upload Sales Mix Excel File
+                                    </Typography>
+                                    <Typography
+                                        sx={{
+                                            color: '#64748b',
+                                            fontSize: '0.95rem'
+                                        }}
+                                    >
+                                        Drag and drop your file here, or click to select
+                                    </Typography>
+                                </Box>
+                            </Box>
+                            {salesMixUploadDate && (
+                                <Box sx={{
+                                    mt: 2,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    justifyContent: 'center'
+                                }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 8V12L15 15" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#64748b" strokeWidth="2" />
+                                    </svg>
+                                    <Typography sx={{ color: '#64748b', fontSize: '0.875rem' }}>
+                                        Last updated: {format(salesMixUploadDate, 'MMM d, yyyy h:mm a')}
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
+
+                        {/* Date Range Picker */}
+                        <Box sx={{
+                            backgroundColor: '#f8fafc',
+                            borderRadius: '12px',
+                            p: 4,
+                            border: '1px solid #e2e8f0'
+                        }}>
+                            <Typography
+                                sx={{
+                                    color: '#0f172a',
+                                    fontSize: '1.1rem',
+                                    fontWeight: 500,
+                                    mb: 3
+                                }}
+                            >
+                                Select Date Range
+                            </Typography>
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 2,
+                                mb: 3
+                            }}>
+                                <Box sx={{ flex: 1 }}>
+                                    <Typography
+                                        sx={{
+                                            color: '#64748b',
+                                            fontSize: '0.9rem',
+                                            mb: 1
+                                        }}
+                                    >
+                                        Start Date
+                                    </Typography>
+                                    <input
+                                        type="date"
+                                        value={format(startDate, 'yyyy-MM-dd')}
+                                        onChange={(e) => {
+                                            const date = parseISO(e.target.value);
+                                            setStartDate(date);
+                                            setDateRange([date, endDate]);
+                                        }}
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm cursor-pointer bg-white hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
+                                    />
+                                </Box>
+                                <Box sx={{
+                                    color: '#64748b',
+                                    fontSize: '0.9rem'
+                                }}>
+                                    to
+                                </Box>
+                                <Box sx={{ flex: 1 }}>
+                                    <Typography
+                                        sx={{
+                                            color: '#64748b',
+                                            fontSize: '0.9rem',
+                                            mb: 1
+                                        }}
+                                    >
+                                        End Date
+                                    </Typography>
+                                    <input
+                                        type="date"
+                                        value={format(endDate, 'yyyy-MM-dd')}
+                                        min={format(startDate, 'yyyy-MM-dd')}
+                                        onChange={(e) => {
+                                            const date = parseISO(e.target.value);
+                                            setEndDate(date);
+                                            setDateRange([startDate, date]);
+                                        }}
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm cursor-pointer bg-white hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
+                                    />
+                                </Box>
+                            </Box>
+                            {startDate && endDate && (
+                                <Box sx={{
+                                    backgroundColor: '#f0f9ff',
+                                    borderRadius: '8px',
+                                    p: 2,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1
+                                }}>
+                                    <Typography sx={{
+                                        color: '#0369a1',
+                                        fontSize: '0.95rem',
+                                        fontWeight: 500
+                                    }}>
+                                        Total Sales:
+                                    </Typography>
+                                    <Typography sx={{
+                                        color: '#0c4a6e',
+                                        fontSize: '0.95rem',
+                                        fontWeight: 600
+                                    }}>
+                                        {eachDayOfInterval({
+                                            start: startOfDay(startDate),
+                                            end: endOfDay(endDate)
+                                        }).reduce((sum, date) => {
+                                            const dateStr = format(date, 'yyyy-MM-dd');
+                                            if (futureProjections[dateStr]) {
+                                                return sum + Number(futureProjections[dateStr]);
+                                            }
+                                            const dayName = format(date, 'EEEE');
+                                            return sum + Number(salesProjections[dayName] || 0);
+                                        }, 0).toLocaleString()}
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
+                    </Box>
+                </Paper>
+
                 {/* Search Bar */}
                 <Box sx={{ mb: 4 }}>
-                    <div className="items-center px-4 flex justify-center">
-                        <div className="relative w-full max-w-2xl">
-                            <div className="absolute top-3 left-3 items-center" ref={searchRef}>
-                                <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"></path>
-                                </svg>
-                            </div>
-                            <input
-                                type="text"
-                                className="block w-full p-2 pl-10 text-gray-900 bg-white rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all duration-200 focus:pl-3"
-                                placeholder="Search by description, UOM, or associated items..."
-                                value={searchQuery}
-                                onChange={(e) => handleSearch(e.target.value)}
-                                onFocus={handleSearchFocus}
-                                onBlur={handleSearchBlur}
-                            />
-                            {searchQuery && (
-                                <div className="absolute right-3 top-3">
-                                    <button
-                                        onClick={() => handleSearch('')}
-                                        className="text-gray-400 hover:text-gray-600"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                            )}
+                    <div className="relative w-full">
+                        <div className="absolute top-3 left-3 items-center" ref={searchRef}>
+                            <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"></path>
+                            </svg>
                         </div>
+                        <input
+                            type="text"
+                            className="block w-full p-3 pl-10 text-gray-900 bg-white rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all duration-200 focus:pl-3"
+                            placeholder="Search by description, UOM, or associated items..."
+                            value={searchQuery}
+                            onChange={(e) => handleSearch(e.target.value)}
+                            onFocus={handleSearchFocus}
+                            onBlur={handleSearchBlur}
+                        />
+                        {searchQuery && (
+                            <div className="absolute right-3 top-3">
+                                <button
+                                    onClick={() => handleSearch('')}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </Box>
 
@@ -723,7 +975,10 @@ const TruckItems = () => {
                             onClose={() => setError('')}
                             sx={{
                                 borderRadius: '12px',
-                                mb: 2
+                                mb: 2,
+                                '& .MuiAlert-icon': {
+                                    color: '#dc2626'
+                                }
                             }}
                         >
                             {error}
@@ -735,7 +990,10 @@ const TruckItems = () => {
                             onClose={() => setSuccess('')}
                             sx={{
                                 borderRadius: '12px',
-                                mb: 2
+                                mb: 2,
+                                '& .MuiAlert-icon': {
+                                    color: '#16a34a'
+                                }
                             }}
                         >
                             {success}
@@ -743,308 +1001,393 @@ const TruckItems = () => {
                     )}
                 </Box>
 
-                {/* Controls Section */}
-                <Paper
-                    elevation={0}
-                    sx={{
-                        p: 3,
-                        mb: 4,
-                        borderRadius: '16px',
-                        backgroundColor: 'white',
-                        display: 'flex',
-                        gap: 3,
-                        alignItems: 'center'
-                    }}
-                >
-                    {/* Upload Box */}
-                    <Box
-                        {...getRootProps()}
-                        sx={{
-                            flex: 1,
-                            border: '2px dashed #e0e0e0',
-                            borderRadius: '12px',
-                            padding: '24px',
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            '&:hover': {
-                                borderColor: '#007FFF',
-                                backgroundColor: '#F5F9FF'
-                            }
-                        }}
-                    >
-                        <input {...getInputProps()} />
-                        <Typography
-                            sx={{
-                                color: '#666',
-                                fontSize: '0.95rem'
-                            }}
-                        >
-                            Upload Sales Mix Excel File (with UPT data)
-                        </Typography>
-                    </Box>
-
-                    {/* Date Range Picker */}
-                    <div className="relative min-w-[400px] bg-white rounded-xl p-4 flex flex-col gap-4">
-                        <div className="relative flex items-center justify-center gap-4">
-                            <div className="relative">
-                                <input
-                                    type="date"
-                                    value={format(startDate, 'yyyy-MM-dd')}
-                                    onChange={(e) => {
-                                        const date = parseISO(e.target.value);
-                                        setStartDate(date);
-                                        setDateRange([date, endDate]);
-                                    }}
-                                    className="px-4 py-2 border border-gray-200 rounded-xl text-sm cursor-pointer bg-white hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
-                                />
-                            </div>
-                            <span className="text-gray-600">to</span>
-                            <div className="relative">
-                                <input
-                                    type="date"
-                                    value={format(endDate, 'yyyy-MM-dd')}
-                                    min={format(startDate, 'yyyy-MM-dd')}
-                                    onChange={(e) => {
-                                        const date = parseISO(e.target.value);
-                                        setEndDate(date);
-                                        setDateRange([startDate, date]);
-                                    }}
-                                    className="px-4 py-2 border border-gray-200 rounded-xl text-sm cursor-pointer bg-white hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
-                                />
-                            </div>
-                        </div>
-                        {startDate && endDate && (
-                            <div className="text-center text-sm text-gray-600">
-                                Total Sales: {eachDayOfInterval({
-                                    start: startOfDay(startDate),
-                                    end: endOfDay(endDate)
-                                }).reduce((sum, date) => {
-                                    const dateStr = format(date, 'yyyy-MM-dd');
-                                    if (futureProjections[dateStr]) {
-                                        return sum + Number(futureProjections[dateStr]);
-                                    }
-                                    const dayName = format(date, 'EEEE');
-                                    return sum + Number(salesProjections[dayName] || 0);
-                                }, 0).toLocaleString()}
-                            </div>
-                        )}
-                    </div>
-                </Paper>
-
                 {/* Table Section */}
                 <Paper
                     elevation={0}
                     sx={{
                         borderRadius: '16px',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        border: '1px solid #e2e8f0',
+                        backgroundColor: 'white'
                     }}
                 >
                     <TableContainer>
                         <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, py: 2 }}>Description</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, py: 2 }}>UOM</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, py: 2 }}>Cost (CAD)</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, py: 2 }}>Associated Items</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, py: 2 }}>UPT Values</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, py: 2 }}>Projected Sales</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, py: 2 }}>Cases Needed</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, py: 2 }}>Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
                             <TableBody>
                                 {Array.isArray(searchQuery ? searchResults : truckItems) && (searchQuery ? searchResults : truckItems).length > 0 ? (
-                                    (searchQuery ? searchResults : truckItems).map((item) => {
+                                    (searchQuery ? searchResults : truckItems).map((item, index) => {
                                         const usage = calculateUsage(item, salesMixData, dateRange);
                                         return (
-                                            <TableRow
-                                                key={item._id}
-                                                sx={{
-                                                    '&:hover': {
-                                                        backgroundColor: '#F5F9FF'
-                                                    }
-                                                }}
-                                            >
-                                                <TableCell sx={{ py: 2 }}>{item.description}</TableCell>
-                                                <TableCell sx={{ py: 2 }}>{item.uom} ({item.totalUnits} {item.unitType})</TableCell>
-                                                <TableCell sx={{ py: 2 }}>${item.cost.toFixed(2)}</TableCell>
-                                                <TableCell sx={{ py: 2 }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Typography sx={{ fontSize: '0.9rem', color: '#334155' }}>
-                                                            {item.associatedItems.length} items
-                                                        </Typography>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => toggleRowExpansion(item._id)}
-                                                            sx={{
-                                                                transform: expandedRows[item._id] ? 'rotate(180deg)' : 'rotate(0deg)',
-                                                                transition: 'transform 0.2s',
-                                                                color: '#64748b'
-                                                            }}
-                                                        >
-                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                                <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                            </svg>
-                                                        </IconButton>
-                                                    </Box>
-                                                    <Box
+                                            <React.Fragment key={item._id}>
+                                                {/* Main Row */}
+                                                <TableRow
+                                                    sx={{
+                                                        borderLeft: '4px solid transparent',
+                                                        transition: 'all 0.2s ease-in-out',
+                                                        '&:hover': {
+                                                            backgroundColor: '#F8FAFC',
+                                                            borderLeft: '4px solid #0284c7',
+                                                            '& .row-actions': {
+                                                                opacity: 1,
+                                                                transform: 'translateX(0)',
+                                                                visibility: 'visible'
+                                                            }
+                                                        }
+                                                    }}
+                                                >
+                                                    {/* Description Column */}
+                                                    <TableCell
                                                         sx={{
-                                                            maxHeight: expandedRows[item._id] ? '500px' : '0px',
-                                                            overflow: 'hidden',
-                                                            transition: 'max-height 0.3s ease-in-out',
-                                                            mt: expandedRows[item._id] ? 1 : 0
+                                                            py: 3,
+                                                            width: '30%',
+                                                            borderBottom: '1px solid #e2e8f0'
                                                         }}
                                                     >
-                                                        {item.associatedItems.map((assoc, index) => (
+                                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                                                             <Box
-                                                                key={index}
                                                                 sx={{
+                                                                    backgroundColor: '#f1f5f9',
+                                                                    borderRadius: '8px',
+                                                                    p: 2,
                                                                     display: 'flex',
                                                                     alignItems: 'center',
-                                                                    gap: 1,
-                                                                    mb: 1,
-                                                                    p: 1,
-                                                                    borderRadius: '8px',
-                                                                    backgroundColor: '#f8fafc',
-                                                                    border: '1px solid #e2e8f0'
+                                                                    justifyContent: 'center'
                                                                 }}
                                                             >
+                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                    <path d="M20 7L12 3L4 7M20 7L12 11M20 7V17L12 21M12 11L4 7M12 11V21M4 7V17L12 21" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                                </svg>
+                                                            </Box>
+                                                            <Box>
                                                                 <Typography
                                                                     sx={{
-                                                                        fontSize: '0.9rem',
-                                                                        color: '#334155',
-                                                                        fontWeight: 500
+                                                                        fontSize: '1rem',
+                                                                        fontWeight: 600,
+                                                                        color: '#0f172a',
+                                                                        mb: 0.5
                                                                     }}
                                                                 >
-                                                                    {assoc.name}
+                                                                    {item.description}
                                                                 </Typography>
+                                                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                                                    <Typography
+                                                                        sx={{
+                                                                            fontSize: '0.875rem',
+                                                                            color: '#64748b'
+                                                                        }}
+                                                                    >
+                                                                        {item.uom}
+                                                                    </Typography>
+                                                                    <Box
+                                                                        sx={{
+                                                                            width: '4px',
+                                                                            height: '4px',
+                                                                            borderRadius: '50%',
+                                                                            backgroundColor: '#cbd5e1'
+                                                                        }}
+                                                                    />
+                                                                    <Typography
+                                                                        sx={{
+                                                                            fontSize: '0.875rem',
+                                                                            color: '#047857',
+                                                                            fontWeight: 500
+                                                                        }}
+                                                                    >
+                                                                        ${item.cost.toFixed(2)}
+                                                                    </Typography>
+                                                                </Box>
+                                                            </Box>
+                                                        </Box>
+                                                    </TableCell>
+
+                                                    {/* Associated Items Column */}
+                                                    <TableCell
+                                                        sx={{
+                                                            py: 3,
+                                                            width: '35%',
+                                                            borderBottom: '1px solid #e2e8f0'
+                                                        }}
+                                                    >
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                                 <Typography
                                                                     sx={{
-                                                                        fontSize: '0.85rem',
+                                                                        fontSize: '0.875rem',
                                                                         color: '#64748b',
-                                                                        ml: 'auto'
+                                                                        fontWeight: 500
                                                                     }}
                                                                 >
-                                                                    {assoc.usage} {item.unitType}
+                                                                    Associated Items
                                                                 </Typography>
+                                                                <Box
+                                                                    sx={{
+                                                                        backgroundColor: '#f1f5f9',
+                                                                        borderRadius: '6px',
+                                                                        px: 1.5,
+                                                                        py: 0.5
+                                                                    }}
+                                                                >
+                                                                    <Typography
+                                                                        sx={{
+                                                                            fontSize: '0.75rem',
+                                                                            color: '#475569',
+                                                                            fontWeight: 500
+                                                                        }}
+                                                                    >
+                                                                        {item.associatedItems.length} items
+                                                                    </Typography>
+                                                                </Box>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => toggleRowExpansion(item._id)}
+                                                                    sx={{
+                                                                        transform: expandedRows[item._id] ? 'rotate(180deg)' : 'rotate(0deg)',
+                                                                        transition: 'transform 0.2s',
+                                                                        color: '#64748b',
+                                                                        p: 0.5
+                                                                    }}
+                                                                >
+                                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                        <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                                    </svg>
+                                                                </IconButton>
                                                             </Box>
-                                                        ))}
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell sx={{ py: 2 }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Typography sx={{ fontSize: '0.9rem', color: '#334155' }}>
-                                                            {item.associatedItems.filter(assoc => salesMixData[assoc.name]).length} of {item.associatedItems.length} with UPT
-                                                        </Typography>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => toggleRowExpansion(item._id)}
-                                                            sx={{
-                                                                transform: expandedRows[item._id] ? 'rotate(180deg)' : 'rotate(0deg)',
-                                                                transition: 'transform 0.2s',
-                                                                color: '#64748b'
-                                                            }}
-                                                        >
-                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                                <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                            </svg>
-                                                        </IconButton>
-                                                    </Box>
-                                                    <Box
-                                                        sx={{
-                                                            maxHeight: expandedRows[item._id] ? '500px' : '0px',
-                                                            overflow: 'hidden',
-                                                            transition: 'max-height 0.3s ease-in-out',
-                                                            mt: expandedRows[item._id] ? 1 : 0
-                                                        }}
-                                                    >
-                                                        {item.associatedItems.map((assoc, index) => (
                                                             <Box
-                                                                key={index}
                                                                 sx={{
                                                                     display: 'flex',
-                                                                    alignItems: 'center',
                                                                     gap: 1,
-                                                                    mb: 1,
-                                                                    p: 1,
-                                                                    borderRadius: '8px',
-                                                                    backgroundColor: salesMixData[assoc.name] ? '#f0fdf4' : '#fef2f2',
-                                                                    border: `1px solid ${salesMixData[assoc.name] ? '#bbf7d0' : '#fecaca'}`
+                                                                    flexWrap: 'wrap'
                                                                 }}
                                                             >
+                                                                {item.associatedItems.slice(0, expandedRows[item._id] ? undefined : 2).map((assoc, idx) => (
+                                                                    <Box
+                                                                        key={idx}
+                                                                        sx={{
+                                                                            backgroundColor: salesMixData[assoc.name] ? '#f0fdf4' : '#fef2f2',
+                                                                            border: `1px solid ${salesMixData[assoc.name] ? '#bbf7d0' : '#fecaca'}`,
+                                                                            borderRadius: '6px',
+                                                                            px: 1.5,
+                                                                            py: 0.5,
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            gap: 1
+                                                                        }}
+                                                                    >
+                                                                        <Typography
+                                                                            sx={{
+                                                                                fontSize: '0.75rem',
+                                                                                color: salesMixData[assoc.name] ? '#166534' : '#991b1b',
+                                                                                fontWeight: 500
+                                                                            }}
+                                                                        >
+                                                                            {assoc.name}
+                                                                        </Typography>
+                                                                        {salesMixData[assoc.name] && (
+                                                                            <Box
+                                                                                sx={{
+                                                                                    backgroundColor: '#dcfce7',
+                                                                                    borderRadius: '4px',
+                                                                                    px: 1,
+                                                                                    py: 0.25
+                                                                                }}
+                                                                            >
+                                                                                <Typography
+                                                                                    sx={{
+                                                                                        fontSize: '0.75rem',
+                                                                                        color: '#166534'
+                                                                                    }}
+                                                                                >
+                                                                                    UPT: {salesMixData[assoc.name].toFixed(2)}
+                                                                                </Typography>
+                                                                            </Box>
+                                                                        )}
+                                                                    </Box>
+                                                                ))}
+                                                                {!expandedRows[item._id] && item.associatedItems.length > 2 && (
+                                                                    <Box
+                                                                        sx={{
+                                                                            backgroundColor: '#f1f5f9',
+                                                                            borderRadius: '6px',
+                                                                            px: 1.5,
+                                                                            py: 0.5
+                                                                        }}
+                                                                    >
+                                                                        <Typography
+                                                                            sx={{
+                                                                                fontSize: '0.75rem',
+                                                                                color: '#475569'
+                                                                            }}
+                                                                        >
+                                                                            +{item.associatedItems.length - 2} more
+                                                                        </Typography>
+                                                                    </Box>
+                                                                )}
+                                                            </Box>
+                                                        </Box>
+                                                    </TableCell>
+
+                                                    {/* Stats Column */}
+                                                    <TableCell
+                                                        sx={{
+                                                            py: 3,
+                                                            width: '25%',
+                                                            borderBottom: '1px solid #e2e8f0'
+                                                        }}
+                                                    >
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                            <Box>
                                                                 <Typography
                                                                     sx={{
-                                                                        fontSize: '0.9rem',
-                                                                        color: '#334155',
-                                                                        fontWeight: 500
+                                                                        fontSize: '0.75rem',
+                                                                        color: '#64748b',
+                                                                        mb: 0.5
                                                                     }}
                                                                 >
-                                                                    {assoc.name}
+                                                                    Projected Sales
                                                                 </Typography>
                                                                 <Typography
                                                                     sx={{
-                                                                        fontSize: '0.85rem',
-                                                                        color: salesMixData[assoc.name] ? '#166534' : '#991b1b',
-                                                                        ml: 'auto',
-                                                                        fontWeight: 500
+                                                                        fontSize: '1rem',
+                                                                        color: '#0369a1',
+                                                                        fontWeight: 600
                                                                     }}
                                                                 >
-                                                                    {salesMixData[assoc.name] ? `${salesMixData[assoc.name].toFixed(2)} per 1000` : 'No UPT data'}
+                                                                    {usage.projectedSales.toLocaleString()}
                                                                 </Typography>
                                                             </Box>
-                                                        ))}
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell sx={{ py: 2 }}>{usage.projectedSales.toLocaleString()}</TableCell>
-                                                <TableCell sx={{ py: 2 }}>
-                                                    {usage.exactCases?.toFixed(2)}
-                                                </TableCell>
-                                                <TableCell sx={{ py: 2 }}>
-                                                    <IconButton
-                                                        onClick={() => {
-                                                            setCurrentItem(item);
-                                                            setOpenDialog(true);
-                                                        }}
+                                                            <Box>
+                                                                <Typography
+                                                                    sx={{
+                                                                        fontSize: '0.75rem',
+                                                                        color: '#64748b',
+                                                                        mb: 0.5
+                                                                    }}
+                                                                >
+                                                                    Cases Needed
+                                                                </Typography>
+                                                                <Box
+                                                                    sx={{
+                                                                        backgroundColor: '#f0fdf4',
+                                                                        borderRadius: '6px',
+                                                                        px: 2,
+                                                                        py: 0.5,
+                                                                        display: 'inline-block'
+                                                                    }}
+                                                                >
+                                                                    <Typography
+                                                                        sx={{
+                                                                            fontSize: '1rem',
+                                                                            color: '#166534',
+                                                                            fontWeight: 600
+                                                                        }}
+                                                                    >
+                                                                        {usage.exactCases?.toFixed(2)}
+                                                                    </Typography>
+                                                                </Box>
+                                                            </Box>
+                                                        </Box>
+                                                    </TableCell>
+
+                                                    {/* Actions Column */}
+                                                    <TableCell
+                                                        align="right"
                                                         sx={{
-                                                            color: '#007FFF',
-                                                            '&:hover': {
-                                                                backgroundColor: '#F5F9FF'
-                                                            }
+                                                            py: 3,
+                                                            width: '10%',
+                                                            borderBottom: '1px solid #e2e8f0',
+                                                            pr: 3
                                                         }}
                                                     >
-                                                        <EditIcon />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        onClick={() => handleDeleteItem(item._id)}
-                                                        sx={{
-                                                            color: '#d32f2f',
-                                                            '&:hover': {
-                                                                backgroundColor: '#FFF5F5'
-                                                            }
-                                                        }}
-                                                    >
-                                                        <DeleteIcon />
-                                                    </IconButton>
-                                                </TableCell>
-                                            </TableRow>
+                                                        <Box
+                                                            className="row-actions"
+                                                            sx={{
+                                                                display: 'flex',
+                                                                gap: 1,
+                                                                justifyContent: 'flex-end',
+                                                                opacity: 0,
+                                                                visibility: 'hidden',
+                                                                transform: 'translateX(10px)',
+                                                                transition: 'all 0.2s ease-in-out'
+                                                            }}
+                                                        >
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => {
+                                                                    setCurrentItem(item);
+                                                                    setOpenDialog(true);
+                                                                }}
+                                                                sx={{
+                                                                    color: '#0284c7',
+                                                                    backgroundColor: '#f0f9ff',
+                                                                    border: '1px solid #bae6fd',
+                                                                    '&:hover': {
+                                                                        backgroundColor: '#e0f2fe',
+                                                                        transform: 'translateY(-1px)'
+                                                                    },
+                                                                    transition: 'transform 0.2s ease'
+                                                                }}
+                                                            >
+                                                                <EditIcon fontSize="small" />
+                                                            </IconButton>
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleDeleteItem(item._id)}
+                                                                sx={{
+                                                                    color: '#dc2626',
+                                                                    backgroundColor: '#fef2f2',
+                                                                    border: '1px solid #fecaca',
+                                                                    '&:hover': {
+                                                                        backgroundColor: '#fee2e2',
+                                                                        transform: 'translateY(-1px)'
+                                                                    },
+                                                                    transition: 'transform 0.2s ease'
+                                                                }}
+                                                            >
+                                                                <DeleteIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Box>
+                                                    </TableCell>
+                                                </TableRow>
+                                            </React.Fragment>
                                         );
                                     })
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
+                                        <TableCell colSpan={4} sx={{ textAlign: 'center', py: 8 }}>
                                             <Box sx={{
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 alignItems: 'center',
                                                 gap: 2
                                             }}>
+                                                <Box
+                                                    sx={{
+                                                        backgroundColor: '#f8fafc',
+                                                        borderRadius: '12px',
+                                                        p: 3,
+                                                        mb: 2
+                                                    }}
+                                                >
+                                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M20 7L12 3L4 7M20 7L12 11M20 7V17L12 21M12 11L4 7M12 11V21M4 7V17L12 21" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                </Box>
                                                 <Typography
-                                                    variant="body1"
-                                                    sx={{ color: '#666' }}
+                                                    variant="h6"
+                                                    sx={{
+                                                        color: '#475569',
+                                                        fontWeight: 600
+                                                    }}
                                                 >
                                                     {searchQuery ? 'No matching items found' : 'No truck items available'}
+                                                </Typography>
+                                                <Typography
+                                                    sx={{
+                                                        color: '#64748b',
+                                                        mb: 2
+                                                    }}
+                                                >
+                                                    {searchQuery ? 'Try adjusting your search terms' : 'Get started by adding your first truck item'}
                                                 </Typography>
                                                 {!searchQuery && (
                                                     <Button
@@ -1053,7 +1396,15 @@ const TruckItems = () => {
                                                         onClick={handleAddItem}
                                                         sx={{
                                                             borderRadius: '12px',
-                                                            textTransform: 'none'
+                                                            textTransform: 'none',
+                                                            px: 4,
+                                                            py: 1.5,
+                                                            borderColor: '#e2e8f0',
+                                                            color: '#0284c7',
+                                                            '&:hover': {
+                                                                borderColor: '#0284c7',
+                                                                backgroundColor: '#f0f9ff'
+                                                            }
                                                         }}
                                                     >
                                                         Add Your First Item
