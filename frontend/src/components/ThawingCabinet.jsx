@@ -3,13 +3,12 @@
 import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from "react";
 import { BackpackIcon, Clock, Maximize, Minimize } from "lucide-react";
 import axiosInstance from "./axiosInstance";
-import playbackVid from "../assets/background.mp4";
 import { Link } from "react-router-dom";
 import { ArrowBackIos } from "@mui/icons-material";
 import { useAuth } from "./AuthContext";
-console.log(playbackVid);
+import useSWR from 'swr';
 
-const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections, isNextWeek) => {
+const useCalculateThawingData = (salesData, utpData, bufferData, adjustments = [], salesProjectionConfig = null, futureProjections = [], isNextWeek = false) => {
   return useMemo(() => {
     console.log('Calculating with:', {
       salesData,
@@ -40,15 +39,20 @@ const useCalculateThawingData = (salesData, utpData, bufferData, adjustments, sa
 
     const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-    const calculateBufferMultiplier = (bufferPrcnt) => (100 + bufferPrcnt) / 100;
+    const calculateBufferMultiplier = (bufferPrcnt = 0) => (100 + bufferPrcnt) / 100;
+
+    const findBufferPrcnt = (productName) => {
+      const item = Array.isArray(bufferData) ? bufferData.find(item => item.productName === productName) : null;
+      return item?.bufferPrcnt ?? 0;
+    };
 
     const bufferMultipliers = {
-      Filets: calculateBufferMultiplier(bufferData.find(item => item.productName === "Filets")?.bufferPrcnt || 1),
-      "Spicy Filets": calculateBufferMultiplier(bufferData.find(item => item.productName === "Spicy Filets")?.bufferPrcnt || 1),
-      "Grilled Filets": calculateBufferMultiplier(bufferData.find(item => item.productName === "Grilled Filets")?.bufferPrcnt || 1),
-      "Grilled Nuggets": calculateBufferMultiplier(bufferData.find(item => item.productName === "Grilled Nuggets")?.bufferPrcnt || 1),
-      Nuggets: calculateBufferMultiplier(bufferData.find(item => item.productName === "Nuggets")?.bufferPrcnt || 1),
-      "Spicy Strips": calculateBufferMultiplier(bufferData.find(item => item.productName === "Spicy Strips")?.bufferPrcnt || 1),
+      Filets: calculateBufferMultiplier(findBufferPrcnt("Filets")),
+      "Spicy Filets": calculateBufferMultiplier(findBufferPrcnt("Spicy Filets")),
+      "Grilled Filets": calculateBufferMultiplier(findBufferPrcnt("Grilled Filets")),
+      "Grilled Nuggets": calculateBufferMultiplier(findBufferPrcnt("Grilled Nuggets")),
+      Nuggets: calculateBufferMultiplier(findBufferPrcnt("Nuggets")),
+      "Spicy Strips": calculateBufferMultiplier(findBufferPrcnt("Spicy Strips")),
     };
 
     const utpValues = {
@@ -411,74 +415,13 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
 
 const ThawingCabinet = () => {
   const { user } = useAuth();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [adjustments, setAdjustments] = useState([]);
-  const [closures, setClosures] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [wakeLock, setWakeLock] = useState(null);
-  const adjustmentsRef = useRef(adjustments);
-  const videoRef = useRef(null); // Ref for the video element
-  const containerRef = useRef(null)
-  const [salesProjectionConfig, setSalesProjectionConfig] = useState(null);
   const [showAdminView, setShowAdminView] = useState(false);
-  const [futureProjections, setFutureProjections] = useState({});
   const [showNextWeek, setShowNextWeek] = useState(false);
+  const containerRef = useRef(null);
 
-
-  useEffect(() => {
-    adjustmentsRef.current = adjustments;
-  }, [adjustments]);
-
-  const requestWakeLock = useCallback(async () => {
-    if ('wakeLock' in navigator) {
-      try {
-        const lock = await navigator.wakeLock.request('screen');
-        setWakeLock(lock);
-        lock.addEventListener('release', () => {
-          setWakeLock(null);
-        });
-      } catch (err) {
-        console.error(`Wake Lock error: ${err.name}, ${err.message}`);
-      }
-    } else {
-      console.warn('Wake Lock API not supported.');
-    }
-  }, []);
-
-  useEffect(() => {
-    requestWakeLock();
-
-    // Always start the video playback
-    const video = document.createElement('video');
-    video.src = playbackVid;
-    video.loop = true;
-    video.muted = true;
-    video.style.display = 'none';
-    document.body.appendChild(video);
-    videoRef.current = video; // Store the video element in the ref
-    video.play().catch(err => console.error('Video playback failed:', err));
-
-    return () => {
-      if (wakeLock) {
-        wakeLock.release();
-      }
-      // Ensure the video is removed when the component unmounts
-      if (videoRef.current) {
-        document.body.removeChild(videoRef.current);
-      }
-    };
-  }, [requestWakeLock]);
-
-  useEffect(() => {
-    if (!wakeLock && 'wakeLock' in navigator) {
-      requestWakeLock();
-    }
-  }, [wakeLock, requestWakeLock]);
-
-  const getCurrentDay = useCallback(() => {
+  // Memoize the current day calculation
+  const currentDay = useMemo(() => {
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const now = new Date();
     const dayIndex = now.getDay();
@@ -493,7 +436,6 @@ const ThawingCabinet = () => {
       if (containerRef.current) {
         containerRef.current.classList.add('fullscreen');
       }
-
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
@@ -506,112 +448,124 @@ const ThawingCabinet = () => {
     }
   }, []);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  // SWR fetcher function
+  const fetcher = useCallback(async (url) => {
     try {
-      console.log('Fetching data...');
-      const [
-        adjustmentsResponse,
-        closuresResponse,
-        messagesResponse,
-        salesResponse,
-        utpResponse,
-        bufferResponse,
-        configResponse,
-        futureProjectionsResponse,
-      ] = await Promise.all([
-        axiosInstance.get("/adjustment/data"),
-        axiosInstance.get("/closure/plans"),
-        axiosInstance.get("/messages"),
-        axiosInstance.get("/sales"),
-        axiosInstance.get("/upt"),
-        axiosInstance.get("/buffer"),
-        axiosInstance.get("/sales-projection-config"),
-        axiosInstance.get("/projections/future"),
-      ]);
-
-      console.log('Responses:', {
-        sales: salesResponse.data,
-        utp: utpResponse.data,
-        buffer: bufferResponse.data,
-        config: configResponse.data
-      });
-
-      const salesData = salesResponse.data;
-      const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const sortedSales = daysOrder.map((day) => salesData.find((entry) => entry.day === day) || { day, sales: 0 });
-
-      setData({
-        sales: sortedSales,
-        utp: utpResponse.data,
-        buffer: bufferResponse.data,
-      });
-      setAdjustments(adjustmentsResponse.data);
-      setClosures(closuresResponse.data);
-      setMessages(messagesResponse.data);
-      setLastUpdated(new Date());
-      setSalesProjectionConfig(configResponse.data);
-      setFutureProjections(futureProjectionsResponse.data);
+      const response = await axiosInstance.get(url);
+      return response.data;
     } catch (error) {
-      console.error("Error fetching data:", error);
-      // Consider setting an error state to display an error message to the user
-    } finally {
-      setLoading(false);
+      console.error(`Error fetching ${url}:`, error);
+      throw error;
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-    requestWakeLock();
-
-    const fetchInterval = setInterval(fetchData, 10 * 60 * 1000);
-    const adjustmentsInterval = setInterval(() => axiosInstance.get("/adjustment/data").then(res => setAdjustments(res.data)).catch(err => console.error("Error fetching adjustments:", err)), 5 * 60 * 1000);
-    const closuresInterval = setInterval(() => axiosInstance.get("/closure/plans").then(res => setClosures(res.data)).catch(err => console.error("Error fetching closures:", err)), 10 * 60 * 1000);
-    const messagesInterval = setInterval(() => axiosInstance.get("/messages").then(res => setMessages(res.data)).catch(err => console.error("Error fetching messages:", err)), 5 * 60 * 1000);
-
-    const storedFullScreenPreference = localStorage.getItem('isFullScreen');
-    if (storedFullScreenPreference === 'true' && !document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullScreen(true);
-    }
-
-    const handleFullScreenChange = () => {
-      setIsFullScreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullScreenChange);
-
-    return () => {
-      clearInterval(fetchInterval);
-      clearInterval(adjustmentsInterval);
-      clearInterval(closuresInterval);
-      clearInterval(messagesInterval);
-      document.removeEventListener('fullscreenchange', handleFullScreenChange);
-    };
-  }, [fetchData, requestWakeLock]);
-
-  const currentDay = getCurrentDay();
-  const calculatedData = useCalculateThawingData(
-    data?.sales,
-    data?.utp,
-    data?.buffer,
-    adjustments,
-    salesProjectionConfig,
-    futureProjections,
-    showNextWeek
-  );
-  const filteredClosures = useFilteredClosures(closures);
-
-  console.log('Rendering with:', {
-    data,
-    salesProjectionConfig,
-    calculatedData
+  // Data fetching hooks
+  const { data: salesData, error: salesError } = useSWR("/sales", fetcher, {
+    refreshInterval: 10 * 60 * 1000,
+    shouldRetryOnError: true,
+    errorRetryCount: 3
   });
 
-  if (loading) {
+  const { data: utpData, error: utpError } = useSWR("/upt", fetcher, {
+    refreshInterval: 10 * 60 * 1000,
+    shouldRetryOnError: true,
+    errorRetryCount: 3
+  });
+
+  const { data: bufferData, error: bufferError } = useSWR("/buffer", fetcher, {
+    refreshInterval: 10 * 60 * 1000,
+    shouldRetryOnError: true,
+    errorRetryCount: 3
+  });
+
+  const { data: adjustments, error: adjustmentsError } = useSWR("/adjustment/data", fetcher, {
+    refreshInterval: 5 * 60 * 1000
+  });
+
+  const { data: closures, error: closuresError } = useSWR("/closure/plans", fetcher, {
+    refreshInterval: 10 * 60 * 1000
+  });
+
+  const { data: messages, error: messagesError } = useSWR("/messages", fetcher, {
+    refreshInterval: 5 * 60 * 1000
+  });
+
+  const { data: salesProjectionConfig, error: configError } = useSWR("/sales-projection-config", fetcher, {
+    refreshInterval: 10 * 60 * 1000
+  });
+
+  const { data: futureProjections, error: projectionsError } = useSWR("/projections/future", fetcher, {
+    refreshInterval: 10 * 60 * 1000
+  });
+
+  // Transform sales data with null check
+  const sortedSales = useMemo(() => {
+    if (!Array.isArray(salesData)) return [];
+    const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    return daysOrder.map((day) => salesData.find((entry) => entry?.day === day) || { day, sales: 0 });
+  }, [salesData]);
+
+  // Prepare data object with null checks
+  const data = useMemo(() => ({
+    sales: Array.isArray(sortedSales) ? sortedSales : [],
+    utp: Array.isArray(utpData) ? utpData : [],
+    buffer: Array.isArray(bufferData) ? bufferData : []
+  }), [sortedSales, utpData, bufferData]);
+
+  // Calculate data with null checks
+  const calculatedData = useCalculateThawingData(
+    data.sales,
+    data.utp,
+    data.buffer,
+    Array.isArray(adjustments) ? adjustments : [],
+    salesProjectionConfig || null,
+    Array.isArray(futureProjections) ? futureProjections : [],
+    showNextWeek
+  );
+
+  const filteredClosures = useFilteredClosures(Array.isArray(closures) ? closures : []);
+
+  // Check for loading state
+  const isLoading = !salesData || !utpData || !bufferData;
+
+  // Check for errors
+  const errors = [
+    salesError, utpError, bufferError, adjustmentsError,
+    closuresError, messagesError, configError, projectionsError
+  ].filter(Boolean);
+
+  if (isLoading) {
     return (
       <div className="fixed top-0 left-0 w-full h-full bg-gray-100 flex items-center justify-center">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-b-4 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (errors.length > 0) {
+    return (
+      <div className="fixed top-0 left-0 w-full h-full bg-gray-100 flex items-center justify-center">
+        <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg">
+          <h2 className="text-xl font-bold text-red-600 mb-4">Error Loading Data</h2>
+          <p className="text-gray-600 mb-4">
+            There was an error loading some of the required data. Please try refreshing the page or contact support if the problem persists.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+          >
+            Refresh Page
+          </button>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 p-4 bg-gray-100 rounded overflow-auto">
+              <pre className="text-xs text-red-500">
+                {errors.map((error, index) => (
+                  <div key={index}>{error.message}</div>
+                ))}
+              </pre>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -656,7 +610,7 @@ const ThawingCabinet = () => {
             <div className="flex items-center gap-1 sm:gap-2 bg-gray-50 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm">
               <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
               <span className="text-gray-600 font-medium whitespace-nowrap">
-                Updated: {lastUpdated.toLocaleTimeString()}
+                Updated: {new Date().toLocaleTimeString()}
               </span>
             </div>
             <button
@@ -677,14 +631,13 @@ const ThawingCabinet = () => {
           className={`flex-1 flex gap-1 sm:gap-2 ${isFullScreen ? 'fullscreen' : ''}`}
           style={{ minHeight: '0' }}
         >
-          {calculatedData.map((entry) => (
-            <div className="flex-1 min-w-0">
+          {Array.isArray(calculatedData) && calculatedData.map((entry) => (
+            <div key={entry.day} className="flex-1 min-w-0">
               <DayCard
-                key={entry.day}
                 entry={entry}
                 currentDay={currentDay}
                 closures={filteredClosures}
-                messages={messages}
+                messages={Array.isArray(messages) ? messages : []}
                 showAdminView={showAdminView}
               />
             </div>

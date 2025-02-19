@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useAuth } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from './axiosInstance';
@@ -31,8 +31,221 @@ import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import EditIcon from '@mui/icons-material/Edit';
 import { format, eachDayOfInterval, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, parseISO } from 'date-fns';
+import debounce from 'lodash/debounce';
 
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+// Create a memoized form component
+const TruckItemForm = memo(({ currentItem, setCurrentItem, handleUOMChange, salesMixData, selectedItems, handleAssociatedItemSelect, handleAssociatedItemChange, handleRemoveAssociatedItem, handleSaveItem, onClose }) => {
+    const [associatedItemSearch, setAssociatedItemSearch] = useState('');
+
+    // Filter function for associated items search
+    const filteredSalesMixItems = Object.keys(salesMixData || {}).filter(name =>
+        name.toLowerCase().includes(associatedItemSearch.toLowerCase())
+    );
+
+    return (
+        <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+            pt: 2
+        }}>
+            <TextField
+                label="Description"
+                value={currentItem.description}
+                onChange={(e) => setCurrentItem(prev => ({ ...prev, description: e.target.value }))}
+                fullWidth
+                sx={{
+                    '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px'
+                    }
+                }}
+            />
+            <TextField
+                label="UOM (e.g., '2/5 Lb Ct Case' or '1000 Ct case')"
+                value={currentItem.uom}
+                onChange={handleUOMChange}
+                fullWidth
+                helperText="For lb cases, use format '2/5 Lb Ct Case'. For count cases, use format '1000 Ct case'"
+                sx={{
+                    '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px'
+                    }
+                }}
+            />
+            <TextField
+                label="Cost (CAD)"
+                type="number"
+                value={currentItem.cost}
+                onChange={(e) => setCurrentItem(prev => ({ ...prev, cost: e.target.value }))}
+                fullWidth
+                sx={{
+                    '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px'
+                    }
+                }}
+            />
+
+            {/* Associated Items Section */}
+            <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                    Associated Items
+                </Typography>
+
+                {/* Search Box for Associated Items */}
+                <TextField
+                    label="Search Menu Items"
+                    value={associatedItemSearch}
+                    onChange={(e) => setAssociatedItemSearch(e.target.value)}
+                    fullWidth
+                    sx={{ mb: 2 }}
+                />
+
+                {/* Associated Items Grid */}
+                <Box sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: 1,
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    mb: 2,
+                    p: 1,
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px'
+                }}>
+                    {filteredSalesMixItems.map((item) => (
+                        <Box
+                            key={item}
+                            onClick={() => handleAssociatedItemSelect(item)}
+                            sx={{
+                                p: 1,
+                                border: '1px solid',
+                                borderColor: selectedItems.has(item) ? '#0284c7' : '#e2e8f0',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                backgroundColor: selectedItems.has(item) ? '#f0f9ff' : 'white',
+                                '&:hover': {
+                                    borderColor: '#0284c7',
+                                    backgroundColor: '#f0f9ff'
+                                }
+                            }}
+                        >
+                            <Typography variant="body2">{item}</Typography>
+                        </Box>
+                    ))}
+                </Box>
+
+                {/* Selected Items with Usage Input */}
+                <Box sx={{ mt: 2 }}>
+                    {currentItem.associatedItems.map((item, index) => (
+                        <Box
+                            key={index}
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 2,
+                                mb: 2,
+                                p: 2,
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                backgroundColor: '#f8fafc'
+                            }}
+                        >
+                            <Typography sx={{ flex: 1 }}>{item.name}</Typography>
+                            <TextField
+                                type="number"
+                                label="Usage"
+                                value={item.usage}
+                                onChange={(e) => handleAssociatedItemChange(index, 'usage', parseFloat(e.target.value))}
+                                size="small"
+                                sx={{ width: '100px' }}
+                            />
+                            <IconButton
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveAssociatedItem(index);
+                                }}
+                                size="small"
+                                sx={{
+                                    color: '#dc2626',
+                                    '&:hover': {
+                                        backgroundColor: '#fee2e2'
+                                    }
+                                }}
+                            >
+                                <DeleteIcon fontSize="small" />
+                            </IconButton>
+                        </Box>
+                    ))}
+                </Box>
+            </Box>
+
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
+                <Button
+                    onClick={onClose}
+                    sx={{
+                        borderRadius: '12px',
+                        textTransform: 'none',
+                        px: 3
+                    }}
+                >
+                    Cancel
+                </Button>
+                <Button
+                    variant="contained"
+                    onClick={handleSaveItem}
+                    sx={{
+                        borderRadius: '12px',
+                        textTransform: 'none',
+                        px: 3,
+                        backgroundColor: '#0284c7',
+                        '&:hover': {
+                            backgroundColor: '#0369a1'
+                        }
+                    }}
+                >
+                    Save
+                </Button>
+            </Box>
+        </Box>
+    );
+});
+
+// Create a memoized search component
+const SearchBox = memo(({ searchQuery, onSearch, searchRef, onFocus, onBlur }) => {
+    return (
+        <div className="relative w-full">
+            <div className="absolute top-3 left-3 items-center" ref={searchRef}>
+                <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"></path>
+                </svg>
+            </div>
+            <input
+                type="text"
+                className="block w-full p-3 pl-10 text-gray-900 bg-white rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all duration-200 focus:pl-3"
+                placeholder="Search by description, UOM, or associated items..."
+                value={searchQuery}
+                onChange={(e) => onSearch(e.target.value)}
+                onFocus={onFocus}
+                onBlur={onBlur}
+            />
+            {searchQuery && (
+                <div className="absolute right-3 top-3">
+                    <button
+                        onClick={() => onSearch('')}
+                        className="text-gray-400 hover:text-gray-600"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+});
 
 const TruckItems = () => {
     const { user } = useAuth();
@@ -244,28 +457,71 @@ const TruckItems = () => {
             const file = acceptedFiles[0];
             if (file) {
                 try {
-                    const reader = new FileReader();
-                    reader.onload = async (e) => {
-                        try {
-                            const data = new Uint8Array(e.target.result);
-                            const workbook = XLSX.read(data, { type: 'array' });
-                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    if (!worksheet) {
+                        throw new Error('No worksheet found in the Excel file');
+                    }
 
-                            const response = await parseExcelData(jsonData);
-                            setSalesMixData(response);
-                            setSalesMixItems(Object.keys(response));
-                            setSalesMixUploadDate(new Date());
-                            setSuccess('Sales mix data uploaded successfully');
-                        } catch (error) {
-                            console.error('Error processing file:', error);
-                            setError(error.message || 'Error processing sales mix file. Please ensure it is a valid sales mix report.');
+                    // Convert to JSON
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                    // Extract reporting period from the Excel file
+                    const reportPeriod = jsonData[0]?.['Sales Mix Report - Item Summary'];
+                    if (!reportPeriod) {
+                        throw new Error('Could not find report period in the Excel file');
+                    }
+
+                    // Parse the date range
+                    const fullDateString = reportPeriod.toString().replace('From ', '');
+                    const [startDateFull, endDateFull] = fullDateString.split(' through ');
+
+                    if (!startDateFull || !endDateFull) {
+                        throw new Error('Could not parse date range from report header');
+                    }
+
+                    // Process the data rows
+                    const processedData = {};
+                    for (let i = 7; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        // Skip summary rows
+                        if ([41, 42, 43, 44, 45, 553, 554, 555, 556, 557, 772, 773, 774, 775, 776, 961, 962, 963, 964, 965, 1074, 1075, 1076, 1077, 1078, 1363, 1364].includes(i)) {
+                            continue;
                         }
-                    };
-                    reader.readAsArrayBuffer(file);
+
+                        const itemName = row['__EMPTY'];
+                        const soldPer1000 = row['__EMPTY_17'];
+
+                        if (itemName && typeof soldPer1000 !== 'undefined') {
+                            const value = parseFloat(soldPer1000);
+                            if (!isNaN(value)) {
+                                processedData[itemName] = value;
+                            }
+                        }
+                    }
+
+                    if (Object.keys(processedData).length === 0) {
+                        throw new Error('No valid items found after processing');
+                    }
+
+                    // Upload the processed data
+                    const response = await axiosInstance.post('/salesmix/upload', {
+                        data: processedData,
+                        reportingPeriod: {
+                            startDate: startDateFull.trim(),
+                            endDate: endDateFull.trim()
+                        }
+                    });
+
+                    setSalesMixData(processedData);
+                    setSalesMixItems(Object.keys(processedData));
+                    setSalesMixUploadDate(new Date());
+                    setSuccess('Sales mix data uploaded successfully');
+
                 } catch (error) {
-                    console.error('Error reading file:', error);
-                    setError('Error reading sales mix file');
+                    console.error('Error processing file:', error);
+                    setError(error.message || 'Error processing sales mix file. Please ensure it is a valid sales mix report.');
                 }
             }
         }
@@ -436,24 +692,24 @@ const TruckItems = () => {
         }
     };
 
-    const handleUOMChange = (e) => {
+    const handleUOMChange = useCallback((e) => {
         const uomValue = e.target.value;
-        setCurrentItem({
-            ...currentItem,
-            uom: uomValue
-        });
-
-        // Only try to parse if the value matches our expected formats
-        const parsed = parseUOM(uomValue);
-        if (parsed) {
-            setCurrentItem(prev => ({
+        setCurrentItem(prev => {
+            const parsed = parseUOM(uomValue);
+            if (parsed) {
+                return {
+                    ...prev,
+                    uom: uomValue,
+                    totalUnits: parsed.totalUnits,
+                    unitType: parsed.unitType
+                };
+            }
+            return {
                 ...prev,
-                uom: uomValue,
-                totalUnits: parsed.totalUnits,
-                unitType: parsed.unitType
-            }));
-        }
-    };
+                uom: uomValue
+            };
+        });
+    }, []);
 
     const calculateUsage = (item, salesMix, dateRange) => {
         if (!item.associatedItems || item.associatedItems.length === 0) {
@@ -517,30 +773,38 @@ const TruckItems = () => {
         setOpenDialog(true);
     };
 
-    const handleAssociatedItemSelect = (itemName) => {
-        const newSelectedItems = new Set(selectedItems);
-        if (newSelectedItems.has(itemName)) {
-            newSelectedItems.delete(itemName);
-            setCurrentItem({
-                ...currentItem,
-                associatedItems: currentItem.associatedItems.filter(item => item.name !== itemName)
-            });
-        } else {
-            newSelectedItems.add(itemName);
-            setCurrentItem({
-                ...currentItem,
-                associatedItems: [
-                    ...currentItem.associatedItems,
-                    {
-                        name: itemName,
-                        usage: 1,
-                        unit: currentItem.unitType || 'ct'
-                    }
-                ]
-            });
-        }
-        setSelectedItems(newSelectedItems);
+    const handleEditClick = (item) => {
+        setCurrentItem(item);
+        setSelectedItems(new Set(item.associatedItems.map(ai => ai.name)));
+        setOpenDialog(true);
     };
+
+    const handleAssociatedItemSelect = useCallback((itemName) => {
+        setSelectedItems(prev => {
+            const newSelectedItems = new Set(prev);
+            if (newSelectedItems.has(itemName)) {
+                newSelectedItems.delete(itemName);
+                setCurrentItem(prev => ({
+                    ...prev,
+                    associatedItems: prev.associatedItems.filter(item => item.name !== itemName)
+                }));
+            } else {
+                newSelectedItems.add(itemName);
+                setCurrentItem(prev => ({
+                    ...prev,
+                    associatedItems: [
+                        ...prev.associatedItems,
+                        {
+                            name: itemName,
+                            usage: 1,
+                            unit: prev.unitType || 'ct'
+                        }
+                    ]
+                }));
+            }
+            return newSelectedItems;
+        });
+    }, []);
 
     const handleAssociatedItemChange = (index, field, value) => {
         const newAssociatedItems = [...currentItem.associatedItems];
@@ -607,38 +871,34 @@ const TruckItems = () => {
         }
     };
 
-    const handleSearch = (query) => {
+    // Debounce the search function
+    const debouncedSearch = useCallback(
+        debounce((query) => {
+            if (!query.trim()) {
+                setSearchResults([]);
+                return;
+            }
+
+            const results = truckItems.filter(item => {
+                const matchesDescription = item.description.toLowerCase().includes(query.toLowerCase());
+                const matchesUOM = item.uom.toLowerCase().includes(query.toLowerCase());
+                const matchesAssociatedItems = item.associatedItems.some(assoc =>
+                    assoc.name.toLowerCase().includes(query.toLowerCase())
+                );
+
+                return matchesDescription || matchesUOM || matchesAssociatedItems;
+            });
+
+            setSearchResults(results);
+        }, 300),
+        [truckItems]
+    );
+
+    // Memoize the handleSearch function
+    const handleSearch = useCallback((query) => {
         setSearchQuery(query);
-        if (!query.trim()) {
-            setSearchResults([]);
-            return;
-        }
-
-        const results = truckItems.filter(item => {
-            const matchesDescription = item.description.toLowerCase().includes(query.toLowerCase());
-            const matchesUOM = item.uom.toLowerCase().includes(query.toLowerCase());
-            const matchesAssociatedItems = item.associatedItems.some(assoc =>
-                assoc.name.toLowerCase().includes(query.toLowerCase())
-            );
-
-            // Prioritize matches in truck item description
-            if (matchesDescription) return true;
-            if (matchesUOM) return true;
-            return matchesAssociatedItems;
-        });
-
-        setSearchResults(results);
-    };
-
-    const handleSearchFocus = () => {
-        setIsSearchFocused(true);
-        searchRef.current.style.display = "none";
-    };
-
-    const handleSearchBlur = () => {
-        setIsSearchFocused(false);
-        searchRef.current.style.display = "block";
-    };
+        debouncedSearch(query);
+    }, [debouncedSearch]);
 
     // Filter function for associated items search
     const filteredSalesMixItems = salesMixItems.filter(name =>
@@ -980,34 +1240,13 @@ const TruckItems = () => {
 
                 {/* Search Bar */}
                 <Box sx={{ mb: 4 }}>
-                    <div className="relative w-full">
-                        <div className="absolute top-3 left-3 items-center" ref={searchRef}>
-                            <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"></path>
-                            </svg>
-                        </div>
-                        <input
-                            type="text"
-                            className="block w-full p-3 pl-10 text-gray-900 bg-white rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all duration-200 focus:pl-3"
-                            placeholder="Search by description, UOM, or associated items..."
-                            value={searchQuery}
-                            onChange={(e) => handleSearch(e.target.value)}
-                            onFocus={handleSearchFocus}
-                            onBlur={handleSearchBlur}
-                        />
-                        {searchQuery && (
-                            <div className="absolute right-3 top-3">
-                                <button
-                                    onClick={() => handleSearch('')}
-                                    className="text-gray-400 hover:text-gray-600"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    <SearchBox
+                        searchQuery={searchQuery}
+                        onSearch={handleSearch}
+                        searchRef={searchRef}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setIsSearchFocused(false)}
+                    />
                 </Box>
 
                 {/* Alerts */}
@@ -1355,10 +1594,7 @@ const TruckItems = () => {
                                                         >
                                                             <IconButton
                                                                 size="small"
-                                                                onClick={() => {
-                                                                    setCurrentItem(item);
-                                                                    setOpenDialog(true);
-                                                                }}
+                                                                onClick={() => handleEditClick(item)}
                                                                 sx={{
                                                                     color: '#0284c7',
                                                                     backgroundColor: '#f0f9ff',
@@ -1483,213 +1719,18 @@ const TruckItems = () => {
                     {currentItem._id ? 'Edit Truck Item' : 'Add Truck Item'}
                 </DialogTitle>
                 <DialogContent>
-                    <Box sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 3,
-                        pt: 2
-                    }}>
-                        <TextField
-                            label="Description"
-                            value={currentItem.description}
-                            onChange={(e) => setCurrentItem({ ...currentItem, description: e.target.value })}
-                            fullWidth
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: '12px'
-                                }
-                            }}
-                        />
-                        <TextField
-                            label="UOM (e.g., '2/5 Lb Ct Case' or '1000 Ct case')"
-                            value={currentItem.uom}
-                            onChange={handleUOMChange}
-                            fullWidth
-                            helperText="For lb cases, use format '2/5 Lb Ct Case'. For count cases, use format '1000 Ct case'"
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: '12px'
-                                }
-                            }}
-                        />
-                        <TextField
-                            label="Cost (CAD)"
-                            type="number"
-                            value={currentItem.cost}
-                            onChange={(e) => setCurrentItem({ ...currentItem, cost: e.target.value })}
-                            fullWidth
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: '12px'
-                                }
-                            }}
-                        />
-
-                        <Typography variant="h6" sx={{ fontWeight: 600, mt: 2 }}>Associated Items</Typography>
-
-                        {/* Search and Selection Section */}
-                        <Box sx={{
-                            border: '1px solid #e0e0e0',
-                            borderRadius: '12px',
-                            p: 2,
-                            mb: 2
-                        }}>
-                            <TextField
-                                fullWidth
-                                variant="outlined"
-                                placeholder="Search items..."
-                                value={associatedItemSearch}
-                                onChange={(e) => setAssociatedItemSearch(e.target.value)}
-                                sx={{
-                                    mb: 2,
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: '12px'
-                                    }
-                                }}
-                            />
-                            <Box sx={{
-                                maxHeight: '200px',
-                                overflowY: 'auto',
-                                border: '1px solid #f0f0f0',
-                                borderRadius: '8px',
-                                p: 1
-                            }}>
-                                {filteredSalesMixItems.map((name) => (
-                                    <Box
-                                        key={name}
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            p: 1,
-                                            '&:hover': {
-                                                backgroundColor: '#f5f5f5',
-                                                borderRadius: '8px'
-                                            }
-                                        }}
-                                    >
-                                        <FormControl>
-                                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedItems.has(name)}
-                                                    onChange={() => handleAssociatedItemSelect(name)}
-                                                    style={{ marginRight: '8px' }}
-                                                />
-                                                <Typography>
-                                                    {name}
-                                                    <Typography
-                                                        component="span"
-                                                        sx={{
-                                                            ml: 1,
-                                                            color: 'text.secondary',
-                                                            fontSize: '0.875rem'
-                                                        }}
-                                                    >
-                                                        (UPT: {salesMixData[name]?.toFixed(2) || '0.00'})
-                                                    </Typography>
-                                                </Typography>
-                                            </label>
-                                        </FormControl>
-                                    </Box>
-                                ))}
-                            </Box>
-                        </Box>
-
-                        {/* Selected Items with Usage Amounts */}
-                        {currentItem.associatedItems.map((item, index) => (
-                            <Paper
-                                key={index}
-                                elevation={0}
-                                sx={{
-                                    p: 2,
-                                    borderRadius: '12px',
-                                    border: '1px solid #e0e0e0',
-                                    display: 'flex',
-                                    gap: 2,
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <Typography sx={{ flex: 1 }}>
-                                    {item.name}
-                                    <Typography
-                                        component="span"
-                                        sx={{
-                                            ml: 1,
-                                            color: 'text.secondary',
-                                            fontSize: '0.875rem'
-                                        }}
-                                    >
-                                        (UPT: {salesMixData[item.name]?.toFixed(2) || '0.00'})
-                                    </Typography>
-                                </Typography>
-                                <TextField
-                                    label={`Usage Amount (${currentItem.unitType || 'units'})`}
-                                    type="number"
-                                    inputProps={{ step: "0.01" }}
-                                    value={item.usage}
-                                    onChange={(e) => handleAssociatedItemChange(index, 'usage', e.target.value)}
-                                    sx={{
-                                        width: '200px',
-                                        '& .MuiOutlinedInput-root': {
-                                            borderRadius: '12px'
-                                        }
-                                    }}
-                                />
-                                <IconButton
-                                    onClick={() => {
-                                        handleRemoveAssociatedItem(index);
-                                        setSelectedItems(prev => {
-                                            const newSet = new Set(prev);
-                                            newSet.delete(item.name);
-                                            return newSet;
-                                        });
-                                    }}
-                                    sx={{
-                                        color: '#d32f2f',
-                                        '&:hover': {
-                                            backgroundColor: '#FFF5F5'
-                                        }
-                                    }}
-                                >
-                                    <DeleteIcon />
-                                </IconButton>
-                            </Paper>
-                        ))}
-
-                        <Box sx={{
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            gap: 2,
-                            mt: 4
-                        }}>
-                            <Button
-                                onClick={() => setOpenDialog(false)}
-                                sx={{
-                                    borderRadius: '12px',
-                                    textTransform: 'none',
-                                    px: 3
-                                }}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={handleSaveItem}
-                                sx={{
-                                    borderRadius: '12px',
-                                    textTransform: 'none',
-                                    px: 3,
-                                    backgroundColor: '#007FFF',
-                                    '&:hover': {
-                                        backgroundColor: '#0066CC'
-                                    }
-                                }}
-                            >
-                                Save
-                            </Button>
-                        </Box>
-                    </Box>
+                    <TruckItemForm
+                        currentItem={currentItem}
+                        setCurrentItem={setCurrentItem}
+                        handleUOMChange={handleUOMChange}
+                        salesMixData={salesMixData}
+                        selectedItems={selectedItems}
+                        handleAssociatedItemSelect={handleAssociatedItemSelect}
+                        handleAssociatedItemChange={handleAssociatedItemChange}
+                        handleRemoveAssociatedItem={handleRemoveAssociatedItem}
+                        handleSaveItem={handleSaveItem}
+                        onClose={() => setOpenDialog(false)}
+                    />
                 </DialogContent>
             </Dialog>
 
@@ -1785,4 +1826,4 @@ const TruckItems = () => {
     );
 };
 
-export default TruckItems; 
+export default memo(TruckItems); 

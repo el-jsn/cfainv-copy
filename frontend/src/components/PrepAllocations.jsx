@@ -4,10 +4,8 @@ import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from "
 import { Link } from "react-router-dom";
 import { Clock, Maximize, Minimize, Settings } from "lucide-react";
 import axiosInstance from "./axiosInstance";
-import playbackVid from "../assets/background.mp4";
 import { ArrowBackIos } from "@mui/icons-material";
 import { useAuth } from "./AuthContext";
-console.log(playbackVid);
 
 const BufferAdjustmentModal = memo(({ isOpen, onClose, day, dailyBuffers, onSave }) => {
     const [buffers, setBuffers] = useState({
@@ -455,22 +453,6 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
 
             {closure ? (
                 <div className="flex-1 flex flex-col justify-center items-center p-2 sm:p-3 bg-gradient-to-br from-red-50 via-red-100 to-red-50 relative">
-                    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                        {[...Array(15)].map((_, i) => (
-                            <circle
-                                key={i}
-                                cx={`${Math.random() * 100}%`}
-                                cy={`${Math.random() * 100}%`}
-                                r={`${Math.random() * 40 + 10}`}
-                                fill="rgba(239, 68, 68, 0.1)"
-                                className="animate-float"
-                                style={{
-                                    animationDuration: `${Math.random() * 20 + 20}s`,
-                                    animationDelay: `${i * -0.2}s`
-                                }}
-                            />
-                        ))}
-                    </svg>
                     <div className="relative z-10 flex flex-col items-center">
                         <div className="text-xl sm:text-2xl md:text-3xl font-bold text-red-600 mb-2">
                             CLOSED
@@ -481,8 +463,6 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
                             </div>
                         </div>
                     </div>
-                    <div className="absolute top-0 left-0 w-8 h-8 bg-red-200 rounded-br-full opacity-50"></div>
-                    <div className="absolute bottom-0 right-0 w-12 h-12 bg-red-200 rounded-tl-full opacity-50"></div>
                 </div>
             ) : (
                 <div className="flex-1 flex flex-col gap-1 p-1 sm:p-2 relative">
@@ -511,14 +491,21 @@ const PrepAllocations = () => {
     const [messages, setMessages] = useState([]);
     const [wakeLock, setWakeLock] = useState(null);
     const adjustmentsRef = useRef(adjustments);
-    const videoRef = useRef(null); // Ref for the video element
-    const containerRef = useRef(null)
+    const containerRef = useRef(null);
     const { user } = useAuth();
     const [showAdminView, setShowAdminView] = useState(false);
     const [showNextWeek, setShowNextWeek] = useState(false);
     const [salesProjectionConfig, setSalesProjectionConfig] = useState(null);
     const [futureProjections, setFutureProjections] = useState([]);
     const [dailyBuffers, setDailyBuffers] = useState([]);
+
+    // Memoize the current day calculation
+    const currentDay = useMemo(() => {
+        const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const now = new Date();
+        const dayIndex = now.getDay();
+        return days[(dayIndex + 6) % 7];
+    }, []);
 
     useEffect(() => {
         adjustmentsRef.current = adjustments;
@@ -543,137 +530,62 @@ const PrepAllocations = () => {
     useEffect(() => {
         requestWakeLock();
 
-        // Always start the video playback
-        const video = document.createElement('video');
-        video.src = playbackVid;
-        video.loop = true;
-        video.muted = true;
-        video.style.display = 'none';
-        document.body.appendChild(video);
-        videoRef.current = video; // Store the video element in the ref
-        video.play().catch(err => console.error('Video playback failed:', err));
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const [
+                    adjustmentsResponse,
+                    closuresResponse,
+                    messagesResponse,
+                    salesResponse,
+                    utpResponse,
+                    bufferResponse,
+                    configResponse,
+                    futureProjectionsResponse,
+                ] = await Promise.all([
+                    axiosInstance.get("/adjustment/data"),
+                    axiosInstance.get("/closure/plans"),
+                    axiosInstance.get("/messages"),
+                    axiosInstance.get("/sales"),
+                    axiosInstance.get("/upt"),
+                    axiosInstance.get("/buffer"),
+                    axiosInstance.get("/sales-projection-config"),
+                    axiosInstance.get("/projections/future"),
+                ]);
 
-        return () => {
-            if (wakeLock) {
-                wakeLock.release();
-            }
-            // Ensure the video is removed when the component unmounts
-            if (videoRef.current) {
-                document.body.removeChild(videoRef.current);
+                const salesData = salesResponse.data;
+                const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                const sortedSales = daysOrder.map((day) => salesData.find((entry) => entry.day === day) || { day, sales: 0 });
+
+                setData({
+                    sales: sortedSales,
+                    utp: utpResponse.data,
+                    buffer: bufferResponse.data,
+                });
+                setAdjustments(adjustmentsResponse.data);
+                setClosures(closuresResponse.data);
+                setMessages(messagesResponse.data);
+                setLastUpdated(new Date());
+                setSalesProjectionConfig(configResponse.data);
+                setFutureProjections(futureProjectionsResponse.data);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                // Consider setting an error state to display an error message to the user
+            } finally {
+                setLoading(false);
             }
         };
-    }, [requestWakeLock]);
-
-    useEffect(() => {
-        if (!wakeLock && 'wakeLock' in navigator) {
-            requestWakeLock();
-        }
-    }, [wakeLock, requestWakeLock]);
-
-    const getCurrentDay = useCallback(() => {
-        const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        const now = new Date();
-        const dayIndex = now.getDay();
-        return days[(dayIndex + 6) % 7];
-    }, []);
-
-    const toggleFullScreen = useCallback(() => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-            setIsFullScreen(true);
-            localStorage.setItem('isFullScreen', 'true');
-            if (containerRef.current) {
-                containerRef.current.classList.add('fullscreen');
-            }
-
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-                setIsFullScreen(false);
-                localStorage.setItem('isFullScreen', 'false');
-                if (containerRef.current) {
-                    containerRef.current.classList.remove('fullscreen');
-                }
-            }
-        }
-    }, []);
-
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const [
-                adjustmentsResponse,
-                closuresResponse,
-                messagesResponse,
-                salesResponse,
-                utpResponse,
-                bufferResponse,
-                configResponse,
-                futureProjectionsResponse,
-            ] = await Promise.all([
-                axiosInstance.get("/adjustment/data"),
-                axiosInstance.get("/closure/plans"),
-                axiosInstance.get("/messages"),
-                axiosInstance.get("/sales"),
-                axiosInstance.get("/upt"),
-                axiosInstance.get("/buffer"),
-                axiosInstance.get("/sales-projection-config"),
-                axiosInstance.get("/projections/future"),
-            ]);
-
-            const salesData = salesResponse.data;
-            const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-            const sortedSales = daysOrder.map((day) => salesData.find((entry) => entry.day === day) || { day, sales: 0 });
-
-            setData({
-                sales: sortedSales,
-                utp: utpResponse.data,
-                buffer: bufferResponse.data,
-            });
-            setAdjustments(adjustmentsResponse.data);
-            setClosures(closuresResponse.data);
-            setMessages(messagesResponse.data);
-            setLastUpdated(new Date());
-            setSalesProjectionConfig(configResponse.data);
-            setFutureProjections(futureProjectionsResponse.data);
-        } catch (error) {
-            console.error("Error fetching data:", error);
-            // Consider setting an error state to display an error message to the user
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const fetchDailyBuffers = useCallback(async () => {
-        try {
-            const response = await axiosInstance.get("/daily-buffer");
-            setDailyBuffers(response.data);
-        } catch (error) {
-            console.error("Error fetching daily buffers:", error);
-        }
-    }, []);
-
-    const handleAdjustBuffer = async (day, buffers) => {
-        try {
-            const promises = Object.entries(buffers).map(([productName, bufferPrcnt]) =>
-                axiosInstance.post("/daily-buffer", {
-                    day,
-                    productName,
-                    bufferPrcnt
-                })
-            );
-
-            await Promise.all(promises);
-            await fetchDailyBuffers();
-        } catch (error) {
-            console.error("Error updating daily buffers:", error);
-        }
-    };
-
-    useEffect(() => {
         fetchData();
+
+        const fetchDailyBuffers = async () => {
+            try {
+                const response = await axiosInstance.get("/daily-buffer");
+                setDailyBuffers(response.data);
+            } catch (error) {
+                console.error("Error fetching daily buffers:", error);
+            }
+        };
         fetchDailyBuffers();
-        requestWakeLock();
 
         const fetchInterval = setInterval(fetchData, 10 * 60 * 1000);
         const dailyBuffersInterval = setInterval(fetchDailyBuffers, 10 * 60 * 1000);
@@ -701,9 +613,8 @@ const PrepAllocations = () => {
             clearInterval(messagesInterval);
             document.removeEventListener('fullscreenchange', handleFullScreenChange);
         };
-    }, [fetchData, fetchDailyBuffers, requestWakeLock]);
+    }, []);
 
-    const currentDay = getCurrentDay();
     const calculatedData = useCalculatePrepData(
         data?.sales,
         data?.utp,
@@ -716,6 +627,52 @@ const PrepAllocations = () => {
     );
     const filteredClosures = useFilteredClosures(closures);
 
+    // Add toggleFullScreen function
+    const toggleFullScreen = useCallback(() => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            setIsFullScreen(true);
+            localStorage.setItem('isFullScreen', 'true');
+            if (containerRef.current) {
+                containerRef.current.classList.add('fullscreen');
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+                setIsFullScreen(false);
+                localStorage.setItem('isFullScreen', 'false');
+                if (containerRef.current) {
+                    containerRef.current.classList.remove('fullscreen');
+                }
+            }
+        }
+    }, []);
+
+    // Add handleAdjustBuffer function
+    const handleAdjustBuffer = useCallback(async (day, buffers) => {
+        try {
+            const updatedBuffers = Object.entries(buffers).map(([productName, bufferPrcnt]) => ({
+                day,
+                productName,
+                bufferPrcnt: Number(bufferPrcnt)
+            }));
+
+            await axiosInstance.post("/daily-buffer", updatedBuffers);
+
+            // Update local state
+            setDailyBuffers(prev => {
+                // Remove existing buffers for this day
+                const filtered = prev.filter(b => b.day !== day);
+                // Add new buffers
+                return [...filtered, ...updatedBuffers];
+            });
+
+            // Show success message or handle UI feedback here if needed
+        } catch (error) {
+            console.error("Error updating daily buffers:", error);
+            // Handle error state or show error message to user if needed
+        }
+    }, []);
 
     if (loading) {
         return (

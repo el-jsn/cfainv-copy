@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
-import * as xlsx from "xlsx";
+import ExcelJS from "exceljs";
 import axiosInstance from "./axiosInstance";
 import {
   Grid,
@@ -43,6 +43,7 @@ import {
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as ChartTooltip } from 'recharts';
+import * as XLSX from "xlsx";
 
 
 // Theming and Consistent Styling (Modern Theme)
@@ -583,10 +584,89 @@ const EnhancedUTPUpdate = () => {
     setDragActive(false);
   }, []);
 
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      handleFileUpload(file);
+    if (!file) return;
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (!worksheet) {
+        throw new Error('No worksheet found in the Excel file');
+      }
+
+      // Convert to JSON
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      // Extract metadata
+      const storeName = jsonData[2]?.['Sales Mix Report - Item Summary']?.replace("Store: ", "")?.split(",")[0] || "Unknown";
+      const reportTime = jsonData[1]?.['__EMPTY_1'] || "Unknown";
+      const reportPeriod = jsonData[0]?.['Sales Mix Report - Item Summary'];
+      const [reportStartDate, reportEndDate] = reportPeriod?.toString().split("through").map(d => d.replace("From", "").trim()) || ["Unknown", "Unknown"];
+
+      setReportMetadata({
+        storeName,
+        reportTime,
+        reportStartDate,
+        reportEndDate
+      });
+
+      // Process data rows
+      const processedRows = [];
+      for (let i = 7; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        // Skip summary rows
+        if ([41, 42, 43, 44, 45, 553, 554, 555, 556, 557, 772, 773, 774, 775, 776, 961, 962, 963, 964, 965, 1074, 1075, 1076, 1077, 1078, 1363, 1364].includes(i)) {
+          continue;
+        }
+
+        const itemName = row['__EMPTY'];
+        if (!itemName) continue;
+
+        const rowData = {
+          'Item Name': itemName,
+          'Total Count': parseInt(row['__EMPTY_4']) || 0,
+          'Promo Count': parseInt(row['__EMPTY_8']) || 0,
+          'Digital Count': parseInt(row['__EMPTY_10']) || 0,
+          'Sold Count': parseInt(row['__EMPTY_13']) || 0,
+          '# Sold Per 1000': parseFloat(row['__EMPTY_17']) || 0
+        };
+
+        processedRows.push(rowData);
+      }
+
+      if (processedRows.length === 0) {
+        throw new Error('No valid data found in the Excel file');
+      }
+
+      const parsedData = processedRows;
+      console.log("Parsed Data:", parsedData);
+
+      if (parsedData) {
+        const updatedUtpData = calculateUtps(parsedData);
+        const updatedPrepUtpData = calculatePrepUtps(parsedData)
+        setUtpData(updatedUtpData);
+        setPrepUtpData(updatedPrepUtpData);
+
+        calculateOverallMetrics(parsedData);
+
+        const analysis = analyzeSalesReport(parsedData);
+        setAnalysisResults(analysis);
+
+        const variance = calculateSalesVariance(parsedData);
+        setSalesVariance(variance);
+
+        setRawSalesData(parsedData);
+      }
+
+      setSelectedFile(file);
+      setError("");
+    } catch (err) {
+      console.error("Error reading Excel file:", err);
+      setError(err.message || "Error reading Excel file. Please ensure it's a valid Excel file with the correct format.");
+      setUtpData(null);
+      setSelectedFile(null);
     }
   };
 
