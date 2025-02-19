@@ -66,7 +66,16 @@ const TruckItems = () => {
     const [associatedItemSearch, setAssociatedItemSearch] = useState('');
     const [selectedItems, setSelectedItems] = useState(new Set());
     const [salesMixUploadDate, setSalesMixUploadDate] = useState(null);
-    const [salesMixReportingPeriod, setSalesMixReportingPeriod] = useState(null);
+    const [salesMixReportingPeriod, setSalesMixReportingPeriod] = useState({
+        startDate: '',
+        endDate: ''
+    });
+    const [reportMetadata, setReportMetadata] = useState({
+        storeName: "Unknown",
+        reportTime: "Unknown",
+        reportStartDate: "Unknown",
+        reportEndDate: "Unknown"
+    });
 
     // Add useEffect hooks for data fetching
     useEffect(() => {
@@ -141,7 +150,7 @@ const TruckItems = () => {
         return null;
     };
 
-    const parseExcelData = async (jsonData) => {
+    const parseExcelData = useCallback(async (jsonData) => {
         try {
             // Log the first few rows to understand the structure
             console.log('First few rows of data:', jsonData.slice(0, 10));
@@ -153,13 +162,19 @@ const TruckItems = () => {
             }
             console.log('Report period raw:', reportPeriod);
 
-            // Parse the date range more robustly
-            const dateMatch = reportPeriod.match(/From\s+(.*?)\s+through\s+(.*?)(?:\s|$)/i);
-            if (!dateMatch) {
+            // Parse the date range using the full string
+            const fullDateString = reportPeriod.replace('From ', '');
+            const [startDateFull, endDateFull] = fullDateString.split(' through ');
+
+            if (!startDateFull || !endDateFull) {
                 throw new Error('Could not parse date range from report header');
             }
-            const [_, startDate, endDate] = dateMatch;
-            console.log('Parsed dates:', { startDate, endDate });
+
+            // Set the reporting period with the full date strings
+            setSalesMixReportingPeriod({
+                startDate: startDateFull.trim(),
+                endDate: endDateFull.trim()
+            });
 
             // Clean and Structure Data
             const data_rows = [];
@@ -208,8 +223,8 @@ const TruckItems = () => {
             const response = await axiosInstance.post('/salesmix/upload', {
                 data: processedData,
                 reportingPeriod: {
-                    startDate: startDate.trim(),
-                    endDate: endDate.trim()
+                    startDate: startDateFull.trim(),
+                    endDate: endDateFull.trim()
                 }
             });
 
@@ -218,7 +233,7 @@ const TruckItems = () => {
             console.error('Error in parseExcelData:', error);
             throw new Error(`Failed to parse Excel file: ${error.message}`);
         }
-    };
+    }, []);
 
     const { getRootProps, getInputProps } = useDropzone({
         accept: {
