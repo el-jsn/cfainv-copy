@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Calendar, Clock, Info, ArrowLeft, CheckCircle } from "lucide-react";
+import { Calendar, Clock, Info, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
 import axiosInstance from "./axiosInstance";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 const ClosurePlannerComponent = () => {
   const navigate = useNavigate();
@@ -30,6 +31,25 @@ const ClosurePlannerComponent = () => {
     return Object.keys(errors).length === 0;
   };
 
+  const getExpiryDate = () => {
+    if (!formData.closureDate || !formData.duration.value) return null;
+
+    const date = new Date(formData.closureDate);
+    const daysToAdd = formData.duration.unit === "weeks"
+      ? formData.duration.value * 7
+      : formData.duration.value;
+
+    date.setDate(date.getDate() + parseInt(daysToAdd));
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -48,54 +68,73 @@ const ClosurePlannerComponent = () => {
       }, 2000);
     } catch (error) {
       console.error("Error submitting closure plan:", error);
+      setFormErrors(prev => ({ ...prev, submit: "Failed to submit. Please try again." }));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
-      <div className="max-w-4xl mx-auto pt-8">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/closure/plans')}
-          className="mb-6 flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200"
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          <ArrowLeft className="w-5 h-5 mr-2" />
-          Back to Closure Plans
-        </button>
+          <button
+            onClick={() => navigate('/closure/plans')}
+            className="mb-6 flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Back to Closure Plans
+          </button>
 
-        {/* Main Form Card */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden backdrop-blur-lg backdrop-filter">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-6 px-8">
-            <div className="flex items-center space-x-4">
-              <Calendar className="w-8 h-8" />
-              <div>
-                <h2 className="text-2xl font-bold">Plan Store Closure</h2>
-                <p className="text-blue-100 mt-1">Schedule a new store closure period</p>
-              </div>
-            </div>
+          <AnimatePresence>
+            {showSuccess && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-6 bg-green-50 text-green-800 rounded-lg p-4 flex items-center"
+              >
+                <CheckCircle className="w-5 h-5 mr-3 text-green-500" />
+                <span>Closure plan created successfully!</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="bg-white rounded-xl shadow-sm overflow-hidden"
+        >
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-8 mb-6">
+            <h1 className="text-2xl font-bold text-white mb-2">Create Closure Plan</h1>
+            <p className="text-blue-100">Schedule a new period of store closure</p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-8 space-y-8">
-            {/* Date Field */}
-            <div className="group">
+          <form onSubmit={handleSubmit} className="p-6 space-y-8">
+            {/* Date Selection */}
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                <Calendar className="mr-2 w-5 h-5 text-blue-500" /> 
+                <Calendar className="w-5 h-5 mr-2 text-blue-500" />
                 Closure Date
               </label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={formData.closureDate}
                 onChange={(e) => setFormData(prev => ({ ...prev, closureDate: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                          transition-all duration-200 outline-none hover:border-blue-300"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                          transition-all duration-200 hover:border-blue-300"
+                min={new Date().toISOString().split('T')[0]}
               />
               {formErrors.closureDate && (
-                <p className="text-red-500 text-sm mt-2 flex items-center">
-                  <Info className="w-4 h-4 mr-1" /> {formErrors.closureDate}
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {formErrors.closureDate}
                 </p>
               )}
             </div>
@@ -103,20 +142,21 @@ const ClosurePlannerComponent = () => {
             {/* Reason Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                <Info className="mr-2 w-5 h-5 text-blue-500" /> 
+                <Info className="w-5 h-5 mr-2 text-blue-500" />
                 Reason for Closure
               </label>
-              <textarea 
+              <textarea
                 value={formData.reason}
                 onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                          transition-all duration-200 outline-none hover:border-blue-300 resize-none"
-                rows="3"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                          transition-all duration-200 hover:border-blue-300 resize-none"
+                rows="4"
                 placeholder="Enter the reason for store closure..."
               />
               {formErrors.reason && (
-                <p className="text-red-500 text-sm mt-2 flex items-center">
-                  <Info className="w-4 h-4 mr-1" /> {formErrors.reason}
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {formErrors.reason}
                 </p>
               )}
             </div>
@@ -124,98 +164,83 @@ const ClosurePlannerComponent = () => {
             {/* Duration Fields */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                <Clock className="mr-2 w-5 h-5 text-blue-500" />
+                <Clock className="w-5 h-5 mr-2 text-blue-500" />
                 Duration
               </label>
               <div className="grid grid-cols-2 gap-4">
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   placeholder="Duration"
                   min="1"
                   value={formData.duration.value}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    duration: { ...prev.duration, value: e.target.value } 
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    duration: { ...prev.duration, value: e.target.value }
                   }))}
-                  className="px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                            transition-all duration-200 outline-none hover:border-blue-300"
+                  className="px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                            transition-all duration-200 hover:border-blue-300"
                 />
-                <select 
+                <select
                   value={formData.duration.unit}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    duration: { ...prev.duration, unit: e.target.value } 
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    duration: { ...prev.duration, unit: e.target.value }
                   }))}
-                  className="px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                            transition-all duration-200 outline-none hover:border-blue-300 bg-white"
+                  className="px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                            transition-all duration-200 hover:border-blue-300 bg-white"
                 >
                   <option value="days">Days</option>
                   <option value="weeks">Weeks</option>
                 </select>
               </div>
               {formErrors.duration && (
-                <p className="text-red-500 text-sm mt-2 flex items-center">
-                  <Info className="w-4 h-4 mr-1" /> {formErrors.duration}
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {formErrors.duration}
                 </p>
               )}
             </div>
 
-            {/* Submit Button */}
-            <button 
-              type="submit" 
+            {/* Expiry Preview */}
+            {getExpiryDate() && (
+              <div className="bg-gray-50 rounded-lg p-4 flex items-start space-x-3">
+                <Calendar className="w-5 h-5 text-blue-500 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Closure will end on:</p>
+                  <p className="text-sm text-gray-600">{getExpiryDate()}</p>
+                </div>
+              </div>
+            )}
+
+            {formErrors.submit && (
+              <div className="bg-red-50 text-red-800 rounded-lg p-4 flex items-center">
+                <AlertCircle className="w-5 h-5 mr-3 text-red-500" />
+                <span>{formErrors.submit}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
               disabled={isSubmitting}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-lg font-medium
-                       hover:from-blue-700 hover:to-blue-800 transition-all duration-300 transform hover:scale-[1.02]
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-lg font-medium
+                       hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-[1.02]
                        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Submitting...
+                  Creating Plan...
                 </span>
               ) : (
-                "Submit Closure Plan"
+                "Create Closure Plan"
               )}
             </button>
           </form>
-        </div>
+        </motion.div>
       </div>
-
-      {/* Success Modal */}
-      {showSuccess && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 flex items-center space-x-4 transform animate-scale-in">
-            <div className="bg-green-100 p-3 rounded-full">
-              <CheckCircle className="w-8 h-8 text-green-500" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900">Success!</h3>
-              <p className="text-gray-600">Closure plan has been submitted</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
-
-// Add these animations to your global CSS or tailwind config
-const style = `
-  @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes scale-in {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
-  .animate-fade-in {
-    animation: fade-in 0.2s ease-out;
-  }
-  .animate-scale-in {
-    animation: scale-in 0.2s ease-out;
-  }
-`;
 
 export default ClosurePlannerComponent;

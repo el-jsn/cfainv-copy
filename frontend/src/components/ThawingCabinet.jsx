@@ -262,7 +262,8 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
   }, [closures, entry.day]);
 
   const dayMessages = useMemo(() => {
-    return messages.filter(msg => msg.day === entry.day);
+    // Filter out messages with [PREP] tag
+    return messages.filter(msg => msg.day === entry.day && !msg.message.startsWith("[PREP]"));
   }, [messages, entry.day]);
 
   const productMessages = useMemo(() => {

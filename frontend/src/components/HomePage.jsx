@@ -689,10 +689,10 @@ const HomePage = () => {
         </div>
 
         {/* Charts Section with Modern Design */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
           {/* UPTs Chart */}
           {renderAdminSection(
-            <Card className="lg:col-span-1 transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
+            <Card className="lg:col-span-5 transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
               <CardHeader floated={false} shadow={false} className="rounded-none">
                 <div className="flex items-center justify-between p-6">
                   <div>
@@ -717,7 +717,7 @@ const HomePage = () => {
           )}
 
           {/* Sales Projection Chart */}
-          <Card className="lg:col-span-2 transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
+          <Card className="lg:col-span-7 transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
             <CardHeader floated={false} shadow={false} className="rounded-none">
               <div className="flex items-center justify-between p-6">
                 <div>

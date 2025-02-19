@@ -9,43 +9,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  tableCellClasses,
   Chip,
   IconButton,
   Tooltip,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { Info, TrendingUp, TrendingDown } from "lucide-react";
-
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  [`&.${tableCellClasses.head}`]: {
-    backgroundColor: 'transparent',
-    color: theme.palette.grey[600],
-    fontWeight: 500,
-    fontSize: '0.875rem',
-    borderBottom: `1px solid ${theme.palette.grey[200]}`,
-    padding: '12px 16px',
-  },
-  [`&.${tableCellClasses.body}`]: {
-    fontSize: '0.875rem',
-    padding: '16px',
-    color: theme.palette.grey[800],
-  },
-}));
-
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  '&:hover': {
-    backgroundColor: theme.palette.grey[50],
-  },
-  '& td': {
-    borderBottom: `1px solid ${theme.palette.grey[100]}`,
-  },
-  transition: 'all 150ms ease-in-out',
-}));
 
 const CategoryChip = styled(Chip)(({ theme, selected }) => ({
   borderRadius: '6px',
@@ -58,6 +27,44 @@ const CategoryChip = styled(Chip)(({ theme, selected }) => ({
   },
   marginRight: '8px',
   cursor: 'pointer',
+}));
+
+const StyledTableCell = styled(TableCell)(({ theme }) => ({
+  borderBottom: `1px solid ${theme.palette.grey[100]}`,
+  padding: '16px',
+  '&.header': {
+    backgroundColor: theme.palette.grey[50],
+    color: theme.palette.grey[700],
+    fontWeight: 600,
+    fontSize: '0.875rem',
+    whiteSpace: 'nowrap',
+  },
+}));
+
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  '&:hover': {
+    backgroundColor: theme.palette.grey[50],
+  },
+  transition: 'background-color 150ms ease-in-out',
+}));
+
+const TrendChip = styled(Box)(({ theme, trend }) => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '4px 8px',
+  borderRadius: '6px',
+  fontSize: '0.875rem',
+  fontWeight: 500,
+  backgroundColor: trend === 'up'
+    ? theme.palette.success.soft
+    : trend === 'down'
+      ? theme.palette.error.soft
+      : theme.palette.grey[100],
+  color: trend === 'up'
+    ? theme.palette.success.main
+    : trend === 'down'
+      ? theme.palette.error.main
+      : theme.palette.grey[600],
 }));
 
 const EnhancedChart = ({
@@ -136,7 +143,7 @@ const EnhancedChart = ({
               {subtitle}
             </Typography>
           </Box>
-          <Tooltip title="UTP values help determine product usage per thousand dollars in sales">
+          <Tooltip title="UPT values help determine product usage per thousand dollars in sales">
             <IconButton size="small">
               <Info size={18} />
             </IconButton>
@@ -161,42 +168,43 @@ const EnhancedChart = ({
           />
         </Box>
 
-        <TableContainer sx={{ borderRadius: 2, backgroundColor: '#ffffff' }}>
+        <TableContainer>
           <Table>
             <TableHead>
               <TableRow>
-                <StyledTableCell>Product Name</StyledTableCell>
-                <StyledTableCell align="right">UTP Value</StyledTableCell>
-                <StyledTableCell align="right">Trend</StyledTableCell>
+                <StyledTableCell className="header">Product Name</StyledTableCell>
+                <StyledTableCell className="header" align="right">UPT Value</StyledTableCell>
+                <StyledTableCell className="header" align="right">Trend</StyledTableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {selectedData.map((item) => (
                 <StyledTableRow key={item._id}>
-                  <StyledTableCell component="th" scope="row">
-                    {item.productName}
+                  <StyledTableCell>
+                    <Typography variant="body2" fontWeight={500}>
+                      {item.productName}
+                    </Typography>
                   </StyledTableCell>
                   <StyledTableCell align="right">
-                    {item.utp.toFixed(3)}
+                    <Typography variant="body2" fontWeight={600}>
+                      {item.utp.toFixed(3)}
+                    </Typography>
                   </StyledTableCell>
                   <StyledTableCell align="right">
-                    <Box display="flex" alignItems="center" justifyContent="flex-end" gap={1}>
-                      {item.trend === 'up' ? (
-                        <TrendingUp size={16} color="#10B981" />
-                      ) : item.trend === 'down' ? (
-                        <TrendingDown size={16} color="#EF4444" />
-                      ) : (
-                        <span>-</span>
-                      )}
-                      {item.trend !== 'none' && (
-                        <Typography
-                          variant="body2"
-                          color={item.trend === 'up' ? 'success.main' : 'error.main'}
-                        >
-                          {item.trendDisplay}
-                        </Typography>
-                      )}
-                    </Box>
+                    {item.trend !== 'none' ? (
+                      <TrendChip trend={item.trend}>
+                        {item.trend === 'up' ? (
+                          <TrendingUp size={16} className="mr-1" />
+                        ) : (
+                          <TrendingDown size={16} className="mr-1" />
+                        )}
+                        {item.trendDisplay}
+                      </TrendChip>
+                    ) : (
+                      <TrendChip trend="none">
+                        --
+                      </TrendChip>
+                    )}
                   </StyledTableCell>
                 </StyledTableRow>
               ))}

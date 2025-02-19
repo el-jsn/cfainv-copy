@@ -88,7 +88,7 @@ const DeleteZone = ({ isOver, onDrop }) => (
 const DayColumn = ({ day, config, onConfigChange }) => {
     const [isOver, setIsOver] = useState(false);
     const [editingDay, setEditingDay] = useState(null);
-    const [editValue, setEditValue] = useState(100);
+    const [editValue, setEditValue] = useState("");
 
     const getAssignments = () => {
         return Object.entries(config[day] || {})
@@ -121,20 +121,53 @@ const DayColumn = ({ day, config, onConfigChange }) => {
     };
 
     const handleValueChange = (sourceDay, newValue) => {
-        const value = Math.min(100, Math.max(0, Number(newValue) || 0));
-        const newConfig = JSON.parse(JSON.stringify(config));
-        if (!newConfig[day]) {
-            newConfig[day] = {};
+        // Allow empty string for editing
+        if (newValue === "") {
+            setEditValue("");
+            return;
         }
-        newConfig[day][sourceDay] = value;
-        onConfigChange(newConfig);
+
+        // Parse the number and clamp between 0 and 100
+        const value = Math.min(100, Math.max(0, Number(newValue) || 0));
+        setEditValue(value.toString());
+    };
+
+    const handleValueBlur = (sourceDay) => {
+        // Only update if we have a value
+        if (editValue !== "") {
+            const value = Math.min(100, Math.max(0, Number(editValue) || 0));
+            const newConfig = JSON.parse(JSON.stringify(config));
+            if (!newConfig[day]) {
+                newConfig[day] = {};
+            }
+            newConfig[day][sourceDay] = value;
+            onConfigChange(newConfig);
+        }
+        setEditingDay(null);
+        setEditValue("");
+    };
+
+    const handleValueKeyDown = (e, sourceDay) => {
+        if (e.key === 'Enter') {
+            handleValueBlur(sourceDay);
+        } else if (e.key === 'Escape') {
+            setEditingDay(null);
+            setEditValue("");
+        }
+    };
+
+    const startEditing = (sourceDay, currentValue) => {
+        setEditingDay(sourceDay);
+        setEditValue(currentValue.toString());
     };
 
     return (
         <div
             onDragOver={(e) => {
-                e.preventDefault();
-                setIsOver(true);
+                if (!editingDay) {  // Only allow drag when not editing
+                    e.preventDefault();
+                    setIsOver(true);
+                }
             }}
             onDragLeave={() => setIsOver(false)}
             onDrop={handleDrop}
@@ -148,32 +181,37 @@ const DayColumn = ({ day, config, onConfigChange }) => {
                 {getAssignments().map(({ day: sourceDay, value }) => (
                     <div
                         key={sourceDay}
-                        draggable
+                        draggable={editingDay !== sourceDay}
                         onDragStart={(e) => {
-                            e.dataTransfer.setData('sourceDay', sourceDay);
-                            e.dataTransfer.setData('targetDay', day);
-                            e.dataTransfer.setData('value', value);
+                            if (editingDay !== sourceDay) {
+                                e.dataTransfer.setData('sourceDay', sourceDay);
+                                e.dataTransfer.setData('targetDay', day);
+                                e.dataTransfer.setData('value', value);
+                            }
                         }}
-                        className="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm hover:shadow-md cursor-grab"
+                        className={`
+                            flex items-center justify-between p-2 bg-white rounded-lg shadow-sm 
+                            ${editingDay !== sourceDay ? 'hover:shadow-md cursor-grab' : ''}
+                        `}
                     >
                         <span className="text-sm font-medium">{sourceDay}</span>
                         {editingDay === sourceDay ? (
                             <input
-                                type="number"
-                                value={value}
+                                type="text"
+                                value={editValue}
                                 onChange={(e) => handleValueChange(sourceDay, e.target.value)}
-                                onBlur={() => setEditingDay(null)}
+                                onBlur={() => handleValueBlur(sourceDay)}
+                                onKeyDown={(e) => handleValueKeyDown(e, sourceDay)}
                                 autoFocus
-                                className="w-16 text-right text-sm font-bold text-blue-600 border rounded px-1"
-                                min="0"
-                                max="100"
+                                className="w-16 text-right text-sm font-bold text-blue-600 border rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onClick={(e) => e.stopPropagation()}
                             />
                         ) : (
                             <span
                                 className="text-sm text-blue-600 font-bold cursor-pointer hover:bg-blue-50 px-2 py-1 rounded"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    setEditingDay(sourceDay);
+                                    startEditing(sourceDay, value);
                                 }}
                             >
                                 {value}%

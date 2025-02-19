@@ -1,11 +1,12 @@
 // src/components/PrepAllocations.js
 
-import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from "react";
+import React, { useState, useCallback, useRef, memo, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Clock, Maximize, Minimize, Settings } from "lucide-react";
 import axiosInstance from "./axiosInstance";
 import { ArrowBackIos } from "@mui/icons-material";
 import { useAuth } from "./AuthContext";
+import useSWR from 'swr';
 
 const BufferAdjustmentModal = memo(({ isOpen, onClose, day, dailyBuffers, onSave }) => {
     const [buffers, setBuffers] = useState({
@@ -89,7 +90,7 @@ const BufferAdjustmentModal = memo(({ isOpen, onClose, day, dailyBuffers, onSave
     ) : null;
 });
 
-const useCalculatePrepData = (salesData, utpData, bufferData, adjustments, salesProjectionConfig, futureProjections, isNextWeek, dailyBuffers) => {
+const useCalculatePrepData = (salesData, utpData, bufferData, adjustments = [], salesProjectionConfig = null, futureProjections = [], isNextWeek = false, dailyBuffers = []) => {
     return useMemo(() => {
         if (!salesData || !utpData || !bufferData) return [];
 
@@ -272,16 +273,17 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
     }, [closures, entry.day]);
 
     const dayMessages = useMemo(() => {
-        return messages.filter(msg => msg.day === entry.day);
+        // Only include messages with [PREP] tag
+        return messages.filter(msg => msg.day === entry.day && msg.message.startsWith("[PREP]"));
     }, [messages, entry.day]);
 
     const productMessages = useMemo(() => {
         return dayMessages.filter(msg => msg.products);
-    }, [dayMessages])
+    }, [dayMessages]);
 
     const noProductMessages = useMemo(() => {
         return dayMessages.filter(msg => !msg.products || msg.products === "");
-    }, [dayMessages])
+    }, [dayMessages]);
 
     const productsMap = useMemo(() => {
         return {
@@ -379,7 +381,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
                                     key={index}
                                     className="text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200"
                                 >
-                                    {msg.message}
+                                    {msg.message.substring(6).trim()}
                                 </div>
                             ))}
                         </div>
@@ -446,7 +448,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
                 {showAdminView && renderSalesDetails()}
                 {noProductMessages.map((msg, index) => (
                     <div key={index} className="mt-1 text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200">
-                        {msg.message}
+                        {msg.message.substring(6).trim()}
                     </div>
                 ))}
             </div>
@@ -482,22 +484,12 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
 });
 
 const PrepAllocations = () => {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [lastUpdated, setLastUpdated] = useState(new Date());
     const [isFullScreen, setIsFullScreen] = useState(false);
-    const [adjustments, setAdjustments] = useState([]);
-    const [closures, setClosures] = useState([]);
-    const [messages, setMessages] = useState([]);
-    const [wakeLock, setWakeLock] = useState(null);
-    const adjustmentsRef = useRef(adjustments);
-    const containerRef = useRef(null);
-    const { user } = useAuth();
     const [showAdminView, setShowAdminView] = useState(false);
     const [showNextWeek, setShowNextWeek] = useState(false);
-    const [salesProjectionConfig, setSalesProjectionConfig] = useState(null);
-    const [futureProjections, setFutureProjections] = useState([]);
-    const [dailyBuffers, setDailyBuffers] = useState([]);
+    const [wakeLock, setWakeLock] = useState(null);
+    const containerRef = useRef(null);
+    const { user } = useAuth();
 
     // Memoize the current day calculation
     const currentDay = useMemo(() => {
@@ -507,9 +499,87 @@ const PrepAllocations = () => {
         return days[(dayIndex + 6) % 7];
     }, []);
 
-    useEffect(() => {
-        adjustmentsRef.current = adjustments;
-    }, [adjustments]);
+    // SWR fetcher function
+    const fetcher = useCallback(async (url) => {
+        try {
+            const response = await axiosInstance.get(url);
+            return response.data;
+        } catch (error) {
+            console.error(`Error fetching ${url}:`, error);
+            throw error;
+        }
+    }, []);
+
+    // Data fetching hooks
+    const { data: salesData, error: salesError } = useSWR("/sales", fetcher, {
+        refreshInterval: 10 * 60 * 1000,
+        shouldRetryOnError: true,
+        errorRetryCount: 3
+    });
+
+    const { data: utpData, error: utpError } = useSWR("/upt", fetcher, {
+        refreshInterval: 10 * 60 * 1000,
+        shouldRetryOnError: true,
+        errorRetryCount: 3
+    });
+
+    const { data: bufferData, error: bufferError } = useSWR("/buffer", fetcher, {
+        refreshInterval: 10 * 60 * 1000,
+        shouldRetryOnError: true,
+        errorRetryCount: 3
+    });
+
+    const { data: adjustments, error: adjustmentsError } = useSWR("/adjustment/data", fetcher, {
+        refreshInterval: 5 * 60 * 1000
+    });
+
+    const { data: closures, error: closuresError } = useSWR("/closure/plans", fetcher, {
+        refreshInterval: 10 * 60 * 1000
+    });
+
+    const { data: messages, error: messagesError } = useSWR("/messages", fetcher, {
+        refreshInterval: 5 * 60 * 1000
+    });
+
+    const { data: salesProjectionConfig, error: configError } = useSWR("/sales-projection-config", fetcher, {
+        refreshInterval: 10 * 60 * 1000
+    });
+
+    const { data: futureProjections, error: projectionsError } = useSWR("/projections/future", fetcher, {
+        refreshInterval: 10 * 60 * 1000
+    });
+
+    const { data: dailyBuffers, error: buffersError, mutate: mutateDailyBuffers } = useSWR("/daily-buffer", fetcher, {
+        refreshInterval: 10 * 60 * 1000
+    });
+
+    // Transform sales data with null check
+    const sortedSales = useMemo(() => {
+        if (!Array.isArray(salesData)) return [];
+        const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        return daysOrder.map((day) => salesData.find((entry) => entry?.day === day) || { day, sales: 0 });
+    }, [salesData]);
+
+    // Prepare data object with null checks
+    const data = useMemo(() => ({
+        sales: Array.isArray(sortedSales) ? sortedSales : [],
+        utp: Array.isArray(utpData) ? utpData : [],
+        buffer: Array.isArray(bufferData) ? bufferData : []
+    }), [sortedSales, utpData, bufferData]);
+
+    // Calculate data with null checks
+    const calculatedData = useCalculatePrepData(
+        data.sales,
+        data.utp,
+        data.buffer,
+        Array.isArray(adjustments) ? adjustments : [],
+        salesProjectionConfig || null,
+        Array.isArray(futureProjections) ? futureProjections : [],
+        showNextWeek,
+        Array.isArray(dailyBuffers) ? dailyBuffers : []
+    );
+
+    const filteredClosures = useFilteredClosures(Array.isArray(closures) ? closures : []);
 
     const requestWakeLock = useCallback(async () => {
         if ('wakeLock' in navigator) {
@@ -527,71 +597,8 @@ const PrepAllocations = () => {
         }
     }, []);
 
-    useEffect(() => {
+    React.useEffect(() => {
         requestWakeLock();
-
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const [
-                    adjustmentsResponse,
-                    closuresResponse,
-                    messagesResponse,
-                    salesResponse,
-                    utpResponse,
-                    bufferResponse,
-                    configResponse,
-                    futureProjectionsResponse,
-                ] = await Promise.all([
-                    axiosInstance.get("/adjustment/data"),
-                    axiosInstance.get("/closure/plans"),
-                    axiosInstance.get("/messages"),
-                    axiosInstance.get("/sales"),
-                    axiosInstance.get("/upt"),
-                    axiosInstance.get("/buffer"),
-                    axiosInstance.get("/sales-projection-config"),
-                    axiosInstance.get("/projections/future"),
-                ]);
-
-                const salesData = salesResponse.data;
-                const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-                const sortedSales = daysOrder.map((day) => salesData.find((entry) => entry.day === day) || { day, sales: 0 });
-
-                setData({
-                    sales: sortedSales,
-                    utp: utpResponse.data,
-                    buffer: bufferResponse.data,
-                });
-                setAdjustments(adjustmentsResponse.data);
-                setClosures(closuresResponse.data);
-                setMessages(messagesResponse.data);
-                setLastUpdated(new Date());
-                setSalesProjectionConfig(configResponse.data);
-                setFutureProjections(futureProjectionsResponse.data);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-                // Consider setting an error state to display an error message to the user
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-
-        const fetchDailyBuffers = async () => {
-            try {
-                const response = await axiosInstance.get("/daily-buffer");
-                setDailyBuffers(response.data);
-            } catch (error) {
-                console.error("Error fetching daily buffers:", error);
-            }
-        };
-        fetchDailyBuffers();
-
-        const fetchInterval = setInterval(fetchData, 10 * 60 * 1000);
-        const dailyBuffersInterval = setInterval(fetchDailyBuffers, 10 * 60 * 1000);
-        const adjustmentsInterval = setInterval(() => axiosInstance.get("/adjustment/data").then(res => setAdjustments(res.data)).catch(err => console.error("Error fetching adjustments:", err)), 5 * 60 * 1000);
-        const closuresInterval = setInterval(() => axiosInstance.get("/closure/plans").then(res => setClosures(res.data)).catch(err => console.error("Error fetching closures:", err)), 10 * 60 * 1000);
-        const messagesInterval = setInterval(() => axiosInstance.get("/messages").then(res => setMessages(res.data)).catch(err => console.error("Error fetching messages:", err)), 5 * 60 * 1000);
 
         const storedFullScreenPreference = localStorage.getItem('isFullScreen');
         if (storedFullScreenPreference === 'true' && !document.fullscreenElement) {
@@ -606,26 +613,9 @@ const PrepAllocations = () => {
         document.addEventListener('fullscreenchange', handleFullScreenChange);
 
         return () => {
-            clearInterval(fetchInterval);
-            clearInterval(dailyBuffersInterval);
-            clearInterval(adjustmentsInterval);
-            clearInterval(closuresInterval);
-            clearInterval(messagesInterval);
             document.removeEventListener('fullscreenchange', handleFullScreenChange);
         };
     }, []);
-
-    const calculatedData = useCalculatePrepData(
-        data?.sales,
-        data?.utp,
-        data?.buffer,
-        adjustments,
-        salesProjectionConfig,
-        futureProjections,
-        showNextWeek,
-        dailyBuffers
-    );
-    const filteredClosures = useFilteredClosures(closures);
 
     // Add toggleFullScreen function
     const toggleFullScreen = useCallback(() => {
@@ -658,26 +648,55 @@ const PrepAllocations = () => {
             }));
 
             await axiosInstance.post("/daily-buffer", updatedBuffers);
+            await mutateDailyBuffers();
 
-            // Update local state
-            setDailyBuffers(prev => {
-                // Remove existing buffers for this day
-                const filtered = prev.filter(b => b.day !== day);
-                // Add new buffers
-                return [...filtered, ...updatedBuffers];
-            });
-
-            // Show success message or handle UI feedback here if needed
         } catch (error) {
             console.error("Error updating daily buffers:", error);
-            // Handle error state or show error message to user if needed
         }
-    }, []);
+    }, [mutateDailyBuffers]);
 
-    if (loading) {
+    // Check for loading state
+    const isLoading = !salesData || !utpData || !bufferData;
+
+    // Check for errors
+    const errors = [
+        salesError, utpError, bufferError, adjustmentsError,
+        closuresError, messagesError, configError, projectionsError,
+        buffersError
+    ].filter(Boolean);
+
+    if (isLoading) {
         return (
             <div className="fixed top-0 left-0 w-full h-full bg-gray-100 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-b-4 border-blue-500"></div>
+            </div>
+        );
+    }
+
+    if (errors.length > 0) {
+        return (
+            <div className="fixed top-0 left-0 w-full h-full bg-gray-100 flex items-center justify-center">
+                <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg">
+                    <h2 className="text-xl font-bold text-red-600 mb-4">Error Loading Data</h2>
+                    <p className="text-gray-600 mb-4">
+                        There was an error loading some of the required data. Please try refreshing the page or contact support if the problem persists.
+                    </p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+                    >
+                        Refresh Page
+                    </button>
+                    {process.env.NODE_ENV === 'development' && (
+                        <div className="mt-4 p-4 bg-gray-100 rounded overflow-auto">
+                            <pre className="text-xs text-red-500">
+                                {errors.map((error, index) => (
+                                    <div key={index}>{error.message}</div>
+                                ))}
+                            </pre>
+                        </div>
+                    )}
+                </div>
             </div>
         );
     }
@@ -722,7 +741,7 @@ const PrepAllocations = () => {
                         <div className="flex items-center gap-1 sm:gap-2 bg-gray-50 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm">
                             <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
                             <span className="text-gray-600 font-medium whitespace-nowrap">
-                                Updated: {lastUpdated.toLocaleTimeString()}
+                                Updated: {new Date().toLocaleTimeString()}
                             </span>
                         </div>
                         <button

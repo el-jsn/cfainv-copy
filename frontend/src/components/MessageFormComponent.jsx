@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, Package } from "lucide-react";
+import { CheckCircle, Package, ArrowLeft, Calendar, Clock, Info } from "lucide-react";
 import axiosInstance from "./axiosInstance";
 import {
   Container,
@@ -16,35 +16,83 @@ import {
   Paper,
   Alert,
   Collapse,
-  InputAdornment,
-  Modal,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Checkbox,
+  Tooltip,
+  IconButton,
+  Chip,
+  Divider,
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { blue, green } from "@mui/material/colors";
+import { blue, green, grey } from "@mui/material/colors";
 
 const theme = createTheme({
   palette: {
-    primary: blue,
-    secondary: green,
+    primary: {
+      main: blue[600],
+      light: blue[400],
+      dark: blue[800],
+    },
+    secondary: {
+      main: green[600],
+      light: green[400],
+      dark: green[800],
+    },
     background: {
-      default: "#f0f8ff",
-      paper: "#fff",
+      default: "#f8fafc",
+      paper: "#ffffff",
     },
   },
   typography: {
-    fontFamily: "'Roboto', sans-serif",
+    fontFamily: "'Inter', 'Roboto', sans-serif",
+    h4: {
+      fontWeight: 700,
+      color: grey[900],
+    },
+    h6: {
+      fontWeight: 600,
+      color: grey[800],
+    },
+    subtitle1: {
+      color: grey[700],
+    },
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: "none",
+          borderRadius: 8,
+          padding: "10px 24px",
+          fontSize: "0.95rem",
+        },
+        contained: {
+          boxShadow: "none",
+          "&:hover": {
+            boxShadow: "none",
+          },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 16,
+          boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          "& .MuiOutlinedInput-root": {
+            borderRadius: 8,
+          },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
         },
       },
     },
@@ -66,9 +114,28 @@ const MessageFormComponent = () => {
     duration: { value: "", unit: "days" },
   });
   const [formErrors, setFormErrors] = useState({});
-  const [openModal, setOpenModal] = useState(false);
   const [selectedDays, setSelectedDays] = useState([]);
-  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  const getExpiryDate = () => {
+    if (!formData.duration.value || isNaN(formData.duration.value)) {
+      return null;
+    }
+
+    const now = new Date();
+    const daysToAdd = formData.duration.unit === "weeks"
+      ? formData.duration.value * 7
+      : formData.duration.value;
+
+    now.setDate(now.getDate() + parseInt(daysToAdd));
+    return now.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   const validateForm = () => {
     const errors = {};
@@ -85,15 +152,12 @@ const MessageFormComponent = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleOpenModal = () => setOpenModal(true);
-  const handleCloseModal = () => setOpenModal(false);
-
-  const handleToggleDay = (day) => {
-    if (selectedDays.includes(day)) {
-      setSelectedDays(selectedDays.filter((d) => d !== day));
-    } else {
-      setSelectedDays([...selectedDays, day]);
-    }
+  const handleDayToggle = (day) => {
+    setSelectedDays((prev) =>
+      prev.includes(day)
+        ? prev.filter((d) => d !== day)
+        : [...prev, day]
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -117,17 +181,16 @@ const MessageFormComponent = () => {
       .filter(Boolean)
       .join(" and ");
 
-    const dataToSend = {
-      product: formData.product,
-      message: messageString,
-      durationInSeconds,
-    };
-    try {
-      const daysToUse = selectedDays.length > 0 ? selectedDays : [formData.day];
+    const daysToProcess = selectedDays.length > 0 ? selectedDays : [formData.day];
 
-      for (const day of daysToUse) {
-        const dataToSendPerDay = { ...dataToSend, day: day };
-        await axiosInstance.post("/adjustment/data", dataToSendPerDay);
+    try {
+      for (const day of daysToProcess) {
+        await axiosInstance.post("/adjustment/data", {
+          day,
+          product: formData.product,
+          message: messageString,
+          durationInSeconds,
+        });
       }
       setShowSuccess(true);
       setTimeout(() => {
@@ -135,81 +198,8 @@ const MessageFormComponent = () => {
       }, 2000);
     } catch (error) {
       console.error("Error submitting data:", error);
+      setFormErrors({ submit: "Failed to submit. Please try again." });
     }
-  };
-
-  const handleBulkAdd = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
-    const durationInSeconds =
-      formData.duration.unit === "weeks"
-        ? formData.duration.value * 7 * 24 * 60 * 60
-        : formData.duration.value * 24 * 60 * 60;
-
-    const messageString = [
-      formData.message.casesQuantity
-        ? `${formData.message.casesOperation}${formData.message.casesQuantity} cases`
-        : null,
-      formData.message.bagsQuantity
-        ? `${formData.message.bagsOperation}${formData.message.bagsQuantity} bags`
-        : null,
-    ]
-      .filter(Boolean)
-      .join(" and ");
-
-
-    const dataToSend = {
-      product: formData.product,
-      message: messageString,
-      durationInSeconds,
-    };
-    try {
-      for (const day of selectedDays) {
-        const dataToSendPerDay = { ...dataToSend, day: day };
-        await axiosInstance.post("/adjustment/data", dataToSendPerDay);
-      }
-      setShowSuccess(true);
-      handleCloseModal();
-      setTimeout(() => {
-        navigate("/data/message/all");
-      }, 2000);
-    } catch (error) {
-      console.error("Error submitting data:", error);
-    }
-  };
-
-  const generateSummary = () => {
-    const casesText = formData.message.casesQuantity
-      ? `${formData.message.casesOperation}${formData.message.casesQuantity} cases`
-      : "";
-    const bagsText = formData.message.bagsQuantity
-      ? `${formData.message.bagsOperation}${formData.message.bagsQuantity} bags`
-      : "";
-    const adjustmentText = [casesText, bagsText].filter(Boolean).join(" and ");
-
-    const futureDate = new Date();
-    const daysToAdd =
-      formData.duration.unit === "weeks"
-        ? formData.duration.value * 7
-        : formData.duration.value;
-    futureDate.setDate(futureDate.getDate() + parseInt(daysToAdd || 0));
-    const formattedDate = futureDate.toDateString();
-
-    return `On ${formData.day}, ${adjustmentText} of ${formData.product} would be adjusted and displayed until ${formattedDate}.`;
-  };
-
-  const modalStyle = {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    width: 400,
-    bgcolor: "background.paper",
-    border: "2px solid #000",
-    boxShadow: 24,
-    p: 4,
   };
 
   return (
@@ -218,184 +208,207 @@ const MessageFormComponent = () => {
         sx={{
           minHeight: "100vh",
           bgcolor: "background.default",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
           py: 4,
           px: { xs: 2, sm: 3, lg: 4 },
         }}
       >
         <Container maxWidth="md">
-          <Collapse in={showSuccess}>
-            <Alert icon={<CheckCircle />} severity="success" sx={{ mb: 2 }}>
-              Modification successful. Redirecting...
-            </Alert>
-          </Collapse>
-          <Paper elevation={3} sx={{ p: 3 }}>
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 2,
-                mb: 3,
-              }}
+          <Box sx={{ mb: 4 }}>
+            <Button
+              startIcon={<ArrowLeft />}
+              onClick={() => navigate("/data/message/all")}
+              sx={{ mb: 3 }}
             >
-              <Package color={theme.palette.primary.main} />
-              <Typography variant="h5" component="h2">
-                Modify Allocation
+              Back to Modifications
+            </Button>
+
+            <Collapse in={showSuccess}>
+              <Alert
+                icon={<CheckCircle />}
+                severity="success"
+                sx={{ mb: 3, borderRadius: 2 }}
+              >
+                Modification created successfully. Redirecting...
+              </Alert>
+            </Collapse>
+          </Box>
+
+          <Paper elevation={0} sx={{ p: 4 }}>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h4" gutterBottom>
+                Create Modification
+              </Typography>
+              <Typography variant="subtitle1" color="text.secondary">
+                Adjust allocation quantities for specific products and days
               </Typography>
             </Box>
+
             <form onSubmit={handleSubmit}>
-              <FormControl fullWidth margin="normal" variant="outlined">
-                <InputLabel id="day-label">Day of the Week</InputLabel>
-                <Select
-                  labelId="day-label"
-                  id="day"
-                  value={formData.day}
-                  label="Day of the Week"
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, day: e.target.value }))
-                  }
-                >
-                  {daysOfWeek.map((day) => (
-                    <MenuItem key={day} value={day}>
-                      {day}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl fullWidth margin="normal" variant="outlined">
-                <InputLabel id="product-label">Product</InputLabel>
-                <Select
-                  labelId="product-label"
-                  id="product"
-                  value={formData.product}
-                  label="Product"
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      product: e.target.value,
-                    }))
-                  }
-                >
-                  {[
-                    "Nuggets",
-                    "Filets",
-                    "Spicy Filets",
-                    "Grilled Filets",
-                    "Grilled Nuggets",
-                    "Spicy Strips",
-                  ].map((product) => (
-                    <MenuItem key={product} value={product}>
-                      {product}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
-                Adjustment Details
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Cases Quantity"
-                    type="number"
-                    variant="outlined"
-                    value={formData.message.casesQuantity}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        message: {
-                          ...prev.message,
-                          casesQuantity: e.target.value,
-                        },
-                      }))
-                    }
-                    InputProps={{
-                      startAdornment: (
-                        <FormControl variant="outlined" size="small">
-                          <Select
-                            value={formData.message.casesOperation}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                message: {
-                                  ...prev.message,
-                                  casesOperation: e.target.value,
-                                },
-                              }))
-                            }
-                            sx={{ mr: 1, height: "100%" }}
-                            variant="standard"
-                            disableUnderline
-                          >
-                            <MenuItem value="+">+</MenuItem>
-                            <MenuItem value="-">-</MenuItem>
-                          </Select>
-                        </FormControl>
-                      ),
-                    }}
-                  />
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Calendar className="w-5 h-5" />
+                    Day Selection
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => (
+                      <Chip
+                        key={day}
+                        label={day}
+                        onClick={() => handleDayToggle(day)}
+                        color={selectedDays.includes(day) ? "primary" : "default"}
+                        variant={selectedDays.includes(day) ? "filled" : "outlined"}
+                        sx={{ m: 0.5 }}
+                      />
+                    ))}
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedDays.length === 0
+                      ? "No days selected - modification will apply to the default day"
+                      : `Selected ${selectedDays.length} day${selectedDays.length > 1 ? "s" : ""}`}
+                  </Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Bags Quantity"
-                    type="number"
-                    variant="outlined"
-                    value={formData.message.bagsQuantity}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        message: {
-                          ...prev.message,
-                          bagsQuantity: e.target.value,
-                        },
-                      }))
-                    }
-                    InputProps={{
-                      startAdornment: (
-                        <FormControl variant="outlined" size="small">
-                          <Select
-                            value={formData.message.bagsOperation}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                message: {
-                                  ...prev.message,
-                                  bagsOperation: e.target.value,
-                                },
-                              }))
-                            }
-                            sx={{ mr: 1, height: "100%" }}
-                            variant="standard"
-                            disableUnderline
-                          >
-                            <MenuItem value="+">+</MenuItem>
-                            <MenuItem value="-">-</MenuItem>
-                          </Select>
-                        </FormControl>
-                      ),
-                    }}
-                  />
+
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
                 </Grid>
-              </Grid>
-              {formErrors.quantity && (
-                <Alert severity="error" sx={{ mt: 1 }}>
-                  {formErrors.quantity}
-                </Alert>
-              )}
-              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
-                Duration
-              </Typography>
-              <Grid container spacing={2} alignItems="center">
+
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Package className="w-5 h-5" />
+                    Product Details
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Product</InputLabel>
+                    <Select
+                      value={formData.product}
+                      label="Product"
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          product: e.target.value,
+                        }))
+                      }
+                    >
+                      {[
+                        "Nuggets",
+                        "Filets",
+                        "Spicy Filets",
+                        "Grilled Filets",
+                        "Grilled Nuggets",
+                        "Spicy Strips",
+                      ].map((product) => (
+                        <MenuItem key={product} value={product}>
+                          {product}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <FormControl sx={{ width: 80 }}>
+                      <InputLabel>Cases</InputLabel>
+                      <Select
+                        value={formData.message.casesOperation}
+                        label="Cases"
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            message: {
+                              ...prev.message,
+                              casesOperation: e.target.value,
+                            },
+                          }))
+                        }
+                      >
+                        <MenuItem value="+">+</MenuItem>
+                        <MenuItem value="-">-</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <TextField
+                      fullWidth
+                      label="Cases Quantity"
+                      type="number"
+                      value={formData.message.casesQuantity}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          message: {
+                            ...prev.message,
+                            casesQuantity: e.target.value,
+                          },
+                        }))
+                      }
+                    />
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <FormControl sx={{ width: 80 }}>
+                      <InputLabel>Bags</InputLabel>
+                      <Select
+                        value={formData.message.bagsOperation}
+                        label="Bags"
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            message: {
+                              ...prev.message,
+                              bagsOperation: e.target.value,
+                            },
+                          }))
+                        }
+                      >
+                        <MenuItem value="+">+</MenuItem>
+                        <MenuItem value="-">-</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <TextField
+                      fullWidth
+                      label="Bags Quantity"
+                      type="number"
+                      value={formData.message.bagsQuantity}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          message: {
+                            ...prev.message,
+                            bagsQuantity: e.target.value,
+                          },
+                        }))
+                      }
+                    />
+                  </Box>
+                </Grid>
+
+                {formErrors.quantity && (
+                  <Grid item xs={12}>
+                    <Alert severity="error">{formErrors.quantity}</Alert>
+                  </Grid>
+                )}
+
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Clock className="w-5 h-5" />
+                    Duration
+                  </Typography>
+                </Grid>
+
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
                     label="Duration"
                     type="number"
-                    variant="outlined"
                     value={formData.duration.value}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -403,13 +416,15 @@ const MessageFormComponent = () => {
                         duration: { ...prev.duration, value: e.target.value },
                       }))
                     }
+                    error={!!formErrors.duration}
+                    helperText={formErrors.duration}
                   />
                 </Grid>
+
                 <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel id="duration-unit-label">Unit</InputLabel>
+                  <FormControl fullWidth>
+                    <InputLabel>Unit</InputLabel>
                     <Select
-                      labelId="duration-unit-label"
                       value={formData.duration.unit}
                       label="Unit"
                       onChange={(e) =>
@@ -424,79 +439,66 @@ const MessageFormComponent = () => {
                     </Select>
                   </FormControl>
                 </Grid>
+
+                <Grid item xs={12}>
+                  <Box sx={{ mt: 2 }}>
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 2,
+                        bgcolor: "background.default",
+                      }}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: formData.duration.value ? 2 : 0 }}>
+                        <Info className="w-5 h-5 text-blue-500" />
+                        <Typography variant="body2" color="text.secondary">
+                          This modification will automatically expire after the specified duration.
+                        </Typography>
+                      </Box>
+                      {formData.duration.value && !isNaN(formData.duration.value) && (
+                        <Box sx={{
+                          mt: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          borderTop: 1,
+                          borderColor: 'divider',
+                          pt: 2
+                        }}>
+                          <Calendar className="w-5 h-5 text-indigo-500" />
+                          <Typography variant="body2" color="text.primary" sx={{ fontWeight: 500 }}>
+                            Expires on: {getExpiryDate()}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Paper>
+                  </Box>
+                </Grid>
+
+                {formErrors.submit && (
+                  <Grid item xs={12}>
+                    <Alert severity="error">{formErrors.submit}</Alert>
+                  </Grid>
+                )}
+
+                <Grid item xs={12}>
+                  <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="primary"
+                      size="large"
+                      fullWidth
+                    >
+                      Create Modification
+                    </Button>
+                  </Box>
+                </Grid>
               </Grid>
-              {formErrors.duration && (
-                <Alert severity="error" sx={{ mt: 1 }}>
-                  {formErrors.duration}
-                </Alert>
-              )}
-              <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: "background.default" }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-                  Summary
-                </Typography>
-                <Typography variant="body2">{generateSummary()}</Typography>
-              </Paper>
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                color="primary"
-                sx={{ mt: 3, py: 1.5 }}
-              >
-                Modify
-              </Button>
-              <Button
-                fullWidth
-                variant="contained"
-                color="secondary"
-                sx={{ mt: 3, py: 1.5 }}
-                onClick={handleOpenModal}
-              >
-                Bulk Modify
-              </Button>
             </form>
           </Paper>
         </Container>
       </Box>
-      {/* Modal for Bulk Modification */}
-      <Modal
-        open={openModal}
-        onClose={handleCloseModal}
-        aria-labelledby="bulk-modify-modal-title"
-        aria-describedby="bulk-modify-modal-description"
-      >
-        <Box sx={modalStyle}>
-          <Typography id="bulk-modify-modal-title" variant="h6" component="h2" mb={2}>
-            Select Days for Bulk Modification
-          </Typography>
-          <List>
-            {daysOfWeek.map((day) => (
-              <ListItem key={day} disablePadding>
-                <ListItemButton onClick={() => handleToggleDay(day)} dense>
-                  <ListItemIcon>
-                    <Checkbox
-                      edge="start"
-                      checked={selectedDays.includes(day)}
-                      tabIndex={-1}
-                      disableRipple
-                    />
-                  </ListItemIcon>
-                  <ListItemText primary={day} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-          <Button
-            fullWidth
-            variant="contained"
-            color="secondary"
-            sx={{ mt: 3, py: 1.5 }}
-            onClick={handleBulkAdd}
-          >
-            Bulk Add
-          </Button>
-        </Box>
-      </Modal>
     </ThemeProvider>
   );
 };
