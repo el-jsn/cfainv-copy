@@ -568,14 +568,14 @@ const HomePage = () => {
     (projection) => projection.day !== "Sunday"
   );
 
-  // Calculate weekly total excluding Sunday
-  const weeklyTotal = filteredSalesProjection.reduce(
+  // Calculate weekly total excluding Sunday - only use first 6 days (current week)
+  const weeklyTotal = filteredSalesProjection.slice(0, 6).reduce(
     (acc, curr) => acc + curr.sales,
     0
   );
 
-  // Calculate daily average excluding Sunday
-  const dailyAverage = weeklyTotal / filteredSalesProjection.length;
+  // Calculate daily average excluding Sunday - only use first 6 days (current week)
+  const dailyAverage = weeklyTotal / Math.min(filteredSalesProjection.slice(0, 6).length, 6);
 
   // Add a function to get today's day name
   const getTodayDayName = () => {
