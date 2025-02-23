@@ -135,7 +135,7 @@ export const NavBar = ({ items, onNavigate, className }) => {
                             {/* Dropdown Menu */}
                             {item.hasDropdown && openDropdown === item.name && (
                                 <div
-                                    className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
+                                    className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-[9999]"
                                     onMouseEnter={() => handleMouseEnter(item.name)}
                                     onMouseLeave={handleMouseLeave}
                                 >

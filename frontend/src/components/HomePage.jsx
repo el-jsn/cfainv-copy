@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   ShoppingBag,
   DollarSign,
+  TrendingUp,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -59,7 +60,6 @@ const HomePage = () => {
   const navigate = useNavigate();
   const [futureProjections, setFutureProjections] = useState({});
   const [chartView, setChartView] = useState('sequential'); // 'sequential' or 'overlap'
-  const [nextWeekTotal, setNextWeekTotal] = useState(0);
   const [nextWeekAverage, setNextWeekAverage] = useState(0);
 
   // Calculate UTP trend percentage
@@ -165,7 +165,6 @@ const HomePage = () => {
           nextWeekCount++;
         });
 
-        setNextWeekTotal(nextWeekTotalAmount);
         setNextWeekAverage(nextWeekCount > 0 ? nextWeekTotalAmount / nextWeekCount : 0);
 
         // Combine current week and next week projections
@@ -574,6 +573,15 @@ const HomePage = () => {
     0
   );
 
+  // Calculate next week's total (days 7-12, excluding Sunday)
+  const nextWeekTotal = filteredSalesProjection.slice(6, 12).reduce(
+    (acc, curr) => acc + curr.sales,
+    0
+  );
+
+  // Calculate week-over-week change
+  const weekOverWeekChange = ((nextWeekTotal - weeklyTotal) / weeklyTotal) * 100;
+
   // Calculate daily average excluding Sunday - only use first 6 days (current week)
   const dailyAverage = weeklyTotal / Math.min(filteredSalesProjection.slice(0, 6).length, 6);
 
@@ -586,8 +594,8 @@ const HomePage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex justify-center items-center">
-        <Progress color="indigo" size="lg" className="w-64" />
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="w-12 h-12 rounded-full border-4 border-[#E51636] border-t-transparent animate-spin"></div>
       </div>
     );
   }
@@ -596,90 +604,133 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      {/* Simplified Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0">
+    <div className="min-h-screen bg-gray-50">
+      {/* Modern Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 backdrop-blur-xl bg-opacity-90 z-[35]">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center">
-            <LayoutDashboard className="text-indigo-500" size={24} />
-            <Typography variant="h5" className="font-bold text-gray-800 ml-3">
-              {user?.isAdmin ? 'Admin Dashboard' : 'Dashboard'}
-            </Typography>
+            <div className="flex items-center space-x-4">
+              <LayoutDashboard className="text-[#E51636]" size={28} />
+              <div>
+                <Typography variant="h5" className="font-bold text-[#262626]">
+                  {user?.isAdmin ? 'Admin Dashboard' : 'Dashboard'}
+                </Typography>
+                <Typography variant="small" className="text-gray-600">
+                  Welcome back, {user?.name || 'User'}
+                </Typography>
+              </div>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-8">
+      <main className="container mx-auto px-6 py-8 relative z-[30]">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {renderAdminSection(
             <>
-              <Card className="transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
+              <Card className="transform transition-all duration-300 hover:scale-105 bg-white border border-gray-100 shadow-sm">
                 <CardBody className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <Typography variant="small" className="text-gray-600 mb-1 font-medium">
                         Today's Sales
                       </Typography>
-                      <Typography variant="h4" className="font-bold text-gray-800">
+                      <Typography variant="h4" className="font-bold text-[#262626]">
                         ${salesProjection.find(proj =>
                           new Date(proj.date).toDateString() === new Date().toDateString()
                         )?.sales.toLocaleString() || '0'}
                       </Typography>
-                      <Typography variant="small" className="text-gray-500">
+                      <Typography variant="small" className="text-gray-600">
                         {getTodayDayName()}
                         {salesProjection.find(proj =>
                           new Date(proj.date).toDateString() === new Date().toDateString()
                         )?.hasFutureProjection && (
-                            <span className="ml-2 text-indigo-500 text-xs">(Future Projection)</span>
+                            <span className="ml-2 text-[#E51636] text-xs">(Future Projection)</span>
                           )}
                       </Typography>
                     </div>
-                    <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                      <ShoppingBag className="h-6 w-6 text-green-600" />
+                    <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+                      <ShoppingBag className="h-6 w-6 text-[#E51636]" />
                     </div>
                   </div>
                 </CardBody>
               </Card>
 
-              <Card className="transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
+              <Card className="transform transition-all duration-300 hover:scale-105 bg-white border border-gray-100 shadow-sm">
+                <CardBody className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Typography variant="small" className="text-gray-600 mb-1 font-medium">
+                        This Week's Total
+                      </Typography>
+                      <Typography variant="h4" className="font-bold text-[#262626]">
+                        ${weeklyTotal.toLocaleString()}
+                      </Typography>
+                      <Typography variant="small" className="text-gray-600">
+                        Mon-Sat Total
+                      </Typography>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                      <Calendar className="h-6 w-6 text-blue-600" />
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              <Card className="transform transition-all duration-300 hover:scale-105 bg-white border border-gray-100 shadow-sm">
+                <CardBody className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Typography variant="small" className="text-gray-600 mb-1 font-medium">
+                        Next Week's Total
+                      </Typography>
+                      <Typography variant="h4" className="font-bold text-[#262626]">
+                        ${nextWeekTotal.toLocaleString()}
+                      </Typography>
+                      <div className="flex items-center mt-1">
+                        {weekOverWeekChange > 0 ? (
+                          <ArrowUp className="h-4 w-4 text-green-600 mr-1" />
+                        ) : weekOverWeekChange < 0 ? (
+                          <ArrowDown className="h-4 w-4 text-red-600 mr-1" />
+                        ) : null}
+                        <Typography
+                          variant="small"
+                          className={`${weekOverWeekChange > 0
+                            ? 'text-green-600'
+                            : weekOverWeekChange < 0
+                              ? 'text-red-600'
+                              : 'text-gray-600'
+                            }`}
+                        >
+                          {weekOverWeekChange > 0 ? '+' : ''}{weekOverWeekChange.toFixed(1)}% vs. This Week
+                        </Typography>
+                      </div>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
+                      <TrendingUp className="h-6 w-6 text-purple-600" />
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              <Card className="transform transition-all duration-300 hover:scale-105 bg-white border border-gray-100 shadow-sm">
                 <CardBody className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <Typography variant="small" className="text-gray-600 mb-1 font-medium">
                         Daily Average
                       </Typography>
-                      <Typography variant="h4" className="font-bold text-gray-800">
+                      <Typography variant="h4" className="font-bold text-[#262626]">
                         ${Math.round(dailyAverage).toLocaleString()}
                       </Typography>
-                      <Typography variant="small" className="text-gray-500">
+                      <Typography variant="small" className="text-gray-600">
                         Mon-Sat Average
                       </Typography>
                     </div>
-                    <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                      <Inspect className="h-6 w-6 text-blue-600" />
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-
-              <Card className="transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
-                <CardBody className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Typography variant="small" className="text-gray-600 mb-1 font-medium">
-                        Weekly Total
-                      </Typography>
-                      <Typography variant="h4" className="font-bold text-gray-800">
-                        ${weeklyTotal.toLocaleString()}
-                      </Typography>
-                      <Typography variant="small" className="text-gray-500">
-                        6-Day Total
-                      </Typography>
-                    </div>
-                    <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                      <Calendar className="h-6 w-6 text-purple-600" />
+                    <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+                      <Inspect className="h-6 w-6 text-green-600" />
                     </div>
                   </div>
                 </CardBody>
@@ -688,15 +739,15 @@ const HomePage = () => {
           )}
         </div>
 
-        {/* Charts Section with Modern Design */}
+        {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
           {/* UPTs Chart */}
           {renderAdminSection(
-            <Card className="lg:col-span-5 transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
-              <CardHeader floated={false} shadow={false} className="rounded-none">
+            <Card className="lg:col-span-5 transform transition-all duration-300 hover:scale-105 bg-white border border-gray-100 shadow-sm">
+              <CardHeader floated={false} shadow={false} className="rounded-none border-b border-gray-100">
                 <div className="flex items-center justify-between p-6">
                   <div>
-                    <Typography variant="h6" color="blue-gray" className="font-bold">
+                    <Typography variant="h6" className="font-bold text-[#262626]">
                       UPTs by Product
                     </Typography>
                     <Typography variant="small" className="text-gray-600">
@@ -704,7 +755,7 @@ const HomePage = () => {
                     </Typography>
                   </div>
                   <Link to="/update-upt">
-                    <Button size="sm" className="bg-indigo-500 hover:bg-indigo-600">
+                    <Button size="sm" className="bg-[#E51636] hover:bg-[#C41230] text-white">
                       Update
                     </Button>
                   </Link>
@@ -717,11 +768,11 @@ const HomePage = () => {
           )}
 
           {/* Sales Projection Chart */}
-          <Card className="lg:col-span-7 transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
-            <CardHeader floated={false} shadow={false} className="rounded-none">
+          <Card className="lg:col-span-7 transform transition-all duration-300 hover:scale-105 bg-white border border-gray-100 shadow-sm">
+            <CardHeader floated={false} shadow={false} className="rounded-none border-b border-gray-100">
               <div className="flex items-center justify-between p-6">
                 <div>
-                  <Typography variant="h6" color="blue-gray" className="font-bold">
+                  <Typography variant="h6" className="font-bold text-[#262626]">
                     Sales Projections
                   </Typography>
                   <Typography variant="small" className="text-gray-600">
@@ -733,7 +784,7 @@ const HomePage = () => {
                     <Button
                       size="sm"
                       className={`px-4 py-2 rounded-md transition-all duration-300 ${chartView === 'sequential'
-                        ? 'bg-indigo-500 text-white'
+                        ? 'bg-[#E51636] text-white'
                         : 'bg-transparent text-gray-600 hover:bg-gray-200'
                         }`}
                       onClick={() => setChartView('sequential')}
@@ -743,7 +794,7 @@ const HomePage = () => {
                     <Button
                       size="sm"
                       className={`px-4 py-2 rounded-md transition-all duration-300 ${chartView === 'overlap'
-                        ? 'bg-indigo-500 text-white'
+                        ? 'bg-[#E51636] text-white'
                         : 'bg-transparent text-gray-600 hover:bg-gray-200'
                         }`}
                       onClick={() => setChartView('overlap')}
@@ -753,7 +804,7 @@ const HomePage = () => {
                   </div>
                   {renderAdminSection(
                     <Link to="/update-sales-projection">
-                      <Button size="sm" className="bg-indigo-500 hover:bg-indigo-600">
+                      <Button size="sm" className="bg-[#E51636] hover:bg-[#C41230] text-white">
                         Update
                       </Button>
                     </Link>
@@ -764,30 +815,99 @@ const HomePage = () => {
             <CardBody className="px-6 pt-0">
               <div className="h-[300px]">
                 <Line
-                  options={chartView === 'sequential' ? chartOptions : overlappingChartOptions}
+                  options={{
+                    ...chartOptions,
+                    plugins: {
+                      ...chartOptions.plugins,
+                      title: {
+                        ...chartOptions.plugins.title,
+                        color: '#262626'
+                      }
+                    },
+                    scales: {
+                      ...chartOptions.scales,
+                      y: {
+                        ...chartOptions.scales.y,
+                        grid: {
+                          color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                          ...chartOptions.scales.y.ticks,
+                          color: '#64748b'
+                        }
+                      },
+                      x: {
+                        ...chartOptions.scales.x,
+                        grid: {
+                          display: false
+                        },
+                        ticks: {
+                          ...chartOptions.scales.x.ticks,
+                          color: '#64748b'
+                        }
+                      }
+                    }
+                  }}
                   data={chartView === 'sequential' ? chartData : getOverlappingChartData()}
                 />
               </div>
-              <div className="grid grid-cols-6 gap-4 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                 {salesProjection.slice(0, 6).map((projection) => {
                   const date = new Date(projection.date);
+                  const isToday = date.toDateString() === new Date().toDateString();
+                  const hasFutureProjection = projection.sales !== projection.originalSales;
+
                   return (
-                    <div key={projection.dateStr}
-                      className={`bg-gray-50 rounded-lg p-3 text-center transform transition-transform hover:scale-105 
-                        ${projection.sales !== projection.originalSales ? 'ring-2 ring-indigo-500' : ''}`}
+                    <div
+                      key={projection.dateStr}
+                      className={`relative overflow-hidden bg-white rounded-xl p-6 border transition-all duration-300 
+                        ${isToday ? 'border-[#E51636]' : 'border-gray-100'}
+                        hover:shadow-lg hover:scale-105 transform group min-h-[160px] w-full`}
                     >
-                      <Typography variant="h6" className="font-bold text-gray-800">
-                        ${projection.sales.toLocaleString()}
-                      </Typography>
-                      <Typography variant="small" className="text-gray-500">
-                        {date.toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </Typography>
-                      <Typography variant="small" className="text-gray-400">
-                        ({getShortDayName(date)})
-                      </Typography>
+                      {/* Day Label */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex flex-col">
+                          <Typography variant="small" className="text-gray-600 font-medium text-base">
+                            {getShortDayName(date)}
+                          </Typography>
+                          <Typography variant="small" className="text-gray-500 text-sm">
+                            {date.toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </Typography>
+                        </div>
+                        {hasFutureProjection && (
+                          <div className="h-7 w-7 rounded-full bg-red-50 flex items-center justify-center">
+                            <div className="h-2.5 w-2.5 rounded-full bg-[#E51636]"></div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Sales Amount */}
+                      <div className="relative">
+                        <Typography variant="h4" className="font-bold text-[#262626] transition-all duration-300 group-hover:text-[#E51636] text-2xl whitespace-nowrap">
+                          ${projection.sales.toLocaleString()}
+                        </Typography>
+
+                        {/* Show original sales if different */}
+                        {hasFutureProjection && (
+                          <div className="mt-2 flex items-center space-x-2">
+                            <Typography variant="small" className="text-gray-500 line-through text-base whitespace-nowrap">
+                              ${projection.originalSales.toLocaleString()}
+                            </Typography>
+                            <Typography variant="small" className="text-[#E51636] text-base">
+                              {((projection.sales - projection.originalSales) / projection.originalSales * 100).toFixed(1)}%
+                            </Typography>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Decorative Elements */}
+                      <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-gradient-to-br from-gray-50 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      {isToday && (
+                        <div className="absolute bottom-0 left-0 w-full h-1 bg-[#E51636]"></div>
+                      )}
                     </div>
                   );
                 })}
@@ -796,13 +916,13 @@ const HomePage = () => {
           </Card>
         </div>
 
-        {/* Buffer Section with Modern Design */}
+        {/* Buffer Section */}
         {renderAdminSection(
-          <Card className="transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
-            <CardHeader floated={false} shadow={false} className="rounded-none">
+          <Card className="transform transition-all duration-300 hover:scale-105 bg-white border border-gray-100 shadow-sm">
+            <CardHeader floated={false} shadow={false} className="rounded-none border-b border-gray-100">
               <div className="flex items-center justify-between p-6">
                 <div>
-                  <Typography variant="h6" className="font-bold text-gray-800">
+                  <Typography variant="h6" className="font-bold text-[#262626]">
                     Buffer Information
                   </Typography>
                   <Typography variant="small" className="text-gray-600">
@@ -813,9 +933,9 @@ const HomePage = () => {
                   <Button
                     size="sm"
                     className={`${activeBufferView === 'chicken'
-                      ? 'bg-indigo-500 hover:bg-indigo-600'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} 
-                      transition-all duration-300`}
+                      ? 'bg-[#E51636] hover:bg-[#C41230]'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      } transition-all duration-300`}
                     onClick={() => handleToggleBufferView('chicken')}
                   >
                     Chicken
@@ -823,9 +943,9 @@ const HomePage = () => {
                   <Button
                     size="sm"
                     className={`${activeBufferView === 'prep'
-                      ? 'bg-indigo-500 hover:bg-indigo-600'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}
-                      transition-all duration-300`}
+                      ? 'bg-[#E51636] hover:bg-[#C41230]'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      } transition-all duration-300`}
                     onClick={() => handleToggleBufferView('prep')}
                   >
                     Prep
@@ -836,10 +956,12 @@ const HomePage = () => {
             <CardBody className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {(activeBufferView === 'chicken' ? chickenBufferData() : prepBufferData()).map((buffer) => (
-                  <div key={buffer._id}
-                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+                  <div
+                    key={buffer._id}
+                    className="bg-gray-50 rounded-xl p-4 border border-gray-100 transition-all duration-300 hover:scale-105"
+                  >
                     <div className="flex justify-between items-start mb-2">
-                      <Typography variant="h6" className="font-semibold text-gray-800">
+                      <Typography variant="h6" className="font-semibold text-[#262626]">
                         {buffer.productName}
                       </Typography>
                       {editingBuffer === buffer._id ? (
@@ -847,7 +969,7 @@ const HomePage = () => {
                           <input
                             type="number"
                             defaultValue={buffer.bufferPrcnt}
-                            className="w-20 p-1 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            className="w-20 p-1 bg-white border border-gray-200 text-[#262626] rounded-lg focus:ring-2 focus:ring-[#E51636] focus:border-[#E51636]"
                             autoFocus
                             onKeyPress={(e) => {
                               if (e.key === 'Enter') {
@@ -857,7 +979,7 @@ const HomePage = () => {
                           />
                           <Button
                             size="sm"
-                            className="bg-indigo-500 hover:bg-indigo-600 px-3 py-1 rounded-lg transition-colors duration-300"
+                            className="bg-[#E51636] hover:bg-[#C41230] text-white px-3 py-1 rounded-lg transition-colors duration-300"
                             onClick={(e) => {
                               const input = e.target.previousSibling;
                               handleBufferUpdate(buffer._id, parseFloat(input.value));
@@ -874,7 +996,7 @@ const HomePage = () => {
                           </div>
                           <IconButton
                             size="sm"
-                            className="bg-indigo-500 hover:bg-indigo-600 text-white transition-colors duration-300"
+                            className="bg-[#E51636] hover:bg-[#C41230] text-white transition-colors duration-300"
                             onClick={() => handleBufferEdit(buffer._id)}
                           >
                             <Edit2 className="h-4 w-4" />
@@ -882,7 +1004,7 @@ const HomePage = () => {
                         </div>
                       )}
                     </div>
-                    <Typography variant="small" className="text-gray-500 mt-2">
+                    <Typography variant="small" className="text-gray-600 mt-2">
                       Updated: {new Date(buffer.updatedOn).toLocaleDateString()}
                     </Typography>
                   </div>

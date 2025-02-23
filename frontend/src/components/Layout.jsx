@@ -53,7 +53,7 @@ const Layout = React.memo(({ children }) => {
         icon: Settings,
         hasDropdown: true,
         dropdownLinks: [
-          { to: "/update-upt", label: "UTP Settings" },
+          { to: "/update-upt", label: "UPT Settings" },
           { to: "/data/message/all", label: "Allocation Adjustments" },
           { to: "/instructions", label: "Allocation Instructions" },
           { to: "/closure/plans", label: "Store Closures" },
@@ -95,7 +95,7 @@ const Layout = React.memo(({ children }) => {
 
   return (
     <div className="flex flex-col min-h-screen font-sfpro bg-gray-100">
-      <header className="sticky top-0 z-30 bg-white shadow-md">
+      <header className="sticky top-0 z-[45] bg-white shadow-md">
         <nav className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <Link

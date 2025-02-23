@@ -17,54 +17,73 @@ import { styled } from "@mui/material/styles";
 import { Info, TrendingUp, TrendingDown } from "lucide-react";
 
 const CategoryChip = styled(Chip)(({ theme, selected }) => ({
-  borderRadius: '6px',
-  padding: '8px 4px',
-  backgroundColor: selected ? theme.palette.primary.main : 'transparent',
-  color: selected ? 'white' : theme.palette.grey[700],
-  border: `1px solid ${selected ? 'transparent' : theme.palette.grey[300]}`,
+  borderRadius: '8px',
+  padding: '8px 12px',
+  backgroundColor: selected ? '#E51636' : '#F3F4F6',
+  color: selected ? '#ffffff' : '#64748B',
+  border: 'none',
   '&:hover': {
-    backgroundColor: selected ? theme.palette.primary.dark : theme.palette.grey[100],
+    backgroundColor: selected ? '#C41230' : '#E5E7EB',
   },
-  marginRight: '8px',
+  marginRight: '12px',
   cursor: 'pointer',
+  fontWeight: 500,
+  transition: 'all 0.2s ease-in-out',
+  '&:active': {
+    transform: 'scale(0.97)',
+  },
 }));
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  borderBottom: `1px solid ${theme.palette.grey[100]}`,
+  borderBottom: '1px solid #E5E7EB',
   padding: '16px',
+  color: '#262626',
   '&.header': {
-    backgroundColor: theme.palette.grey[50],
-    color: theme.palette.grey[700],
+    backgroundColor: '#F9FAFB',
+    color: '#64748B',
     fontWeight: 600,
     fontSize: '0.875rem',
     whiteSpace: 'nowrap',
+    letterSpacing: '0.025em',
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   '&:hover': {
-    backgroundColor: theme.palette.grey[50],
+    backgroundColor: '#F9FAFB',
   },
   transition: 'background-color 150ms ease-in-out',
+  '& td:first-of-type': {
+    borderTopLeftRadius: '8px',
+    borderBottomLeftRadius: '8px',
+  },
+  '& td:last-of-type': {
+    borderTopRightRadius: '8px',
+    borderBottomRightRadius: '8px',
+  },
 }));
 
 const TrendChip = styled(Box)(({ theme, trend }) => ({
   display: 'inline-flex',
   alignItems: 'center',
-  padding: '4px 8px',
-  borderRadius: '6px',
+  padding: '6px 12px',
+  borderRadius: '8px',
   fontSize: '0.875rem',
   fontWeight: 500,
   backgroundColor: trend === 'up'
-    ? theme.palette.success.soft
+    ? 'rgba(34, 197, 94, 0.1)'
     : trend === 'down'
-      ? theme.palette.error.soft
-      : theme.palette.grey[100],
+      ? 'rgba(239, 68, 68, 0.1)'
+      : '#F3F4F6',
   color: trend === 'up'
-    ? theme.palette.success.main
+    ? '#16A34A'
     : trend === 'down'
-      ? theme.palette.error.main
-      : theme.palette.grey[600],
+      ? '#DC2626'
+      : '#64748B',
+  transition: 'all 0.2s ease-in-out',
+  '&:hover': {
+    transform: 'scale(1.05)',
+  },
 }));
 
 const EnhancedChart = ({
@@ -117,7 +136,7 @@ const EnhancedChart = ({
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height={400}>
-        <Typography>Loading...</Typography>
+        <div className="w-12 h-12 rounded-full border-4 border-[#E51636] border-t-transparent animate-spin"></div>
       </Box>
     );
   }
@@ -128,23 +147,32 @@ const EnhancedChart = ({
       sx={{
         borderRadius: 3,
         overflow: 'hidden',
-        border: '1px solid',
-        borderColor: 'grey.200',
-        background: '#ffffff',
+        border: '1px solid #E5E7EB',
+        background: '#FFFFFF',
       }}
     >
       <Box p={3}>
         <Box mb={4} display="flex" justifyContent="space-between" alignItems="flex-start">
           <Box>
-            <Typography variant="h5" fontWeight="600" color="grey.900" gutterBottom>
+            <Typography variant="h5" fontWeight="600" sx={{ color: '#262626' }} gutterBottom>
               {title}
             </Typography>
-            <Typography variant="body2" color="grey.600">
+            <Typography variant="body2" sx={{ color: '#64748B' }}>
               {subtitle}
             </Typography>
           </Box>
-          <Tooltip title="UPT values help determine product usage per thousand dollars in sales">
-            <IconButton size="small">
+          <Tooltip
+            title="UPT values help determine product usage per thousand dollars in sales"
+            sx={{
+              backgroundColor: '#FFFFFF',
+              color: '#262626',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              border: '1px solid #E5E7EB',
+            }}
+          >
+            <IconButton size="small" sx={{ color: '#64748B', '&:hover': { color: '#262626' } }}>
               <Info size={18} />
             </IconButton>
           </Tooltip>
@@ -181,12 +209,12 @@ const EnhancedChart = ({
               {selectedData.map((item) => (
                 <StyledTableRow key={item._id}>
                   <StyledTableCell>
-                    <Typography variant="body2" fontWeight={500}>
+                    <Typography variant="body2" fontWeight={500} sx={{ color: '#262626' }}>
                       {item.productName}
                     </Typography>
                   </StyledTableCell>
                   <StyledTableCell align="right">
-                    <Typography variant="body2" fontWeight={600}>
+                    <Typography variant="body2" fontWeight={600} sx={{ color: '#262626' }}>
                       {item.utp.toFixed(3)}
                     </Typography>
                   </StyledTableCell>
@@ -212,7 +240,7 @@ const EnhancedChart = ({
                 <StyledTableRow>
                   <StyledTableCell colSpan={3} align="center">
                     <Box py={4}>
-                      <Typography color="grey.600">No data available</Typography>
+                      <Typography sx={{ color: '#64748B' }}>No data available</Typography>
                     </Box>
                   </StyledTableCell>
                 </StyledTableRow>
