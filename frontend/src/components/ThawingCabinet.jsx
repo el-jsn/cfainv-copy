@@ -1,7 +1,7 @@
 // src/components/ThawingCabinet.js
 
 import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from "react";
-import { BackpackIcon, Clock, Maximize, Minimize } from "lucide-react";
+import { BackpackIcon, Clock, Maximize, Minimize, Settings, Calendar } from "lucide-react";
 import axiosInstance from "./axiosInstance";
 import { Link } from "react-router-dom";
 import { ArrowBackIos } from "@mui/icons-material";
@@ -327,19 +327,19 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView }) 
     if (!showAdminView) return null;
 
     return (
-      <div className="text-xs text-gray-600 mt-1 p-1 bg-gray-50 rounded">
-        <div>Sales: ${entry.sales.toLocaleString()}</div>
+      <div className="text-xs text-gray-600 mt-1 p-1 bg-gray-50 rounded shadow-inner">
+        <div className="font-medium">Sales: ${entry.sales.toLocaleString()}</div>
         {entry.salesCalculation.length > 0 && (
           <div className="mt-1">
-            Calculation:
+            <div className="font-medium">Calculation:</div>
             {entry.salesCalculation.map((calc, idx) => (
-              <div key={idx} className="ml-2">
-                {calc.percentage}% of {calc.day}
-                {calc.date && ` (${calc.date.toLocaleDateString()})`}
-                (${calc.amount.toLocaleString()})
-                = ${calc.contribution.toLocaleString()}
+              <div key={idx} className="ml-2 flex flex-wrap items-center">
+                <span className="font-medium text-blue-600">{calc.percentage}%</span> of {calc.day}
+                {calc.date && <span className="ml-1 text-gray-500">({calc.date.toLocaleDateString()})</span>}
+                <span className="mx-1 font-medium">${calc.amount.toLocaleString()}</span>
+                = <span className="ml-1 font-bold text-green-600">${calc.contribution.toLocaleString()}</span>
                 {calc.isFromFutureProjection && (
-                  <span className="ml-1 text-blue-600 font-medium">(Future Projection)</span>
+                  <span className="ml-1 text-blue-600 font-medium px-1 py-0.5 bg-blue-50 rounded-full text-[10px]">Future</span>
                 )}
               </div>
             ))}
@@ -576,7 +576,7 @@ const ThawingCabinet = () => {
       <div className="min-h-full w-full bg-white rounded-lg md:rounded-xl shadow-xl p-2 sm:p-4 border border-gray-100 flex flex-col">
         <div className="flex items-center justify-between mb-2 sm:mb-3">
           <div className="flex items-center gap-2">
-            <Link to={"/"} className="text-lg sm:text-xl font-bold text-gray-800">
+            <Link to={"/"} className="text-lg sm:text-xl font-bold text-gray-800 flex items-center">
               <ArrowBackIos /> Thawing Cabinet
             </Link>
             {showNextWeek && (
@@ -587,26 +587,15 @@ const ThawingCabinet = () => {
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             {user && user.isAdmin && (
-              <>
-                <button
-                  onClick={() => setShowAdminView(!showAdminView)}
-                  className={`px-3 py-1 rounded-lg text-sm transition-colors duration-200 ${showAdminView
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-600'
-                    }`}
-                >
-                  {showAdminView ? 'Admin View' : 'User View'}
-                </button>
-                <button
-                  onClick={() => setShowNextWeek(!showNextWeek)}
-                  className={`px-3 py-1 rounded-lg text-sm transition-colors duration-200 ${showNextWeek
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-100 text-gray-600'
-                    }`}
-                >
-                  {showNextWeek ? 'Next Week' : 'Current Week'}
-                </button>
-              </>
+              <button
+                onClick={() => setShowAdminView(!showAdminView)}
+                className={`p-1.5 rounded-lg transition-colors duration-200 flex items-center gap-1
+                  ${showAdminView ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                title="Toggle Admin View"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="text-sm font-medium">Admin</span>
+              </button>
             )}
             <div className="flex items-center gap-1 sm:gap-2 bg-gray-50 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm">
               <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
@@ -626,6 +615,31 @@ const ThawingCabinet = () => {
             </button>
           </div>
         </div>
+
+        {/* Admin Panel - Only shown when admin view is active */}
+        {showAdminView && user && user.isAdmin && (
+          <div className="mb-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowNextWeek(!showNextWeek)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1.5
+                    ${showNextWeek
+                      ? 'bg-green-600 text-white shadow-sm'
+                      : 'bg-white text-green-700 border border-green-200 hover:bg-green-100'
+                    }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  {showNextWeek ? 'Current Week' : 'Next Week'}
+                </button>
+              </div>
+
+              <div className="ml-auto text-xs text-indigo-700">
+                Admin view is active - showing detailed sales data
+              </div>
+            </div>
+          </div>
+        )}
 
         <div
           ref={containerRef}
