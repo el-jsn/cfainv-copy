@@ -46,7 +46,6 @@ app.use(helmet());
 app.use(helmet({
     contentSecurityPolicy: {
       directives: {
-        defaultSrc: ["'self'"],
         imgSrc: ["'self'", "https://upload.wikimedia.org"], // Allow images from Wikimedia
       },
     },
