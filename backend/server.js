@@ -31,8 +31,6 @@ dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 
-const __dirname = path.resolve();
-
 const app = express();
 
 
@@ -72,7 +70,7 @@ app.use(limiter);
 // Enable CORS with specific options to restrict origins and methods
 app.use(
   cors({
-    origin: ["https://cfanbinv.onrender.com", "http://localhost:3000"],
+    origin: ["https://cfanbinv.onrender.com", "http://localhost:3000", "https://cfanbinv.vercel.app/"],
     credentials: true, // Allow cookies to be sent
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -99,9 +97,14 @@ app.use('/api/salesmix', authenticateToken, salesMixRoutes);
 
 // Serve frontend in production mode
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '/frontend/dist')));
+  const __dirname = path.resolve();
+  app.use(express.static(path.join(__dirname, 'frontend/dist')));
 
   app.get('*', (req, res) => {
+    // Skip API routes
+    if (req.path.startsWith('/api')) {
+      return;
+    }
     res.sendFile(path.resolve(__dirname, 'frontend', 'dist', 'index.html'));
   });
 }
