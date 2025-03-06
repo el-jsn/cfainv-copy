@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
+import LoadingSpinner from './components/LoadingSpinner';
 import { AuthProvider, useAuth } from "./components/AuthContext";
 import { Navigate } from "react-router-dom";
 import SalesProjectionConfig from './components/SalesProjectionConfig';
@@ -13,16 +14,17 @@ import HowToUse from "./components/HowToUse";
 import MessageFormComponent from "./components/MessageFormComponent";
 import MessageListPage from "./components/MessageListPage";
 import ErrorBoundary from './components/ErrorBoundary';
+import { SWRConfig } from 'swr';
 
-// Import components directly instead of lazy loading
-import HomePage from './components/HomePage';
-import ThawingCabinet from './components/ThawingCabinet';
-import UpdateUPTs from './components/UpdateUPTs';
-import UpdateSalesProjection from './components/UpdateSalesProjection';
-import LoginPage from './components/LoginPage';
-import FutureProjectionsCalendar from './components/FutureProjectionsCalendar';
-import DeveloperInfo from './components/DeveloperInfo';
-import TruckItems from './components/TruckItems.jsx';
+// Lazy load components
+const HomePage = lazy(() => import('./components/HomePage'));
+const ThawingCabinet = lazy(() => import('./components/ThawingCabinet'));
+const UpdateUPTs = lazy(() => import('./components/UpdateUPTs'));
+const UpdateSalesProjection = lazy(() => import('./components/UpdateSalesProjection'));
+const LoginPage = lazy(() => import('./components/LoginPage'));
+const FutureProjectionsCalendar = lazy(() => import('./components/FutureProjectionsCalendar'));
+const DeveloperInfo = lazy(() => import('./components/DeveloperInfo'));
+const TruckItems = lazy(() => import('./components/TruckItems.jsx'));
 
 const App = () => {
 
@@ -88,82 +90,105 @@ const App = () => {
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <Layout>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/dev-info" element={<DeveloperInfo />} />
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <HomePage />
-                </ProtectedRoute>
-              } />
-              <Route path="/update-upt" element={
-                <ProtectedRoute adminOnly>
-                  <UpdateUPTs />
-                </ProtectedRoute>
-              } />
-              <Route path="/how-to" element={
-                <ProtectedRoute adminOnly>
-                  <HowToUse />
-                </ProtectedRoute>
-              } />
-              <Route path="/update-sales-projection" element={
-                <ProtectedRoute adminOnly>
-                  <UpdateSalesProjection />
-                </ProtectedRoute>
-              } />
-              <Route path="/thawing-cabinet" element={
-                <ProtectedRoute>
-                  <ThawingCabinet />
-                </ProtectedRoute>
-              } />
-              <Route path="/prep-allocations" element={
-                <ProtectedRoute>
-                  <PrepAllocations />
-                </ProtectedRoute>
-              } />
-              <Route path="/data/message/add" element={
-                <ProtectedRoute adminOnly>
-                  <MessageFormComponent />
-                </ProtectedRoute>
-              } />
-              <Route path="/data/message/all" element={
-                <ProtectedRoute adminOnly>
-                  <MessageListPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/closure/plan/add" element={
-                <ProtectedRoute adminOnly>
-                  <ClosurePlannerComponent />
-                </ProtectedRoute>
-              } />
-              <Route path="/closure/plans" element={
-                <ProtectedRoute adminOnly>
-                  <ClosurePlanList />
-                </ProtectedRoute>
-              } />
-              <Route path="/instructions" element={
-                <ProtectedRoute adminOnly>
-                  <Instructions />
-                </ProtectedRoute>
-              } />
-              <Route path="/thawing-cabinet/config" element={
-                <ProtectedRoute adminOnly>
-                  <SalesProjectionConfig />
-                </ProtectedRoute>
-              } />
-              <Route path="/truck-items" element={
-                <ProtectedRoute adminOnly>
-                  <TruckItems />
-                </ProtectedRoute>
-              } />
-              <Route path="/future-projections" element={<FutureProjectionsCalendar />} />
-            </Routes>
-          </Layout>
-        </Router>
-      </AuthProvider>
+      <SWRConfig
+        value={{
+          revalidateOnFocus: true,
+          revalidateOnReconnect: true,
+          refreshInterval: 0,
+          shouldRetryOnError: true,
+          dedupingInterval: 2000,
+          errorRetryCount: 3,
+          errorRetryInterval: 5000,
+          onError: (error, key) => {
+            if (error.status !== 403 && error.status !== 404) {
+              console.error('SWR Error:', error);
+            }
+          }
+        }}
+      >
+        <AuthProvider>
+          <Router>
+            <Layout>
+              <Suspense fallback={
+                <div className="flex items-center justify-center h-screen">
+                  <LoadingSpinner />
+                </div>
+              }>
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/dev-info" element={<DeveloperInfo />} />
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <HomePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/update-upt" element={
+                    <ProtectedRoute adminOnly>
+                      <UpdateUPTs />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/how-to" element={
+                    <ProtectedRoute adminOnly>
+                      <HowToUse />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/update-sales-projection" element={
+                    <ProtectedRoute adminOnly>
+                      <UpdateSalesProjection />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/thawing-cabinet" element={
+                    <ProtectedRoute>
+                      <ThawingCabinet />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/prep-allocations" element={
+                    <ProtectedRoute>
+                      <PrepAllocations />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/data/message/add" element={
+                    <ProtectedRoute adminOnly>
+                      <MessageFormComponent />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/data/message/all" element={
+                    <ProtectedRoute adminOnly>
+                      <MessageListPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/closure/plan/add" element={
+                    <ProtectedRoute adminOnly>
+                      <ClosurePlannerComponent />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/closure/plans" element={
+                    <ProtectedRoute adminOnly>
+                      <ClosurePlanList />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/instructions" element={
+                    <ProtectedRoute adminOnly>
+                      <Instructions />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/thawing-cabinet/config" element={
+                    <ProtectedRoute adminOnly>
+                      <SalesProjectionConfig />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/truck-items" element={
+                    <ProtectedRoute adminOnly>
+                      <TruckItems />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/future-projections" element={<FutureProjectionsCalendar />} />
+                </Routes>
+              </Suspense>
+            </Layout>
+          </Router>
+        </AuthProvider>
+      </SWRConfig>
     </ErrorBoundary>
   );
 };

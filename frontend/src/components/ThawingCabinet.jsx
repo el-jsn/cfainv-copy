@@ -6,6 +6,7 @@ import axiosInstance from "./axiosInstance";
 import { Link } from "react-router-dom";
 import { ArrowBackIos } from "@mui/icons-material";
 import { useAuth } from "./AuthContext";
+import useSWR from 'swr';
 
 const useCalculateThawingData = (salesData, utpData, bufferData, adjustments = [], salesProjectionConfig = null, futureProjections = [], isNextWeek = false) => {
   return useMemo(() => {
@@ -420,17 +421,6 @@ const ThawingCabinet = () => {
   const [showNextWeek, setShowNextWeek] = useState(false);
   const containerRef = useRef(null);
 
-  // Add state for all data
-  const [salesData, setSalesData] = useState([]);
-  const [utpData, setUtpData] = useState([]);
-  const [bufferData, setBufferData] = useState([]);
-  const [adjustments, setAdjustments] = useState([]);
-  const [closures, setClosures] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [salesProjectionConfig, setSalesProjectionConfig] = useState(null);
-  const [futureProjections, setFutureProjections] = useState([]);
-  const [errors, setErrors] = useState([]);
-
   // Memoize the current day calculation
   const currentDay = useMemo(() => {
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -459,86 +449,55 @@ const ThawingCabinet = () => {
     }
   }, []);
 
-  // Replace SWR with direct API calls
-  const fetchData = useCallback(async () => {
-    const newErrors = [];
-
+  // SWR fetcher function
+  const fetcher = useCallback(async (url) => {
     try {
-      const salesResponse = await axiosInstance.get("/sales");
-      setSalesData(salesResponse.data);
+      const response = await axiosInstance.get(url);
+      return response.data;
     } catch (error) {
-      console.error("Error fetching sales data:", error);
-      newErrors.push(error);
+      console.error(`Error fetching ${url}:`, error);
+      throw error;
     }
-
-    try {
-      const utpResponse = await axiosInstance.get("/upt");
-      setUtpData(utpResponse.data);
-    } catch (error) {
-      console.error("Error fetching UTP data:", error);
-      newErrors.push(error);
-    }
-
-    try {
-      const bufferResponse = await axiosInstance.get("/buffer");
-      setBufferData(bufferResponse.data);
-    } catch (error) {
-      console.error("Error fetching buffer data:", error);
-      newErrors.push(error);
-    }
-
-    try {
-      const adjustmentsResponse = await axiosInstance.get("/adjustment/data");
-      setAdjustments(adjustmentsResponse.data);
-    } catch (error) {
-      console.error("Error fetching adjustment data:", error);
-      newErrors.push(error);
-    }
-
-    try {
-      const closuresResponse = await axiosInstance.get("/closure/plans");
-      setClosures(closuresResponse.data);
-    } catch (error) {
-      console.error("Error fetching closure plans:", error);
-      newErrors.push(error);
-    }
-
-    try {
-      const messagesResponse = await axiosInstance.get("/messages");
-      setMessages(messagesResponse.data);
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      newErrors.push(error);
-    }
-
-    try {
-      const configResponse = await axiosInstance.get("/sales-projection-config");
-      setSalesProjectionConfig(configResponse.data);
-    } catch (error) {
-      console.error("Error fetching sales projection config:", error);
-      newErrors.push(error);
-    }
-
-    try {
-      const projectionsResponse = await axiosInstance.get("/projections/future");
-      setFutureProjections(projectionsResponse.data);
-    } catch (error) {
-      console.error("Error fetching future projections:", error);
-      newErrors.push(error);
-    }
-
-    setErrors(newErrors);
   }, []);
 
-  // Fetch data on component mount
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // Data fetching hooks
+  const { data: salesData, error: salesError } = useSWR("/sales", fetcher, {
+    refreshInterval: 10 * 60 * 1000,
+    shouldRetryOnError: true,
+    errorRetryCount: 3
+  });
 
-  // Add refresh function to manually refresh data
-  const refreshData = () => {
-    fetchData();
-  };
+  const { data: utpData, error: utpError } = useSWR("/upt", fetcher, {
+    refreshInterval: 10 * 60 * 1000,
+    shouldRetryOnError: true,
+    errorRetryCount: 3
+  });
+
+  const { data: bufferData, error: bufferError } = useSWR("/buffer", fetcher, {
+    refreshInterval: 10 * 60 * 1000,
+    shouldRetryOnError: true,
+    errorRetryCount: 3
+  });
+
+  const { data: adjustments, error: adjustmentsError } = useSWR("/adjustment/data", fetcher, {
+    refreshInterval: 5 * 60 * 1000
+  });
+
+  const { data: closures, error: closuresError } = useSWR("/closure/plans", fetcher, {
+    refreshInterval: 10 * 60 * 1000
+  });
+
+  const { data: messages, error: messagesError } = useSWR("/messages", fetcher, {
+    refreshInterval: 5 * 60 * 1000
+  });
+
+  const { data: salesProjectionConfig, error: configError } = useSWR("/sales-projection-config", fetcher, {
+    refreshInterval: 10 * 60 * 1000
+  });
+
+  const { data: futureProjections, error: projectionsError } = useSWR("/projections/future", fetcher, {
+    refreshInterval: 10 * 60 * 1000
+  });
 
   // Transform sales data with null check
   const sortedSales = useMemo(() => {
@@ -566,6 +525,23 @@ const ThawingCabinet = () => {
   );
 
   const filteredClosures = useFilteredClosures(Array.isArray(closures) ? closures : []);
+
+  // Check for loading state
+  const isLoading = !salesData || !utpData || !bufferData;
+
+  // Check for errors
+  const errors = [
+    salesError, utpError, bufferError, adjustmentsError,
+    closuresError, messagesError, configError, projectionsError
+  ].filter(Boolean);
+
+  if (isLoading) {
+    return (
+      <div className="fixed top-0 left-0 w-full h-full bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-b-4 border-blue-500"></div>
+      </div>
+    );
+  }
 
   if (errors.length > 0) {
     return (
