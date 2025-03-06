@@ -1,9 +1,9 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "https://cfanbinv.onrender.com/api", // Set the base URL for all requests
-    // baseURL: "http://localhost:5000/api", // Set the base URL for
-    withCredentials: true, // Send cookies when cross-origin
+  // baseURL: "https://cfanbinv.onrender.com/api", // Set the base URL for all requests
+  baseURL: "http://localhost:5000/api", // Set the base URL for
+  withCredentials: true, // Send cookies when cross-origin
   headers: {
     "Content-Type": "application/json", // Default headers
   },

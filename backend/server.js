@@ -76,7 +76,7 @@ app.use(
     credentials: true, // Allow cookies to be sent
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['set-cookie']
+    exposedHeaders: ['set-cookie', 'cache-control']
   })
 );
 // Body parser to parse JSON payloads

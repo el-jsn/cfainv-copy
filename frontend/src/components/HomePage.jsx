@@ -55,7 +55,6 @@ const HomePage = () => {
   const [bufferData, setBufferData] = useState([]);
   const [activeBufferView, setActiveBufferView] = useState('chicken'); // Changed to track "chicken" or "prep"
   const [editingBuffer, setEditingBuffer] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const navigate = useNavigate();
   const [futureProjections, setFutureProjections] = useState({});
@@ -90,7 +89,6 @@ const HomePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setIsLoading(true);
         const [salesResponse, projectionResponse, bufferResponse, futureResponse] =
           await Promise.all([
             axiosInstance.get("/upt"),
@@ -212,8 +210,6 @@ const HomePage = () => {
         setFutureProjections(futureProjectionsMap);
       } catch (error) {
         console.error("Error fetching data:", error);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -592,13 +588,6 @@ const HomePage = () => {
     return days[today.getDay()];
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-        <div className="w-12 h-12 rounded-full border-4 border-[#E51636] border-t-transparent animate-spin"></div>
-      </div>
-    );
-  }
   const renderAdminSection = (children) => {
     return user && user.isAdmin ? children : null;
   };

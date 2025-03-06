@@ -5,7 +5,6 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [isLoading, setIsLoading] = useState(true); // Add loading state
 
     useEffect(() => {
         const checkToken = async () => { // Make async to handle potential delays
@@ -22,18 +21,11 @@ export const AuthProvider = ({ children }) => {
                 } catch (error) {
                     console.error("Invalid token", error);
                     localStorage.removeItem('authToken');
-                } finally { // Ensure loading state is updated even after error
-                    setIsLoading(false);
                 }
-            } else {
-                setIsLoading(false);
             }
-
         }
         checkToken()
     }, []);
-
-
 
     const login = (token) => {
         localStorage.setItem('authToken', token);
@@ -51,19 +43,8 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
-
-
-    // Provide loading state
-    const value = { user, login, logout, isLoading };
-
-
-    // During initial loading, optionally show a loading indicator
-    if (isLoading) {
-        return <div>Loading...</div>; // Or your custom loading component
-    }
-
-
-
+    // Provide context without loading state
+    const value = { user, login, logout };
 
     return (
         <AuthContext.Provider value={value}>

@@ -711,23 +711,16 @@ const TruckItems = () => {
     // Update fetchTruckItems
     const fetchTruckItems = async () => {
         try {
-            if (!user) {
-                setError('Please log in to view truck items.');
-                navigate('/login');
-                return;
-            }
-
+            // Remove loading state
             const response = await axiosInstance.get('/truck-items');
-            setTruckItems(Array.isArray(response.data) ? response.data : []);
+            setTruckItems(response.data);
+
+            // Extract available storage locations for filtering
+            const uniqueLocations = [...new Set(response.data.map(item => item.storageLocation))].filter(Boolean);
+            setAvailableStorageLocations(uniqueLocations);
         } catch (err) {
             console.error('Error fetching truck items:', err);
-            if (err.response?.status === 401) {
-                setError('Your session has expired. Please log in again.');
-                navigate('/login');
-            } else {
-                setError('Failed to fetch truck items. Please try again.');
-            }
-            setTruckItems([]);
+            setError('Failed to fetch truck items data');
         }
     };
 

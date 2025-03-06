@@ -308,7 +308,6 @@ const EnhancedUTPUpdate = () => {
   const [prepUtpData, setPrepUtpData] = useState({}); // New state for Prep UTP
   const [analysisResults, setAnalysisResults] = useState(null);
   const [salesVariance, setSalesVariance] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [isSnackbarOpen, setIsSnackbarOpen] = useState(false); // State for Snackbar visibility
   const [errorMessage, setErrorMessage] = useState("");
@@ -671,8 +670,6 @@ const EnhancedUTPUpdate = () => {
   };
 
   const handlePrepSubmit = async () => {
-    setIsLoading(true);
-    setErrorMessage("");
     setSuccessMessage("Prep UPT data successfully submitted.");
     try {
       await axiosInstance.post("/upt/bulk", prepUtpData);
@@ -682,14 +679,10 @@ const EnhancedUTPUpdate = () => {
       setErrorMessage(
         error.response?.data?.message || "Failed to submit Prep UPT data. Please verify the information and try again."
       );
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleSubmit = async () => {
-    setIsLoading(true);
-    setErrorMessage("");
     setSuccessMessage("UPT data successfully submitted.");
     try {
       await axiosInstance.post("/upt/bulk", utpData);
@@ -699,8 +692,6 @@ const EnhancedUTPUpdate = () => {
       setErrorMessage(
         error.response?.data?.message || "Failed to submit UPT data. Please verify the information and try again."
       );
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -1133,10 +1124,9 @@ const EnhancedUTPUpdate = () => {
                     variant="contained"
                     color="primary"
                     onClick={handleSubmit}
-                    disabled={isLoading}
-                    startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : <CheckCircleOutline />}
+                    startIcon={<CheckCircleOutline />}
                   >
-                    {isLoading ? "Submitting..." : "Submit UPT Data"}
+                    Submit UPT Data
                   </StyledButton>
                 }
               />
@@ -1223,10 +1213,9 @@ const EnhancedUTPUpdate = () => {
                     variant="contained"
                     color="primary"
                     onClick={handlePrepSubmit}
-                    disabled={isLoading}
-                    startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : <CheckCircleOutline />}
+                    startIcon={<CheckCircleOutline />}
                   >
-                    {isLoading ? "Submitting..." : "Submit Prep UPT Data"}
+                    Submit Prep UPT Data
                   </StyledButton>
                 }
               />
