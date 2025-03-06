@@ -33,6 +33,19 @@ const PORT = process.env.PORT || 3000;
 
 const app = express();
 
+// Create a DB connection variable
+let cachedDb = null;
+
+// Modified connectDB function that caches the connection
+async function connectToDatabase() {
+  if (cachedDb) {
+    return cachedDb;
+  }
+  
+  // If no connection is cached, create a new one
+  cachedDb = await connectDB();
+  return cachedDb;
+}
 
 app.use(cookieParser());
 
@@ -79,6 +92,11 @@ app.use(
 // Body parser to parse JSON payloads
 app.use(express.json({ limit: '10kb' })); // Limit request body size
 
+// Add a lightweight health check route that doesn't need database access
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Routes
 app.use("/api/upt", authenticateToken, salesRoutes);
 app.use("/api/sales", authenticateToken, ProjectedSalesRoutes);
@@ -106,6 +124,9 @@ if (process.env.NODE_ENV === 'production') {
     }
     res.sendFile(path.resolve(__dirname, 'frontend', 'dist', 'index.html'));
   });
+
+  // Connect to database right after creating the app to reduce cold start delay
+  connectToDatabase().catch(console.error);
 }
 
 app.use(express.static('frontend/dist', {
