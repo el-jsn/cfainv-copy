@@ -8,7 +8,7 @@ const axiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json", // Default headers
   },
-  timeout: 10000,
+  timeout: 30000, // Increase timeout to 30 seconds
 });
 
 axiosInstance.interceptors.request.use((config) => {
@@ -19,8 +19,6 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
-
-
 axiosInstance.interceptors.response.use(
   (response) => {
     console.log('Axios response:', response);
@@ -28,7 +26,20 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('Axios error:', error);
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timeout. Backend server might be down or slow to respond.');
+    } else if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('Response error data:', error.response.data);
+      console.error('Response error status:', error.response.status);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received from server', error.request);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Error setting up request:', error.message);
+    }
     return Promise.reject(error);
   }
 );
