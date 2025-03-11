@@ -587,7 +587,15 @@ const TruckItems = () => {
                 }
             });
 
-            return processedData;
+            setSalesMixData(processedData);
+            setSalesMixItems(Object.keys(processedData));
+            setSalesMixUploadDate(new Date());
+            setSalesMixReportingPeriod({
+                startDate: startDateFull.trim(),
+                endDate: endDateFull.trim()
+            });
+            setSuccess('Sales mix data uploaded successfully');
+
         } catch (error) {
             console.error('Error in parseExcelData:', error);
             throw new Error(`Failed to parse Excel file: ${error.message}`);
@@ -663,6 +671,10 @@ const TruckItems = () => {
                     setSalesMixData(processedData);
                     setSalesMixItems(Object.keys(processedData));
                     setSalesMixUploadDate(new Date());
+                    setSalesMixReportingPeriod({
+                        startDate: startDateFull.trim(),
+                        endDate: endDateFull.trim()
+                    });
                     setSuccess('Sales mix data uploaded successfully');
 
                 } catch (error) {
@@ -1190,6 +1202,7 @@ const TruckItems = () => {
                         <Typography variant="body1" sx={{ color: '#64748b', fontSize: '1.1rem' }}>
                             Calculate order quantities based on sales projections and inventory levels
                         </Typography>
+
                     </Box>
                     <Box sx={{ display: 'flex', gap: 2 }}>
                         <Button
@@ -1221,6 +1234,121 @@ const TruckItems = () => {
                         </Button>
                     </Box>
                 </Box>
+
+                {/* Controls Section with Sales Mix Upload */}
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: 4,
+                        mb: 4,
+                        borderRadius: '16px',
+                        backgroundColor: 'white',
+                        boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+                    }}
+                >
+                    <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        width: '100%'
+                    }}>
+                        {/* Upload Box */}
+                        <Box sx={{ width: '100%' }}>
+                            <Typography
+                                sx={{
+                                    color: '#0f172a',
+                                    fontSize: '1.1rem',
+                                    fontWeight: 500,
+                                    mb: 2
+                                }}
+                            >
+                                Sales Mix Data
+                            </Typography>
+                            <Box
+                                {...getRootProps()}
+                                sx={{
+                                    border: '2px dashed #e2e8f0',
+                                    borderRadius: '12px',
+                                    padding: '36px',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    backgroundColor: '#f8fafc',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: 2,
+                                    '&:hover': {
+                                        borderColor: '#0284c7',
+                                        backgroundColor: '#f0f9ff'
+                                    }
+                                }}
+                            >
+                                <input {...getInputProps()} />
+                                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M7 10V9C7 6.23858 9.23858 4 12 4C14.7614 4 17 6.23858 17 9V10C19.2091 10 21 11.7909 21 14C21 16.2091 19.2091 18 17 18H7C4.79086 18 3 16.2091 3 14C3 11.7909 4.79086 10 7 10Z" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M12 12L12 15" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M10 14L12 12L14 14" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                <Box>
+                                    <Typography
+                                        sx={{
+                                            color: '#0f172a',
+                                            fontSize: '1.25rem',
+                                            fontWeight: 500,
+                                            mb: 1
+                                        }}
+                                    >
+                                        Upload Sales Mix Excel File
+                                    </Typography>
+                                    <Typography
+                                        sx={{
+                                            color: '#64748b',
+                                            fontSize: '1rem'
+                                        }}
+                                    >
+                                        Drag and drop your file here, or click to select
+                                    </Typography>
+                                </Box>
+                            </Box>
+                            {salesMixUploadDate && (
+                                <Box sx={{
+                                    mt: 2,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    justifyContent: 'center'
+                                }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 8V12L15 15" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#64748b" strokeWidth="2" />
+                                    </svg>
+                                    <Typography sx={{ color: '#64748b', fontSize: '0.875rem' }}>
+                                        Last updated: {format(salesMixUploadDate, 'MMM d, yyyy h:mm a')}
+                                    </Typography>
+                                </Box>
+                            )}
+                            {salesMixReportingPeriod && salesMixReportingPeriod.startDate && (
+                                <Box sx={{
+                                    mt: 2,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    justifyContent: 'center',
+                                    backgroundColor: '#f0f9ff',
+                                    borderRadius: '8px',
+                                    p: 2
+                                }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="#0369a1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                    <Typography sx={{ color: '#0369a1', fontSize: '0.95rem', fontWeight: 500 }}>
+                                        Current Sales Mix Period: {salesMixReportingPeriod.startDate} through {salesMixReportingPeriod.endDate}
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
+                    </Box>
+                </Paper>
 
                 {/* Dashboard Section */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -2066,6 +2194,19 @@ const TruckItems = () => {
                                                     </Typography>
                                                     <Typography variant="body2" color="text.secondary">
                                                         {usage.unitsNeeded.toLocaleString()} units
+                                                    </Typography>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell sx={{ py: 4 }}>
+                                                <Box>
+                                                    <Typography sx={{ color: '#64748b', mb: 0.5, fontSize: '0.875rem' }}>
+                                                        Need + Buffer (33%)
+                                                    </Typography>
+                                                    <Typography sx={{ fontWeight: 600, color: '#0369a1', fontSize: '1.1rem' }}>
+                                                        {(usage.exactCases * 1.33).toFixed(1)} cases
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {Math.round(usage.unitsNeeded * 1.33).toLocaleString()} units
                                                     </Typography>
                                                 </Box>
                                             </TableCell>
