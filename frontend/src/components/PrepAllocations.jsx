@@ -240,11 +240,10 @@ const useFilteredClosures = (closures) => {
 
 const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, onAdjustBuffer, dailyBuffers }) => {
     const [isBufferModalOpen, setIsBufferModalOpen] = useState(false);
-
     const isToday = entry.day === currentDay;
 
     const closure = useMemo(() => {
-        return closures.find(c => {
+        return closures?.find(c => {
             const closureStartDate = new Date(c.date);
             const closureEndDate = new Date(closureStartDate);
 
@@ -274,7 +273,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
 
     const dayMessages = useMemo(() => {
         // Only include messages with [PREP] tag
-        return messages.filter(msg => msg.day === entry.day && msg.message.startsWith("[PREP]"));
+        return messages?.filter(msg => msg.day === entry.day && msg.message.startsWith("[PREP]")) || [];
     }, [messages, entry.day]);
 
     const productMessages = useMemo(() => {
@@ -307,7 +306,6 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
             "Sunjoy Lemonade": { name: "Sunjoy Lemonade", data: entry.sunjoyLemonade, bg: "bg-orange-200 text-gray-800", index: 7 },
         }
     }, [entry]);
-
 
     const renderProductBox = (productName) => {
         const productData = productsMap[productName];
@@ -395,19 +393,19 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
         if (!showAdminView) return null;
 
         return (
-            <div className="text-xs text-gray-600 mt-1 p-1 bg-gray-50 rounded">
-                <div>Sales: ${(entry.sales || 0).toLocaleString()}</div>
+            <div className={`text-xs ${isToday ? 'text-white bg-blue-400 bg-opacity-50' : 'text-gray-600 bg-gray-50'} mt-2 p-2 rounded w-full`}>
+                <div className="text-center font-medium">Sales: ${(entry.sales || 0).toLocaleString()}</div>
                 {entry.salesCalculation?.length > 0 && (
                     <div className="mt-1">
-                        Calculation:
+                        <div className="text-center font-medium">Calculation:</div>
                         {entry.salesCalculation.map((calc, idx) => (
-                            <div key={idx} className="ml-2">
-                                {calc.percentage}% of {calc.day}
-                                {calc.date && ` (${calc.date.toLocaleDateString()})`}
-                                (${calc.amount.toLocaleString()})
-                                = ${calc.contribution.toLocaleString()}
+                            <div key={idx} className="flex flex-wrap items-center justify-center">
+                                <span className={`font-medium ${isToday ? 'text-white' : 'text-blue-600'}`}>{calc.percentage}%</span> of {calc.day}
+                                {calc.date && <span className={`ml-1 ${isToday ? 'text-blue-100' : 'text-gray-500'}`}>({calc.date.toLocaleDateString()})</span>}
+                                <span className="mx-1 font-medium">${calc.amount.toLocaleString()}</span>
+                                = <span className={`ml-1 font-bold ${isToday ? 'text-white' : 'text-green-600'}`}>${calc.contribution.toLocaleString()}</span>
                                 {calc.isFromFutureProjection && (
-                                    <span className="ml-1 text-blue-600 font-medium">(Future Projection)</span>
+                                    <span className={`ml-1 ${isToday ? 'text-white bg-blue-600' : 'text-blue-600 bg-blue-50'} font-medium px-1 py-0.5 rounded-full text-[10px]`}>Future Projection</span>
                                 )}
                             </div>
                         ))}
@@ -418,40 +416,35 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
     };
 
     return (
-        <div
-            key={entry.day}
-            className={`h-full w-full flex flex-col transition-all duration-200
-                ${isToday
-                    ? 'ring-2 ring-blue-500 shadow-lg border-transparent'
-                    : 'border border-gray-200 hover:shadow-md'
-                } rounded-lg md:rounded-xl`}
-        >
-            <div
-                className={`p-2 sm:p-2 rounded-t-lg md:rounded-t-xl font-bold text-center text-sm sm:text-base
-              ${isToday
-                        ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
-                        : 'bg-gradient-to-r from-gray-100 to-gray-200'
-                    }`}
-            >
-                <div className="p-1 flex items-center justify-center gap-2">
-                    {entry.day}
+        <div className={`h-full flex flex-col bg-white rounded-lg md:rounded-xl shadow-md border border-gray-200 overflow-hidden ${isToday ? "ring-2 ring-blue-500" : ""
+            }`}>
+            <div className={`border-b border-gray-200 p-2 sm:p-3 ${isToday ? "bg-blue-500 text-white" : "bg-gray-50 text-gray-800"
+                }`}>
+                <div className="flex justify-center items-center relative">
+                    <h3 className="font-bold text-base sm:text-lg">{entry.day}</h3>
+
                     {showAdminView && (
                         <button
                             onClick={() => setIsBufferModalOpen(true)}
-                            className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                            className={`absolute right-0 p-1 rounded-full ${isToday ? 'hover:bg-blue-400' : 'hover:bg-gray-200'} transition-colors`}
                             title="Adjust Daily Buffers"
                         >
-                            <Settings className="w-4 h-4" />
+                            <Settings className={`w-4 h-4 ${isToday ? 'text-white' : 'text-gray-600'}`} />
                         </button>
                     )}
                 </div>
                 {showAdminView && renderSalesDetails()}
-                {noProductMessages.map((msg, index) => (
-                    <div key={index} className="mt-1 text-xs sm:text-sm bg-yellow-50 p-1 rounded-md text-yellow-800 border border-yellow-200">
-                        {msg.message.substring(6).trim()}
-                    </div>
-                ))}
             </div>
+
+            {noProductMessages.length > 0 && (
+                <div className="px-2 py-1 bg-yellow-50 border-b border-yellow-200">
+                    {noProductMessages.map((msg, index) => (
+                        <div key={index} className="text-xs sm:text-sm text-yellow-800 text-center">
+                            {msg.message.substring(6).trim()}
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {closure ? (
                 <div className="flex-1 flex flex-col justify-center items-center p-2 sm:p-3 bg-gradient-to-br from-red-50 via-red-100 to-red-50 relative">
@@ -467,7 +460,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
                     </div>
                 </div>
             ) : (
-                <div className="flex-1 flex flex-col gap-1 p-1 sm:p-2 relative">
+                <div className="flex-1 flex flex-col gap-1 p-1 sm:p-2 overflow-y-auto min-h-0 w-full">
                     {Object.keys(productsMap).map(productName => renderProductBox(productName))}
                 </div>
             )}
@@ -483,13 +476,35 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
     );
 });
 
-const PrepAllocations = () => {
-    const [isFullScreen, setIsFullScreen] = useState(false);
-    const [showAdminView, setShowAdminView] = useState(false);
-    const [showNextWeek, setShowNextWeek] = useState(false);
+const PrepAllocations = ({
+    data,
+    showAdminView: propShowAdminView,
+    showNextWeek: propShowNextWeek,
+    isFullScreen: propIsFullScreen,
+    adjustments: propAdjustments,
+    closures: propClosures,
+    messages: propMessages,
+    salesProjectionConfig: propSalesProjectionConfig,
+    futureProjections: propFutureProjections,
+    dailyBuffers: propDailyBuffers,
+    onAdjustBuffer: propOnAdjustBuffer,
+    containerMode = false
+}) => {
+    const [isFullScreen, setIsFullScreen] = useState(propIsFullScreen || false);
+    const [showAdminView, setShowAdminView] = useState(propShowAdminView || false);
+    const [showNextWeek, setShowNextWeek] = useState(propShowNextWeek || false);
     const [wakeLock, setWakeLock] = useState(null);
     const containerRef = useRef(null);
     const { user } = useAuth();
+
+    // Update state when props change
+    useEffect(() => {
+        if (containerMode) {
+            setIsFullScreen(propIsFullScreen);
+            setShowAdminView(propShowAdminView);
+            setShowNextWeek(propShowNextWeek);
+        }
+    }, [containerMode, propIsFullScreen, propShowAdminView, propShowNextWeek]);
 
     // Memoize the current day calculation
     const currentDay = useMemo(() => {
@@ -510,76 +525,82 @@ const PrepAllocations = () => {
         }
     }, []);
 
-    // Data fetching hooks
-    const { data: salesData, error: salesError } = useSWR("/sales", fetcher, {
+    // Data fetching hooks - only used when not in containerMode
+    const { data: salesData, error: salesError } = useSWR(containerMode ? null : "/sales", fetcher, {
         refreshInterval: 10 * 60 * 1000,
         shouldRetryOnError: true,
         errorRetryCount: 3
     });
 
-    const { data: utpData, error: utpError } = useSWR("/upt", fetcher, {
+    const { data: utpData, error: utpError } = useSWR(containerMode ? null : "/upt", fetcher, {
         refreshInterval: 10 * 60 * 1000,
         shouldRetryOnError: true,
         errorRetryCount: 3
     });
 
-    const { data: bufferData, error: bufferError } = useSWR("/buffer", fetcher, {
+    const { data: bufferData, error: bufferError } = useSWR(containerMode ? null : "/buffer", fetcher, {
         refreshInterval: 10 * 60 * 1000,
         shouldRetryOnError: true,
         errorRetryCount: 3
     });
 
-    const { data: adjustments, error: adjustmentsError } = useSWR("/adjustment/data", fetcher, {
+    const { data: adjustments, error: adjustmentsError } = useSWR(containerMode ? null : "/adjustment/data", fetcher, {
         refreshInterval: 5 * 60 * 1000
     });
 
-    const { data: closures, error: closuresError } = useSWR("/closure/plans", fetcher, {
+    const { data: closures, error: closuresError } = useSWR(containerMode ? null : "/closure/plans", fetcher, {
         refreshInterval: 10 * 60 * 1000
     });
 
-    const { data: messages, error: messagesError } = useSWR("/messages", fetcher, {
+    const { data: messages, error: messagesError } = useSWR(containerMode ? null : "/messages", fetcher, {
         refreshInterval: 5 * 60 * 1000
     });
 
-    const { data: salesProjectionConfig, error: configError } = useSWR("/sales-projection-config", fetcher, {
+    const { data: salesProjectionConfig, error: configError } = useSWR(containerMode ? null : "/sales-projection-config", fetcher, {
         refreshInterval: 10 * 60 * 1000
     });
 
-    const { data: futureProjections, error: projectionsError } = useSWR("/projections/future", fetcher, {
+    const { data: futureProjections, error: projectionsError } = useSWR(containerMode ? null : "/projections/future", fetcher, {
         refreshInterval: 10 * 60 * 1000
     });
 
-    const { data: dailyBuffers, error: buffersError, mutate: mutateDailyBuffers } = useSWR("/daily-buffer", fetcher, {
+    const { data: dailyBuffers, error: buffersError, mutate: mutateDailyBuffers } = useSWR(containerMode ? null : "/daily-buffer", fetcher, {
         refreshInterval: 10 * 60 * 1000
     });
 
-    // Transform sales data with null check
+    // Transform sales data with null check - use props if in containerMode
     const sortedSales = useMemo(() => {
-        if (!Array.isArray(salesData)) return [];
+        const salesToUse = containerMode ? data?.sales : salesData;
+        if (!Array.isArray(salesToUse)) return [];
         const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        return daysOrder.map((day) => salesData.find((entry) => entry?.day === day) || { day, sales: 0 });
-    }, [salesData]);
+        return daysOrder.map((day) => salesToUse.find((entry) => entry?.day === day) || { day, sales: 0 });
+    }, [containerMode, data, salesData]);
 
     // Prepare data object with null checks
-    const data = useMemo(() => ({
-        sales: Array.isArray(sortedSales) ? sortedSales : [],
-        utp: Array.isArray(utpData) ? utpData : [],
-        buffer: Array.isArray(bufferData) ? bufferData : []
-    }), [sortedSales, utpData, bufferData]);
+    const dataToUse = useMemo(() => {
+        if (containerMode && data) {
+            return data;
+        }
+        return {
+            sales: Array.isArray(sortedSales) ? sortedSales : [],
+            utp: Array.isArray(utpData) ? utpData : [],
+            buffer: Array.isArray(bufferData) ? bufferData : []
+        };
+    }, [containerMode, data, sortedSales, utpData, bufferData]);
 
     // Calculate data with null checks
     const calculatedData = useCalculatePrepData(
-        data.sales,
-        data.utp,
-        data.buffer,
-        Array.isArray(adjustments) ? adjustments : [],
-        salesProjectionConfig || null,
-        Array.isArray(futureProjections) ? futureProjections : [],
+        dataToUse.sales,
+        dataToUse.utp,
+        dataToUse.buffer,
+        containerMode ? propAdjustments : adjustments,
+        containerMode ? propSalesProjectionConfig : salesProjectionConfig,
+        containerMode ? propFutureProjections : futureProjections,
         showNextWeek,
-        Array.isArray(dailyBuffers) ? dailyBuffers : []
+        containerMode ? propDailyBuffers : dailyBuffers
     );
 
-    const filteredClosures = useFilteredClosures(Array.isArray(closures) ? closures : []);
+    const filteredClosures = useFilteredClosures(containerMode ? propClosures : closures);
 
     const requestWakeLock = useCallback(async () => {
         if ('wakeLock' in navigator) {
@@ -598,24 +619,26 @@ const PrepAllocations = () => {
     }, []);
 
     React.useEffect(() => {
-        requestWakeLock();
+        if (!containerMode) {
+            requestWakeLock();
 
-        const storedFullScreenPreference = localStorage.getItem('isFullScreen');
-        if (storedFullScreenPreference === 'true' && !document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-            setIsFullScreen(true);
+            const storedFullScreenPreference = localStorage.getItem('isFullScreen');
+            if (storedFullScreenPreference === 'true' && !document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                setIsFullScreen(true);
+            }
+
+            const handleFullScreenChange = () => {
+                setIsFullScreen(!!document.fullscreenElement);
+            };
+
+            document.addEventListener('fullscreenchange', handleFullScreenChange);
+
+            return () => {
+                document.removeEventListener('fullscreenchange', handleFullScreenChange);
+            };
         }
-
-        const handleFullScreenChange = () => {
-            setIsFullScreen(!!document.fullscreenElement);
-        };
-
-        document.addEventListener('fullscreenchange', handleFullScreenChange);
-
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFullScreenChange);
-        };
-    }, []);
+    }, [containerMode, requestWakeLock]);
 
     // Add toggleFullScreen function
     const toggleFullScreen = useCallback(() => {
@@ -623,23 +646,21 @@ const PrepAllocations = () => {
             document.documentElement.requestFullscreen();
             setIsFullScreen(true);
             localStorage.setItem('isFullScreen', 'true');
-            if (containerRef.current) {
-                containerRef.current.classList.add('fullscreen');
-            }
         } else {
             if (document.exitFullscreen) {
                 document.exitFullscreen();
                 setIsFullScreen(false);
                 localStorage.setItem('isFullScreen', 'false');
-                if (containerRef.current) {
-                    containerRef.current.classList.remove('fullscreen');
-                }
             }
         }
     }, []);
 
     // Add handleAdjustBuffer function
     const handleAdjustBuffer = useCallback(async (day, buffers) => {
+        if (containerMode && propOnAdjustBuffer) {
+            return propOnAdjustBuffer(day, buffers);
+        }
+
         try {
             const updatedBuffers = Object.entries(buffers).map(([productName, bufferPrcnt]) => ({
                 day,
@@ -653,13 +674,13 @@ const PrepAllocations = () => {
         } catch (error) {
             console.error("Error updating daily buffers:", error);
         }
-    }, [mutateDailyBuffers]);
+    }, [containerMode, propOnAdjustBuffer, mutateDailyBuffers]);
 
-    // Check for loading state
-    const isLoading = !salesData || !utpData || !bufferData;
+    // Check for loading state - skip if in containerMode
+    const isLoading = !containerMode && (!salesData || !utpData || !bufferData);
 
-    // Check for errors
-    const errors = [
+    // Check for errors - skip if in containerMode
+    const errors = containerMode ? [] : [
         salesError, utpError, bufferError, adjustmentsError,
         closuresError, messagesError, configError, projectionsError,
         buffersError
@@ -701,6 +722,36 @@ const PrepAllocations = () => {
         );
     }
 
+    // If in containerMode, just render the cards without the outer container
+    if (containerMode) {
+        return (
+            <div
+                ref={containerRef}
+                className={`flex-1 flex flex-col ${isFullScreen ? 'h-full max-h-screen w-full' : ''}`}
+            >
+                <div className="flex-1 flex gap-1 sm:gap-2 w-full min-h-0">
+                    {calculatedData.map((entry) => (
+                        <div key={entry.day} className="flex-1 min-w-0 w-full">
+                            <DayCard
+                                entry={entry}
+                                currentDay={currentDay}
+                                closures={filteredClosures}
+                                messages={propMessages}
+                                showAdminView={showAdminView}
+                                onAdjustBuffer={handleAdjustBuffer}
+                                dailyBuffers={propDailyBuffers}
+                            />
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-2 text-xs text-gray-500 text-center w-full">
+                    *Drink Allocations for Monday - Friday are for 75% of daily sales, Saturday allocations are for 100%.
+                </div>
+            </div>
+        );
+    }
+
+    // Regular standalone view
     return (
         <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
             <div className="min-h-full w-full bg-white rounded-lg md:rounded-xl shadow-xl p-2 sm:p-4 border border-gray-100 flex flex-col">

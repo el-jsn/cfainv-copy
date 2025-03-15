@@ -16,6 +16,7 @@ import MessageListPage from "./components/MessageListPage";
 import ErrorBoundary from './components/ErrorBoundary';
 import { SWRConfig } from 'swr';
 import KeepBackendWarm from './components/KeepBackendWarm';
+import AllocationsDashboard from './components/AllocationsDashboard';
 
 // Lazy load components
 const HomePage = lazy(() => import('./components/HomePage'));
@@ -148,6 +149,11 @@ const App = () => {
                     <Route path="/prep-allocations" element={
                       <ProtectedRoute>
                         <PrepAllocations />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/allocations-dashboard" element={
+                      <ProtectedRoute>
+                        <AllocationsDashboard />
                       </ProtectedRoute>
                     } />
                     <Route path="/data/message/add" element={

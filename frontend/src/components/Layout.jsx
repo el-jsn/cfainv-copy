@@ -31,6 +31,7 @@ const Layout = React.memo(({ children }) => {
       icon: Calculator,
       hasDropdown: true,
       dropdownLinks: [
+        { to: "/allocations-dashboard", label: "Allocations Dashboard" },
         { to: "/thawing-cabinet", label: "Thawing Cabinet" },
         { to: "/prep-allocations", label: "Prep Allocations" },
       ]
@@ -69,7 +70,7 @@ const Layout = React.memo(({ children }) => {
 
   // Determine if navbar should be shown
   const showNavbar = useMemo(() => {
-    const hiddenRoutes = ["/thawing-cabinet", "/prep-allocations", "/login"];
+    const hiddenRoutes = ["/thawing-cabinet", "/prep-allocations", "/login", "/allocations-dashboard"];
     return !hiddenRoutes.includes(location.pathname);
   }, [location.pathname]);
 
