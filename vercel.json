@@ -36,18 +36,12 @@
       "handle": "filesystem"
     },
     {
-      "src": "/(login|allocations-dashboard|thawing-cabinet|prep-allocations|update-upt|how-to|update-sales-projection|data/message/.+|closure/.+|instructions|thawing-cabinet/config|truck-items|future-projections|dev-info)(.*)",
-      "dest": "frontend/dist/index.html",
-      "headers": {
-        "cache-control": "no-cache, no-store, must-revalidate"
-      }
+      "src": "/allocations-dashboard",
+      "dest": "frontend/dist/index.html"
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/dist/index.html",
-      "headers": {
-        "cache-control": "no-cache, no-store, must-revalidate"
-      }
+      "dest": "backend/server.js"
     }
   ],
   "env": {
