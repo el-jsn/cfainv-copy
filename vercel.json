@@ -36,10 +36,6 @@
       "handle": "filesystem"
     },
     {
-      "src": "/allocations-dashboard",
-      "dest": "frontend/dist/index.html"
-    },
-    {
       "src": "/(.*)",
       "dest": "backend/server.js"
     }
