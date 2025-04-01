@@ -5,6 +5,7 @@
   "routes": [
     { "handle": "filesystem" },
     { "src": "/assets/(.*)", "dest": "/assets/$1", "headers": { "cache-control": "public, max-age=31536000, immutable" } },
+    { "src": "/allocations-dashboard", "dest": "/index.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ],
   "headers": [
