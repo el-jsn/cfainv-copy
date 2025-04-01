@@ -40,42 +40,6 @@
       "dest": "frontend/dist/index.html"
     },
     {
-      "src": "/login",
-      "dest": "frontend/dist/index.html"
-    },
-    {
-      "src": "/thawing-cabinet",
-      "dest": "frontend/dist/index.html"
-    },
-    {
-      "src": "/prep-allocations",
-      "dest": "frontend/dist/index.html"
-    },
-    {
-      "src": "/update-upt",
-      "dest": "frontend/dist/index.html"
-    },
-    {
-      "src": "/update-sales-projection",
-      "dest": "frontend/dist/index.html"
-    },
-    {
-      "src": "/future-projections",
-      "dest": "frontend/dist/index.html"
-    },
-    {
-      "src": "/how-to",
-      "dest": "frontend/dist/index.html"
-    },
-    {
-      "src": "/(data|closure)/(.*)",
-      "dest": "frontend/dist/index.html"
-    },
-    {
-      "src": "/truck-items",
-      "dest": "frontend/dist/index.html"
-    },
-    {
       "src": "/(.*)",
       "dest": "backend/server.js"
     }
