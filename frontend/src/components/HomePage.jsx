@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Line } from "react-chartjs-2";
 import Chart from "./Chart";
+import BufferItem from "./BufferItem"; // Import the new component
 import LogoutButton from "./LogoutButton";
 import axiosInstance from "./axiosInstance";
 import { useAuth } from "./AuthContext";
@@ -529,6 +530,14 @@ const HomePage = () => {
     if (value < 0) return <ArrowDown className="inline-block w-4 h-4 mr-1 text-red-600" />;
     return null;
   };
+
+  // Helper function for buffer card styling based on percentage
+  const getBufferStatusClasses = (value) => {
+    if (value > 5) return "bg-green-50 border-green-200 hover:shadow-green-100"; // Positive buffer
+    if (value < -5) return "bg-red-50 border-red-200 hover:shadow-red-100";   // Negative buffer
+    return "bg-gray-50 border-gray-100 hover:shadow-gray-100"; // Neutral buffer
+  };
+
   // Function to filter buffer data for Chicken
   const chickenBufferData = () => {
     return bufferData.filter(buffer =>
@@ -668,9 +677,25 @@ const HomePage = () => {
                       <Typography variant="h4" className="font-bold text-[#262626]">
                         ${weeklyTotal.toLocaleString()}
                       </Typography>
-                      <Typography variant="small" className="text-gray-600">
-                        Mon-Sat Total
-                      </Typography>
+                      {/* Add Trend vs Next Week */}
+                      <div className="flex items-center mt-1">
+                        {weekOverWeekChange > 0 ? (
+                          <ArrowUp className="h-4 w-4 text-green-600 mr-1" />
+                        ) : weekOverWeekChange < 0 ? (
+                          <ArrowDown className="h-4 w-4 text-red-600 mr-1" />
+                        ) : null}
+                        <Typography
+                          variant="small"
+                          className={`${weekOverWeekChange > 0
+                            ? 'text-green-600'
+                            : weekOverWeekChange < 0
+                              ? 'text-red-600'
+                              : 'text-gray-600'
+                            }`}
+                        >
+                          {weekOverWeekChange > 0 ? '+' : ''}{weekOverWeekChange.toFixed(1)}% vs. Next Week
+                        </Typography>
+                      </div>
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
                       <Calendar className="h-6 w-6 text-blue-600" />
@@ -955,60 +980,22 @@ const HomePage = () => {
             </CardHeader>
             <CardBody className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {(activeBufferView === 'chicken' ? chickenBufferData() : prepBufferData()).map((buffer) => (
-                  <div
-                    key={buffer._id}
-                    className="bg-gray-50 rounded-xl p-4 border border-gray-100 transition-all duration-300 hover:scale-105"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <Typography variant="h6" className="font-semibold text-[#262626]">
-                        {buffer.productName}
-                      </Typography>
-                      {editingBuffer === buffer._id ? (
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="number"
-                            defaultValue={buffer.bufferPrcnt}
-                            className="w-20 p-1 bg-white border border-gray-200 text-[#262626] rounded-lg focus:ring-2 focus:ring-[#E51636] focus:border-[#E51636]"
-                            autoFocus
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                handleBufferUpdate(buffer._id, parseFloat(e.target.value));
-                              }
-                            }}
-                          />
-                          <Button
-                            size="sm"
-                            className="bg-[#E51636] hover:bg-[#C41230] text-white px-3 py-1 rounded-lg transition-colors duration-300"
-                            onClick={(e) => {
-                              const input = e.target.previousSibling;
-                              handleBufferUpdate(buffer._id, parseFloat(input.value));
-                            }}
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <div className={`flex items-center ${getBufferColor(buffer.bufferPrcnt)} font-bold text-lg`}>
-                            {getBufferArrow(buffer.bufferPrcnt)}
-                            {buffer.bufferPrcnt}%
-                          </div>
-                          <IconButton
-                            size="sm"
-                            className="bg-[#E51636] hover:bg-[#C41230] text-white transition-colors duration-300"
-                            onClick={() => handleBufferEdit(buffer._id)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </IconButton>
-                        </div>
-                      )}
-                    </div>
-                    <Typography variant="small" className="text-gray-600 mt-2">
-                      Updated: {new Date(buffer.updatedOn).toLocaleDateString()}
-                    </Typography>
-                  </div>
-                ))}
+                {(activeBufferView === 'chicken' ? chickenBufferData() : prepBufferData()).map((buffer) => {
+                  const statusClasses = getBufferStatusClasses(buffer.bufferPrcnt);
+                  // Use the new BufferItem component
+                  return (
+                    <BufferItem
+                      key={buffer._id} // Pass key here
+                      buffer={buffer}
+                      statusClasses={statusClasses}
+                      editingBuffer={editingBuffer}
+                      handleBufferEdit={handleBufferEdit}
+                      handleBufferUpdate={handleBufferUpdate}
+                      getBufferColor={getBufferColor}
+                      getBufferArrow={getBufferArrow}
+                    />
+                  );
+                })}
               </div>
             </CardBody>
           </Card>
