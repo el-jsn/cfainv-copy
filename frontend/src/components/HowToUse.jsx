@@ -211,9 +211,10 @@ const HowToUse = () => {
                 {/* Increased gap between sidebar and content */}
                 <div className="flex flex-col lg:flex-row gap-10 lg:gap-12">
                     {/* Sidebar */}
-                    <aside className="w-full lg:w-72 flex-shrink-0"> {/* Adjusted width for large screens */}
-                        {/* Sticky sidebar with offset */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 lg:sticky lg:top-24">
+                    {/* Make aside sticky */}
+                    <aside className="w-full lg:w-72 flex-shrink-0 lg:sticky lg:top-24 self-start"> {/* Added self-start */}
+                        {/* Inner container for padding and scrolling with max height */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 overflow-y-auto lg:max-h-[calc(100vh-7rem)]"> {/* Moved max-h here, removed h-full */}
                             <h3 className="text-base font-semibold text-gray-500 mb-4 px-2 uppercase tracking-wider"> {/* Styled heading */}
                                 Sections
                             </h3>
