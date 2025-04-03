@@ -1997,6 +1997,7 @@ const TruckItems = () => {
                                 const usage = calculateUsage(item, salesMixData, dateRange);
                                 const currentStockUnits = (item.onHandQty || 0) * item.totalUnits;
                                 const orderQuantity = calculateOrderQuantity(item, usage);
+                                const estimatedNeedBuffered = usage.exactCases * 1.33; // Calculate buffered need
 
                                 return (
                                     <React.Fragment key={item._id}>
@@ -2008,10 +2009,11 @@ const TruckItems = () => {
                                                 '&:hover': {
                                                     backgroundColor: '#f8fafc'
                                                 },
-                                                borderLeft: orderQuantity > 0 ? '4px solid #fee2e2' : '4px solid #f0fdf4'
+                                                borderLeft: orderQuantity > 0 ? '4px solid #fee2e2' : '4px solid #f0fdf4' // Keep border indicator
                                             }}
                                         >
-                                            <TableCell sx={{ py: 4, width: '40%' }}>
+                                            {/* Cell 1: Item Details */}
+                                            <TableCell sx={{ py: 3, width: '35%' }}>
                                                 <Box>
                                                     <Typography variant="h6" sx={{
                                                         fontWeight: 600,
@@ -2024,7 +2026,7 @@ const TruckItems = () => {
                                                         {item.description}
                                                         <Chip
                                                             size="small"
-                                                            label={item.priorityLevel}
+                                                            label={item.priorityLevel || 'N/A'}
                                                             sx={{
                                                                 backgroundColor:
                                                                     item.priorityLevel === 'critical' ? '#fee2e2' :
@@ -2034,11 +2036,12 @@ const TruckItems = () => {
                                                                     item.priorityLevel === 'critical' ? '#991b1b' :
                                                                         item.priorityLevel === 'high' ? '#92400e' :
                                                                             item.priorityLevel === 'medium' ? '#166534' : '#475569',
-                                                                height: '24px'
+                                                                height: '24px',
+                                                                textTransform: 'capitalize'
                                                             }}
                                                         />
                                                     </Typography>
-                                                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                                                         <Chip
                                                             size="small"
                                                             label={item.uom}
@@ -2049,28 +2052,9 @@ const TruckItems = () => {
                                                                 border: '1px solid #e2e8f0'
                                                             }}
                                                         />
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            {(() => {
-                                                                const [numberPart, ...rest] = item.uom.split(' ');
-                                                                const unitPart = rest.join(' ');
-                                                                let totalUnits = item.totalUnits;
-                                                                let unitType = 'units';
-
-                                                                // Check for special unit types
-                                                                if (unitPart.startsWith('Gal.')) {
-                                                                    unitType = 'Gal.';
-                                                                } else if (unitPart.startsWith('Lb')) {
-                                                                    unitType = 'Lb';
-                                                                } else if (unitPart.startsWith('Kg')) {
-                                                                    unitType = 'Kg';
-                                                                }
-
-                                                                return `${totalUnits} ${unitType} per case`;
-                                                            })()}
-                                                        </Typography>
                                                         <Chip
                                                             size="small"
-                                                            label={item.storageType}
+                                                            label={item.storageType || 'N/A'}
                                                             sx={{
                                                                 backgroundColor:
                                                                     item.storageType === 'frozen' ? '#e0f2fe' :
@@ -2078,16 +2062,22 @@ const TruckItems = () => {
                                                                 color:
                                                                     item.storageType === 'frozen' ? '#0369a1' :
                                                                         item.storageType === 'refrigerated' ? '#166534' : '#475569',
-                                                                height: '24px'
+                                                                height: '24px',
+                                                                textTransform: 'capitalize'
                                                             }}
                                                         />
+                                                        <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                                                            {item.totalUnits} units/case
+                                                        </Typography>
                                                     </Box>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell sx={{ py: 4 }}>
+
+                                            {/* Cell 2: Stock Status */}
+                                            <TableCell sx={{ py: 3, width: '20%' }}>
                                                 <Box>
                                                     <Typography sx={{ color: '#64748b', mb: 0.5, fontSize: '0.875rem' }}>
-                                                        Current Stock
+                                                        Stock Status
                                                     </Typography>
                                                     {editingStock === item._id ? (
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -2114,31 +2104,16 @@ const TruckItems = () => {
                                                                 <IconButton
                                                                     size="small"
                                                                     onClick={() => handleQuickStockUpdate(item, tempStockValue)}
-                                                                    sx={{
-                                                                        color: '#16a34a',
-                                                                        p: 0.5,
-                                                                        '&:hover': { backgroundColor: '#f0fdf4' }
-                                                                    }}
+                                                                    sx={{ color: '#16a34a', p: 0.5, '&:hover': { backgroundColor: '#f0fdf4' } }}
                                                                 >
-                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                                        <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                                    </svg>
+                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                                                 </IconButton>
                                                                 <IconButton
                                                                     size="small"
-                                                                    onClick={() => {
-                                                                        setEditingStock(null);
-                                                                        setTempStockValue('');
-                                                                    }}
-                                                                    sx={{
-                                                                        color: '#dc2626',
-                                                                        p: 0.5,
-                                                                        '&:hover': { backgroundColor: '#fee2e2' }
-                                                                    }}
+                                                                    onClick={() => { setEditingStock(null); setTempStockValue(''); }}
+                                                                    sx={{ color: '#dc2626', p: 0.5, '&:hover': { backgroundColor: '#fee2e2' } }}
                                                                 >
-                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                                        <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                                    </svg>
+                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                                                 </IconButton>
                                                             </Box>
                                                         </Box>
@@ -2149,129 +2124,86 @@ const TruckItems = () => {
                                                                 setEditingStock(item._id);
                                                                 setTempStockValue(item.onHandQty?.toString() || '0');
                                                             }}
-                                                            sx={{
-                                                                cursor: 'pointer',
-                                                                '&:hover': {
-                                                                    '& .edit-icon': {
-                                                                        opacity: 1
-                                                                    }
-                                                                }
-                                                            }}
+                                                            sx={{ cursor: 'pointer', '&:hover': { '& .edit-icon': { opacity: 1 } } }}
                                                         >
                                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                                 <Typography sx={{ fontWeight: 600, color: '#0f172a', fontSize: '1.1rem' }}>
                                                                     {item.onHandQty || 0} cases
                                                                 </Typography>
-                                                                <svg
-                                                                    width="14"
-                                                                    height="14"
-                                                                    viewBox="0 0 24 24"
-                                                                    fill="none"
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    className="edit-icon"
-                                                                    style={{ opacity: 0, transition: 'opacity 0.2s' }}
-                                                                >
-                                                                    <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                                </svg>
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="edit-icon" style={{ opacity: 0, transition: 'opacity 0.2s' }}><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                                             </Box>
                                                             <Typography variant="body2" color="text.secondary">
-                                                                {currentStockUnits.toLocaleString()} units
+                                                                ({currentStockUnits.toLocaleString()} units)
                                                             </Typography>
                                                             <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
-                                                                Safety Stock: {item.minParLevel || 0} cases
+                                                                Min: {item.minParLevel || 0} cases
                                                             </Typography>
                                                         </Box>
                                                     )}
                                                 </Box>
                                             </TableCell>
-                                            <TableCell sx={{ py: 4 }}>
+
+                                            {/* Cell 3: Estimated Need (Buffered) */}
+                                            <TableCell sx={{ py: 3, width: '20%' }}>
                                                 <Box>
                                                     <Typography sx={{ color: '#64748b', mb: 0.5, fontSize: '0.875rem' }}>
-                                                        Projected Need
-                                                    </Typography>
-                                                    <Typography sx={{ fontWeight: 600, color: '#0f172a', fontSize: '1.1rem' }}>
-                                                        {usage.exactCases.toFixed(1)} cases
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {usage.unitsNeeded.toLocaleString()} units
-                                                    </Typography>
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell sx={{ py: 4 }}>
-                                                <Box>
-                                                    <Typography sx={{ color: '#64748b', mb: 0.5, fontSize: '0.875rem' }}>
-                                                        Need + Buffer (33%)
+                                                        Est. Need (Buffered)
                                                     </Typography>
                                                     <Typography sx={{ fontWeight: 600, color: '#0369a1', fontSize: '1.1rem' }}>
-                                                        {(usage.exactCases * 1.33).toFixed(1)} cases
+                                                        {estimatedNeedBuffered.toFixed(1)} cases
                                                     </Typography>
                                                     <Typography variant="body2" color="text.secondary">
-                                                        {Math.round(usage.unitsNeeded * 1.33).toLocaleString()} units
+                                                        ({Math.round(usage.unitsNeeded * 1.33).toLocaleString()} units)
                                                     </Typography>
+                                                    {item.wastePercentage > 0 && (
+                                                        <Chip
+                                                            size="small"
+                                                            label={`+${item.wastePercentage}% waste`}
+                                                            sx={{
+                                                                mt: 0.5,
+                                                                height: '20px',
+                                                                backgroundColor: '#fef3c7',
+                                                                color: '#92400e',
+                                                                fontSize: '0.75rem'
+                                                            }}
+                                                        />
+                                                    )}
                                                 </Box>
                                             </TableCell>
-                                            <TableCell sx={{ py: 4 }}>
+
+                                            {/* Cell 4: Suggested Order */}
+                                            <TableCell sx={{ py: 3, width: '15%' }}>
                                                 <Box>
                                                     <Typography sx={{ color: '#64748b', mb: 0.5, fontSize: '0.875rem' }}>
                                                         Suggested Order
                                                     </Typography>
                                                     <Typography sx={{
-                                                        fontWeight: 600,
-                                                        fontSize: '1.1rem',
+                                                        fontWeight: 700, // Bolder
+                                                        fontSize: '1.2rem', // Larger
                                                         color: orderQuantity > 0 ? '#dc2626' : '#16a34a',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: 1
                                                     }}>
                                                         {orderQuantity} cases
-                                                        {item.wastePercentage > 0 && (
-                                                            <Chip
-                                                                size="small"
-                                                                label={`+${item.wastePercentage}% waste`}
-                                                                sx={{
-                                                                    height: '20px',
-                                                                    backgroundColor: '#fef3c7',
-                                                                    color: '#92400e',
-                                                                    fontSize: '0.75rem'
-                                                                }}
-                                                            />
-                                                        )}
                                                     </Typography>
                                                     <Typography variant="body2" color="text.secondary">
-                                                        {(orderQuantity * item.totalUnits).toLocaleString()} units
+                                                        ({(orderQuantity * item.totalUnits).toLocaleString()} units)
                                                     </Typography>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell align="right" sx={{ py: 4, pr: 4 }}>
+
+                                            {/* Cell 5: Actions */}
+                                            <TableCell align="right" sx={{ py: 3, pr: 3, width: '10%' }}>
                                                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                                                     <IconButton
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleEditClick(item);
-                                                        }}
+                                                        onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
                                                         size="small"
-                                                        sx={{
-                                                            color: '#64748b',
-                                                            '&:hover': {
-                                                                backgroundColor: '#f1f5f9'
-                                                            }
-                                                        }}
+                                                        sx={{ color: '#64748b', '&:hover': { backgroundColor: '#f1f5f9' } }}
                                                     >
                                                         <EditIcon fontSize="small" />
                                                     </IconButton>
                                                     <IconButton
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteItem(item._id);
-                                                        }}
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteItem(item._id); }}
                                                         size="small"
-                                                        sx={{
-                                                            color: '#64748b',
-                                                            '&:hover': {
-                                                                backgroundColor: '#fee2e2',
-                                                                color: '#dc2626'
-                                                            }
-                                                        }}
+                                                        sx={{ color: '#64748b', '&:hover': { backgroundColor: '#fee2e2', color: '#dc2626' } }}
                                                     >
                                                         <DeleteIcon fontSize="small" />
                                                     </IconButton>
@@ -2280,101 +2212,96 @@ const TruckItems = () => {
                                         </TableRow>
                                         {expandedRows[item._id] && (
                                             <TableRow>
-                                                <TableCell colSpan={5} sx={{ backgroundColor: '#f8fafc', py: 4 }}>
+                                                <TableCell colSpan={5} sx={{ backgroundColor: '#f8fafc', py: 3, px: 4 }}>
                                                     <Grid container spacing={4}>
+                                                        {/* Expanded View: Inventory Details */}
                                                         <Grid item xs={12} md={4}>
-                                                            <Typography variant="subtitle2" sx={{ color: '#64748b', mb: 2, fontWeight: 600 }}>
+                                                            <Typography variant="subtitle2" sx={{ color: '#64748b', mb: 2, fontWeight: 600, borderBottom: '1px solid #e2e8f0', pb: 1 }}>
                                                                 Inventory Details
                                                             </Typography>
-                                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                                                 <Box>
-                                                                    <Typography variant="body2" sx={{ color: '#64748b', mb: 0.5 }}>
-                                                                        Min Par Level
-                                                                    </Typography>
-                                                                    <Typography>
-                                                                        {item.minParLevel || 'Not set'} ({(item.minParLevel * item.totalUnits).toLocaleString()} units)
-                                                                    </Typography>
+                                                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>Min Par Level</Typography>
+                                                                    <Typography>{item.minParLevel || 'N/A'} cases ({item.minParLevel ? (item.minParLevel * item.totalUnits).toLocaleString() : 'N/A'} units)</Typography>
                                                                 </Box>
                                                                 <Box>
-                                                                    <Typography variant="body2" sx={{ color: '#64748b', mb: 0.5 }}>
-                                                                        Max Par Level
-                                                                    </Typography>
-                                                                    <Typography>
-                                                                        {item.maxParLevel || 'Not set'} ({(item.maxParLevel * item.totalUnits).toLocaleString()} units)
-                                                                    </Typography>
+                                                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>Max Par Level</Typography>
+                                                                    <Typography>{item.maxParLevel || 'N/A'} cases ({item.maxParLevel ? (item.maxParLevel * item.totalUnits).toLocaleString() : 'N/A'} units)</Typography>
                                                                 </Box>
                                                                 <Box>
-                                                                    <Typography variant="body2" sx={{ color: '#64748b', mb: 0.5 }}>
-                                                                        Lead Time
-                                                                    </Typography>
-                                                                    <Typography>
-                                                                        {item.leadTime || 'Not set'} days
-                                                                    </Typography>
+                                                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>Lead Time</Typography>
+                                                                    <Typography>{item.leadTime || 'N/A'} days</Typography>
+                                                                </Box>
+                                                                <Box>
+                                                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>Cost per Case</Typography>
+                                                                    <Typography>${item.cost?.toFixed(2) || 'N/A'}</Typography>
+                                                                </Box>
+                                                                <Box>
+                                                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>Shelf Life</Typography>
+                                                                    <Typography>{item.shelfLife || 'N/A'} days</Typography>
+                                                                </Box>
+                                                                <Box>
+                                                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>Storage Location</Typography>
+                                                                    <Typography>{item.storageLocation || 'N/A'}</Typography>
                                                                 </Box>
                                                             </Box>
                                                         </Grid>
+
+                                                        {/* Expanded View: Usage Information */}
                                                         <Grid item xs={12} md={4}>
-                                                            <Typography variant="subtitle2" sx={{ color: '#64748b', mb: 2, fontWeight: 600 }}>
-                                                                Usage Information
+                                                            <Typography variant="subtitle2" sx={{ color: '#64748b', mb: 2, fontWeight: 600, borderBottom: '1px solid #e2e8f0', pb: 1 }}>
+                                                                Usage Information (Selected Period)
                                                             </Typography>
-                                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                                                 <Box>
-                                                                    <Typography variant="body2" sx={{ color: '#64748b', mb: 0.5 }}>
-                                                                        Daily Usage
-                                                                    </Typography>
-                                                                    <Typography>
-                                                                        {item.avgDailyUsage || 'Not tracked'} cases
-                                                                    </Typography>
+                                                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>Projected Sales (Period)</Typography>
+                                                                    <Typography>{usage.projectedSales.toLocaleString()}</Typography>
                                                                 </Box>
                                                                 <Box>
-                                                                    <Typography variant="body2" sx={{ color: '#64748b', mb: 0.5 }}>
-                                                                        Projected Sales
-                                                                    </Typography>
-                                                                    <Typography>
-                                                                        {(() => {
-                                                                            const itemUsage = calculateUsage(item, salesMixData, dateRange);
-                                                                            return itemUsage.projectedSales.toLocaleString();
-                                                                        })()}
-                                                                    </Typography>
+                                                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>Projected Need (Units)</Typography>
+                                                                    <Typography>{usage.unitsNeeded.toLocaleString()}</Typography>
                                                                 </Box>
                                                                 <Box>
-                                                                    <Typography variant="body2" sx={{ color: '#64748b', mb: 0.5 }}>
-                                                                        Waste Percentage
-                                                                    </Typography>
-                                                                    <Typography>
-                                                                        {item.wastePercentage || '0'}%
-                                                                    </Typography>
+                                                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>Projected Need (Cases)</Typography>
+                                                                    <Typography>{usage.exactCases.toFixed(2)}</Typography>
+                                                                </Box>
+                                                                <Box>
+                                                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>Waste Percentage</Typography>
+                                                                    <Typography>{item.wastePercentage || '0'}%</Typography>
+                                                                </Box>
+                                                                <Box>
+                                                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>Avg Daily Usage (Cases)</Typography>
+                                                                    <Typography>{item.avgDailyUsage || 'N/A'}</Typography>
                                                                 </Box>
                                                             </Box>
                                                         </Grid>
+
+                                                        {/* Expanded View: Associated Menu Items */}
                                                         <Grid item xs={12} md={4}>
-                                                            <Typography variant="subtitle2" sx={{ color: '#64748b', mb: 2, fontWeight: 600 }}>
+                                                            <Typography variant="subtitle2" sx={{ color: '#64748b', mb: 2, fontWeight: 600, borderBottom: '1px solid #e2e8f0', pb: 1 }}>
                                                                 Associated Menu Items & UPTs
                                                             </Typography>
-                                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                                                {item.associatedItems.map((assoc, index) => (
+                                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: '250px', overflowY: 'auto', pr: 1 }}>
+                                                                {item.associatedItems.length > 0 ? item.associatedItems.map((assoc, index) => (
                                                                     <Box
                                                                         key={index}
-                                                                        sx={{
-                                                                            p: 2,
-                                                                            borderRadius: '8px',
-                                                                            backgroundColor: '#f0f9ff',
-                                                                            border: '1px solid #e0f2fe'
-                                                                        }}
+                                                                        sx={{ p: 1.5, borderRadius: '8px', backgroundColor: '#f0f9ff', border: '1px solid #e0f2fe' }}
                                                                     >
-                                                                        <Typography sx={{ fontWeight: 500, color: '#0284c7', mb: 0.5 }}>
+                                                                        <Typography sx={{ fontWeight: 500, color: '#0284c7', mb: 0.5, fontSize: '0.9rem' }}>
                                                                             {assoc.name}
                                                                         </Typography>
                                                                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                            <Typography variant="body2" color="text.secondary">
+                                                                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
                                                                                 UPT: {salesMixData[assoc.name]?.toFixed(2) || 0}
                                                                             </Typography>
-                                                                            <Typography variant="body2" color="text.secondary">
+                                                                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
                                                                                 Usage: {assoc.usage} per item
                                                                             </Typography>
                                                                         </Box>
                                                                     </Box>
-                                                                ))}
+                                                                )) : (
+                                                                    <Typography variant="body2" color="text.secondary">No associated items.</Typography>
+                                                                )}
                                                             </Box>
                                                         </Grid>
                                                     </Grid>
@@ -2715,4 +2642,4 @@ const TruckItems = () => {
     );
 };
 
-export default memo(TruckItems); 
+export default memo(TruckItems);
