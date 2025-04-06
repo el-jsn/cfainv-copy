@@ -67,6 +67,15 @@ axiosInstance.interceptors.response.use(
       console.error('Response error data:', error.response.data);
       console.error('Response error status:', error.response.status);
 
+      // Handle 403 Forbidden - specifically for invalid/expired tokens
+      if (error.response.status === 403 && error.response.data?.message === "Invalid or expired token.") {
+        console.error('Authentication error: Invalid or expired token. Logging out.');
+        localStorage.removeItem('authToken'); // Clear the token
+        // Optionally, clear other user-related data from localStorage/sessionStorage
+        window.location.href = '/login'; // Redirect to login page
+        return Promise.reject(new Error("Session expired. Please log in again.")); // Prevent further processing
+      }
+
       // Handle 504 errors with a more user-friendly message
       if (error.response.status === 504) {
         console.error('Vercel serverless function timeout. The server is taking too long to respond.');

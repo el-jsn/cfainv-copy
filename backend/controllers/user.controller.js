@@ -31,7 +31,7 @@ export const loginUser = async (req, res) => {
     }
 
     const token = jwt.sign({ id: user._id, username: user.username , isAdmin: user.isAdmin}, JWT_SECRET, {
-      expiresIn: "30d", 
+      expiresIn: "365d", // Set token expiration to 1 year
     });
 
     res.cookie('token', token, {
@@ -39,10 +39,10 @@ export const loginUser = async (req, res) => {
       secure: process.env.NODE_ENV === 'production', // Set to true in production
       sameSite: 'Lax', // Or 'Strict' depending on your needs
       path: '/',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days in milliseconds
+      maxAge: 365 * 24 * 60 * 60 * 1000 // 365 days in milliseconds
     });
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       message: "Login successful.",
       token
     });
@@ -82,5 +82,3 @@ export const registerUser = async (req, res) => {
     return res.status(500).json({ message: "Internal server error." });
   }
 };
-
-
