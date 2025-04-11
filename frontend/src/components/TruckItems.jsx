@@ -37,7 +37,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import EditIcon from '@mui/icons-material/Edit';
-import { format, eachDayOfInterval, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, parseISO, addDays, subDays } from 'date-fns';
+import { format, eachDayOfInterval, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, parseISO, addDays, subDays, nextDay } from 'date-fns';
 import debounce from 'lodash/debounce';
 import FilterListIcon from '@mui/icons-material/FilterList';
 
@@ -391,9 +391,10 @@ const TruckItems = () => {
     const [futureProjections, setFutureProjections] = useState({});
     const [startDate, setStartDate] = useState(startOfWeek(new Date()));
     const [endDate, setEndDate] = useState(endOfWeek(new Date()));
-    const [dateRange, setDateRange] = useState([startOfWeek(new Date()), endOfWeek(new Date())]);
+    const [dateRange, setDateRange] = useState([startOfDay(new Date()), endOfDay(new Date())]);
     const [expandedRows, setExpandedRows] = useState({});
     const [openBulkDialog, setOpenBulkDialog] = useState(false);
+    const [buffer, setBuffer] = useState('33');
     const [bulkInput, setBulkInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
@@ -412,14 +413,12 @@ const TruckItems = () => {
         reportStartDate: "Unknown",
         reportEndDate: "Unknown"
     });
-    const [openReorderDialog, setOpenReorderDialog] = useState(false);
     const [openStorageDialog, setOpenStorageDialog] = useState(false);
     const [selectedStorageType, setSelectedStorageType] = useState('all');
     const [filterOptions, setFilterOptions] = useState({
         storageType: 'all',
         priorityLevel: 'all',
         storageLocation: 'all',
-        needsReorder: 'all',
         minCost: '',
         maxCost: '',
         minQuantity: '',
@@ -871,6 +870,7 @@ const TruckItems = () => {
     const calculateUsage = (item, salesMix, dateRange) => {
         if (!item.associatedItems || item.associatedItems.length === 0) {
             return {
+                upt: 0,
                 casesNeeded: 0,
                 projectedSales: 0,
                 exactCases: 0,
@@ -880,6 +880,7 @@ const TruckItems = () => {
 
         let totalUnitsNeeded = 0;
         let projectedSales = 0;
+        let upt = 0;
 
         if (dateRange[0] && dateRange[1]) {
             const days = eachDayOfInterval({
@@ -899,7 +900,7 @@ const TruckItems = () => {
 
         // Calculate total units needed based on associated items
         item.associatedItems.forEach(assoc => {
-            const upt = salesMix[assoc.name] || 0;
+            upt = salesMix[assoc.name] || 0;
             const rawUsage = (upt * projectedSales * assoc.usage) / 1000;
             totalUnitsNeeded += rawUsage;
         });
@@ -910,9 +911,10 @@ const TruckItems = () => {
 
         // Convert to cases
         const exactCases = totalUnitsWithWaste / item.totalUnits;
-        const casesNeeded = Math.ceil(exactCases);
+        const casesNeeded = Number(exactCases.toFixed(2));
 
         return {
+            upt,
             casesNeeded,
             projectedSales,
             exactCases,
@@ -1083,26 +1085,14 @@ const TruckItems = () => {
         name.toLowerCase().includes(associatedItemSearch.toLowerCase())
     );
 
-    // Function to handle reorder list
-    const handleViewReorderList = () => {
-        setOpenReorderDialog(true);
-    };
 
     // Function to handle storage overview
     const handleViewStorageOverview = () => {
         setOpenStorageDialog(true);
     };
 
-    // Add helper functions for item calculations
-    const calculateReorderPoint = (item) => {
-        const dailyUsage = item.avgDailyUsage || 0;
-        return item.minParLevel || 0; // Just use minParLevel as reorder point
-    };
+  
 
-    const needsReorder = (item) => {
-        const reorderPoint = calculateReorderPoint(item);
-        return (item.onHandQty || 0) <= reorderPoint;
-    };
 
     const calculateOrderQuantity = (item, usage) => {
         // Calculate total need as projected usage plus minimum stock level
@@ -1116,16 +1106,7 @@ const TruckItems = () => {
         return orderQuantity;
     };
 
-    // Update the getReorderItems function
-    const getReorderItems = () => {
-        return truckItems
-            .filter(item => needsReorder(item))
-            .sort((a, b) => {
-                const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-                return priorityOrder[a.priorityLevel] - priorityOrder[b.priorityLevel];
-            });
-    };
-
+ 
     // Function to get storage items
     const getStorageItems = (type = 'all') => {
         return truckItems
@@ -1139,11 +1120,7 @@ const TruckItems = () => {
             if (filterOptions.storageType !== 'all' && item.storageType !== filterOptions.storageType) return false;
             if (filterOptions.priorityLevel !== 'all' && item.priorityLevel !== filterOptions.priorityLevel) return false;
             if (filterOptions.storageLocation !== 'all' && item.storageLocation !== filterOptions.storageLocation) return false;
-            if (filterOptions.needsReorder !== 'all') {
-                const needsReorder = calculateReorderPoint(item) >= (item.onHandQty || 0);
-                if (filterOptions.needsReorder === 'yes' && !needsReorder) return false;
-                if (filterOptions.needsReorder === 'no' && needsReorder) return false;
-            }
+           
             if (filterOptions.minCost && item.cost < Number(filterOptions.minCost)) return false;
             if (filterOptions.maxCost && item.cost > Number(filterOptions.maxCost)) return false;
             if (filterOptions.minQuantity && item.onHandQty < Number(filterOptions.minQuantity)) return false;
@@ -1351,52 +1328,8 @@ const TruckItems = () => {
                 </Paper>
 
                 {/* Dashboard Section */}
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                    {/* Items Needing Reorder */}
-                    <Grid item xs={12} md={6} lg={4}>
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                p: 3,
-                                borderRadius: '16px',
-                                backgroundColor: '#fff1f2',
-                                border: '1px solid #fecdd3',
-                                height: '100%',
-                                cursor: 'pointer',
-                                transition: 'transform 0.2s',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)'
-                                }
-                            }}
-                            onClick={handleViewReorderList}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                <Box
-                                    sx={{
-                                        backgroundColor: '#fecdd3',
-                                        borderRadius: '12px',
-                                        p: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                >
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 9V11M12 15H12.01M5.07183 19H18.9282C20.4678 19 21.4301 17.3333 20.6603 16L13.7321 4C12.9623 2.66667 11.0377 2.66667 10.2679 4L3.33975 16C2.56998 17.3333 3.53223 19 5.07183 19Z" stroke="#be123c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                </Box>
-                                <Typography sx={{ color: '#be123c', fontWeight: 600 }}>
-                                    Needs Reorder
-                                </Typography>
-                            </Box>
-                            <Typography variant="h4" sx={{ color: '#be123c', fontWeight: 700, mb: 1 }}>
-                                {truckItems.filter(item => needsReorder(item)).length}
-                            </Typography>
-                            <Typography sx={{ color: '#be123c', fontSize: '0.875rem' }}>
-                                items below reorder point
-                            </Typography>
-                        </Paper>
-                    </Grid>
+                <Grid container spacing={2} sx={{ mb: 4 }}>
+                   
 
                     {/* Total Inventory Value */}
                     <Grid item xs={12} md={6} lg={4}>
@@ -1496,78 +1429,7 @@ const TruckItems = () => {
                     </Grid>
                 </Grid>
 
-                {/* Quick Actions Section */}
-                <Box sx={{ mb: 4 }}>
-                    <Typography variant="h6" sx={{ mb: 2, color: '#0f172a', fontWeight: 600 }}>
-                        Quick Actions
-                    </Typography>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} md={6}>
-                            <Button
-                                fullWidth
-                                variant="outlined"
-                                onClick={handleViewReorderList}
-                                sx={{
-                                    p: 2,
-                                    borderRadius: '12px',
-                                    borderColor: '#fecdd3',
-                                    color: '#be123c',
-                                    backgroundColor: '#fff1f2',
-                                    '&:hover': {
-                                        backgroundColor: '#ffe4e6',
-                                        borderColor: '#fecdd3',
-                                        transform: 'translateY(-2px)',
-                                        transition: 'transform 0.2s'
-                                    }
-                                }}
-                            >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5V3H15V5M9 5H15M12 12H15M12 16H15M9 12H9.01M9 16H9.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    <Box sx={{ textAlign: 'left' }}>
-                                        <Typography sx={{ fontWeight: 600 }}>View Reorder List</Typography>
-                                        <Typography variant="body2">
-                                            {truckItems.filter(item => needsReorder(item)).length} items need attention
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Button>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                            <Button
-                                fullWidth
-                                variant="outlined"
-                                onClick={handleViewStorageOverview}
-                                sx={{
-                                    p: 2,
-                                    borderRadius: '12px',
-                                    borderColor: '#7dd3fc',
-                                    color: '#0284c7',
-                                    backgroundColor: '#f0f9ff',
-                                    '&:hover': {
-                                        backgroundColor: '#e0f2fe',
-                                        borderColor: '#7dd3fc',
-                                        transform: 'translateY(-2px)',
-                                        transition: 'transform 0.2s'
-                                    }
-                                }}
-                            >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M9 20L3 17V4L9 7M9 20L15 17M9 20V7M15 17L21 20V7L15 4M15 17V4M9 7L15 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    <Box sx={{ textAlign: 'left' }}>
-                                        <Typography sx={{ fontWeight: 600 }}>Storage Overview</Typography>
-                                        <Typography variant="body2">
-                                            View storage distribution
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </Box>
+           
 
                 {/* Search and Filter Bar */}
                 <Box sx={{
@@ -1593,6 +1455,8 @@ const TruckItems = () => {
                                 searchRef={searchRef}
                                 onFocus={() => setIsSearchFocused(true)}
                                 onBlur={() => setIsSearchFocused(false)}
+                                style={{ textIndent: searchQuery ? '1.5rem' : '0' }}
+
                             />
                         </Box>
                         <Button
@@ -1703,8 +1567,36 @@ const TruckItems = () => {
                                 })()}
                             </Typography>
                         </Box>
+
+                        {/* Buffer Controller */}
+                        <Divider orientation="vertical" flexItem sx={{ borderColor: '#e2e8f0' }} />
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: '150px' }}>
+                        <Typography variant="body2" sx={{ color: '#64748b' }}>Adjust Buffer</Typography>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={buffer}
+                                    onChange={(e) => setBuffer(e.target.value)}
+                                    style={{
+                                        padding: '8px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #e2e8f0',
+                                        color: '#64748b',
+                                        width: '60px'
+                                    }}
+                                />
+                                <Typography variant="body2" sx={{ color: '#64748b' }}>%</Typography>
+                                </Box>
+
+                        </Box>
+                                
+                        
                     </Box>
                 </Box>
+
+                
 
                 {/* Filter Dialog */}
                 <Dialog
@@ -1896,20 +1788,7 @@ const TruckItems = () => {
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={6}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Needs Reorder</InputLabel>
-                                    <Select
-                                        value={filterOptions.needsReorder}
-                                        onChange={(e) => setFilterOptions(prev => ({ ...prev, needsReorder: e.target.value }))}
-                                        label="Needs Reorder"
-                                    >
-                                        <MenuItem value="all">All Items</MenuItem>
-                                        <MenuItem value="yes">Needs Reorder</MenuItem>
-                                        <MenuItem value="no">In Stock</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Grid>
+                           
                             <Grid item xs={12} md={6}>
                                 <Box sx={{ display: 'flex', gap: 2 }}>
                                     <TextField
@@ -1955,7 +1834,6 @@ const TruckItems = () => {
                                     storageType: 'all',
                                     priorityLevel: 'all',
                                     storageLocation: 'all',
-                                    needsReorder: 'all',
                                     minCost: '',
                                     maxCost: '',
                                     minQuantity: '',
@@ -1997,7 +1875,8 @@ const TruckItems = () => {
                                 const usage = calculateUsage(item, salesMixData, dateRange);
                                 const currentStockUnits = (item.onHandQty || 0) * item.totalUnits;
                                 const orderQuantity = calculateOrderQuantity(item, usage);
-                                const estimatedNeedBuffered = usage.exactCases * 1.33; // Calculate buffered need
+                                const bufferMultiplier = 1 + (Number(buffer) / 100);
+                                const estimatedNeedBuffered = (item.minParLevel || 0) * bufferMultiplier;
 
                                 return (
                                     <React.Fragment key={item._id}>
@@ -2042,16 +1921,7 @@ const TruckItems = () => {
                                                         />
                                                     </Typography>
                                                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                                                        <Chip
-                                                            size="small"
-                                                            label={item.uom}
-                                                            sx={{
-                                                                backgroundColor: '#f8fafc',
-                                                                color: '#64748b',
-                                                                height: '24px',
-                                                                border: '1px solid #e2e8f0'
-                                                            }}
-                                                        />
+                                                      
                                                         <Chip
                                                             size="small"
                                                             label={item.storageType || 'N/A'}
@@ -2073,87 +1943,70 @@ const TruckItems = () => {
                                                 </Box>
                                             </TableCell>
 
-                                            {/* Cell 2: Stock Status */}
-                                            <TableCell sx={{ py: 3, width: '20%' }}>
-                                                <Box>
-                                                    <Typography sx={{ color: '#64748b', mb: 0.5, fontSize: '0.875rem' }}>
-                                                        Stock Status
+                                            {/*Cell 2: Item Sizes*/}
+                                            <TableCell sx={{py:3, width:"20%"}}>
+                                            <Box>
+                                                <Typography sx={{ color: '#64748b', mb: 0.5, fontSize: '0.875rem' }}>
+                                                        Size
                                                     </Typography>
-                                                    {editingStock === item._id ? (
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <TextField
-                                                                type="number"
-                                                                value={tempStockValue}
-                                                                onChange={(e) => setTempStockValue(e.target.value)}
-                                                                onKeyPress={(e) => {
-                                                                    if (e.key === 'Enter') {
-                                                                        handleQuickStockUpdate(item, tempStockValue);
-                                                                    }
-                                                                }}
-                                                                size="small"
-                                                                autoFocus
-                                                                sx={{
-                                                                    width: '80px',
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '32px',
-                                                                        fontSize: '1.1rem'
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                                <IconButton
-                                                                    size="small"
-                                                                    onClick={() => handleQuickStockUpdate(item, tempStockValue)}
-                                                                    sx={{ color: '#16a34a', p: 0.5, '&:hover': { backgroundColor: '#f0fdf4' } }}
-                                                                >
-                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                                </IconButton>
-                                                                <IconButton
-                                                                    size="small"
-                                                                    onClick={() => { setEditingStock(null); setTempStockValue(''); }}
-                                                                    sx={{ color: '#dc2626', p: 0.5, '&:hover': { backgroundColor: '#fee2e2' } }}
-                                                                >
-                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                                </IconButton>
-                                                            </Box>
-                                                        </Box>
-                                                    ) : (
-                                                        <Box
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setEditingStock(item._id);
-                                                                setTempStockValue(item.onHandQty?.toString() || '0');
-                                                            }}
-                                                            sx={{ cursor: 'pointer', '&:hover': { '& .edit-icon': { opacity: 1 } } }}
-                                                        >
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                                <Typography sx={{ fontWeight: 600, color: '#0f172a', fontSize: '1.1rem' }}>
-                                                                    {item.onHandQty || 0} cases
+                                                    <Box>
+                                                    <Typography sx={{ fontWeight: 600, color: '#0f172a', fontSize: '1.1rem' }}>
+                                                                    {item.uom}
                                                                 </Typography>
-                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="edit-icon" style={{ opacity: 0, transition: 'opacity 0.2s' }}><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                            </Box>
-                                                            <Typography variant="body2" color="text.secondary">
-                                                                ({currentStockUnits.toLocaleString()} units)
-                                                            </Typography>
-                                                            <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
-                                                                Min: {item.minParLevel || 0} cases
-                                                            </Typography>
-                                                        </Box>
-                                                    )}
+                                                    </Box>
                                                 </Box>
                                             </TableCell>
 
-                                            {/* Cell 3: Estimated Need (Buffered) */}
-                                            <TableCell sx={{ py: 3, width: '20%' }}>
+                                            {/* Cell 3: Sales Mix Predicition */}
+                                            <TableCell sx={{ py: 3, width: '15%' }}>
+                                              
                                                 <Box>
                                                     <Typography sx={{ color: '#64748b', mb: 0.5, fontSize: '0.875rem' }}>
-                                                        Est. Need (Buffered)
+                                                        Sales Mix
                                                     </Typography>
-                                                    <Typography sx={{ fontWeight: 600, color: '#0369a1', fontSize: '1.1rem' }}>
-                                                        {estimatedNeedBuffered.toFixed(1)} cases
+                                                    <Typography sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                                                        {usage.upt}
                                                     </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        ({Math.round(usage.unitsNeeded * 1.33).toLocaleString()} units)
+
+                                                </Box>
+                                            </TableCell>
+
+                                            {/* Cell 4: predicted usage */}
+                                            <TableCell sx={{ py: 3, width: '15%' }}>
+                                              
+                                                <Box>
+                                                    <Typography sx={{ color: '#64748b', mb: 0.5, fontSize: '0.875rem' }}>
+                                                        Projected Usage
+                                                    </Typography>
+                                                    <Typography sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                                                        {usage.casesNeeded}
+                                                    </Typography>
+
+                                                </Box>
+                                            </TableCell>
+
+                                             {/* Cell 5: Build-To */}
+                                             <TableCell sx={{ py: 3, width: '20%' }}>
+                                              
+                                              <Box>
+                                                  <Typography sx={{ color: '#0369a1', mb: 0.5, fontSize: '0.875rem' }}>
+                                                      Build-To
+                                                  </Typography>
+                                                  <Typography sx={{ fontWeight: 600,color:'#0369a1' , fontSize: '1.1rem' }}>
+                                                      {item.minParLevel || 0}
+                                                  </Typography>
+
+                                              </Box>
+                                          </TableCell>
+
+                                            {/* Cell 6: Buffer */}
+                                            <TableCell sx={{ py: 3, width: '20%' }}>
+                                                <Box>
+                                                    <Typography sx={{ color: '#ccb343', mb: 0.5, fontSize: '0.875rem' }}>
+                                                        Buffer
+                                                    </Typography>
+                                                    <Typography sx={{ fontWeight: 600, color: '#ccb343', fontSize: '1.1rem' }}>
+                                                        {estimatedNeedBuffered.toFixed(2)} cases
                                                     </Typography>
                                                     {item.wastePercentage > 0 && (
                                                         <Chip
@@ -2168,25 +2021,6 @@ const TruckItems = () => {
                                                             }}
                                                         />
                                                     )}
-                                                </Box>
-                                            </TableCell>
-
-                                            {/* Cell 4: Suggested Order */}
-                                            <TableCell sx={{ py: 3, width: '15%' }}>
-                                                <Box>
-                                                    <Typography sx={{ color: '#64748b', mb: 0.5, fontSize: '0.875rem' }}>
-                                                        Suggested Order
-                                                    </Typography>
-                                                    <Typography sx={{
-                                                        fontWeight: 700, // Bolder
-                                                        fontSize: '1.2rem', // Larger
-                                                        color: orderQuantity > 0 ? '#dc2626' : '#16a34a',
-                                                    }}>
-                                                        {orderQuantity} cases
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        ({(orderQuantity * item.totalUnits).toLocaleString()} units)
-                                                    </Typography>
                                                 </Box>
                                             </TableCell>
 
@@ -2315,133 +2149,7 @@ const TruckItems = () => {
                     </Table>
                 </TableContainer>
 
-                {/* Reorder List Dialog */}
-                <Dialog
-                    open={openReorderDialog}
-                    onClose={() => setOpenReorderDialog(false)}
-                    maxWidth="md"
-                    fullWidth
-                    PaperProps={{
-                        sx: {
-                            borderRadius: '16px',
-                            padding: '16px'
-                        }
-                    }}
-                >
-                    <DialogTitle sx={{ pb: 2, fontWeight: 600 }}>
-                        Items Needing Reorder
-                    </DialogTitle>
-                    <DialogContent>
-                        <List>
-                            {getReorderItems().map((item) => {
-                                const usage = calculateUsage(item, salesMixData, dateRange);
-                                const orderQuantity = calculateOrderQuantity(item, usage);
-                                return (
-                                    <React.Fragment key={item._id}>
-                                        <ListItem sx={{
-                                            backgroundColor: '#fff1f2',
-                                            borderRadius: '12px',
-                                            mb: 2,
-                                            flexDirection: 'column',
-                                            alignItems: 'stretch',
-                                            gap: 2
-                                        }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
-                                                <Box>
-                                                    <Typography sx={{ fontWeight: 600, fontSize: '1.1rem', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        {item.description}
-                                                        <Chip
-                                                            size="small"
-                                                            label={item.priorityLevel}
-                                                            sx={{
-                                                                backgroundColor: item.priorityLevel === 'critical' ? '#fee2e2' :
-                                                                    item.priorityLevel === 'high' ? '#fef3c7' :
-                                                                        item.priorityLevel === 'medium' ? '#f0fdf4' : '#f1f5f9',
-                                                                color: item.priorityLevel === 'critical' ? '#991b1b' :
-                                                                    item.priorityLevel === 'high' ? '#92400e' :
-                                                                        item.priorityLevel === 'medium' ? '#166534' : '#475569'
-                                                            }}
-                                                        />
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {item.uom}
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                    {item.wastePercentage > 0 && (
-                                                        <Chip
-                                                            size="small"
-                                                            label={`+${item.wastePercentage}% waste`}
-                                                            sx={{
-                                                                backgroundColor: '#fef3c7',
-                                                                color: '#92400e'
-                                                            }}
-                                                        />
-                                                    )}
-                                                    <Chip
-                                                        label={`${item.storageType || 'unknown'} storage`}
-                                                        size="small"
-                                                        sx={{
-                                                            backgroundColor: item.storageType === 'frozen' ? '#e0f2fe' :
-                                                                item.storageType === 'refrigerated' ? '#f0fdf4' : '#f1f5f9',
-                                                            color: item.storageType === 'frozen' ? '#0369a1' :
-                                                                item.storageType === 'refrigerated' ? '#166534' : '#475569'
-                                                        }}
-                                                    />
-                                                </Box>
-                                            </Box>
-
-                                            <Grid container spacing={2}>
-                                                <Grid item xs={12} sm={4}>
-                                                    <Box sx={{ p: 2, backgroundColor: 'white', borderRadius: '8px' }}>
-                                                        <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
-                                                            Current Stock
-                                                        </Typography>
-                                                        <Typography sx={{ fontWeight: 600, color: '#0f172a' }}>
-                                                            {item.onHandQty || 0} cases
-                                                        </Typography>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Safety Stock: {item.minParLevel || 0}
-                                                        </Typography>
-                                                    </Box>
-                                                </Grid>
-                                                <Grid item xs={12} sm={4}>
-                                                    <Box sx={{ p: 2, backgroundColor: 'white', borderRadius: '8px' }}>
-                                                        <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
-                                                            Projected Need
-                                                        </Typography>
-                                                        <Typography sx={{ fontWeight: 600, color: '#0f172a' }}>
-                                                            {usage.exactCases.toFixed(1)} cases
-                                                        </Typography>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            {usage.unitsNeeded.toLocaleString()} units
-                                                        </Typography>
-                                                    </Box>
-                                                </Grid>
-                                                <Grid item xs={12} sm={4}>
-                                                    <Box sx={{ p: 2, backgroundColor: '#dc2626', borderRadius: '8px' }}>
-                                                        <Typography variant="body2" sx={{ color: 'white', mb: 1 }}>
-                                                            Suggested Order
-                                                        </Typography>
-                                                        <Typography sx={{ fontWeight: 600, color: 'white' }}>
-                                                            {orderQuantity} cases
-                                                        </Typography>
-                                                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                                                            {(orderQuantity * item.totalUnits).toLocaleString()} units
-                                                        </Typography>
-                                                    </Box>
-                                                </Grid>
-                                            </Grid>
-                                        </ListItem>
-                                    </React.Fragment>
-                                );
-                            })}
-                        </List>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setOpenReorderDialog(false)}>Close</Button>
-                    </DialogActions>
-                </Dialog>
+              
 
                 {/* Storage Overview Dialog */}
                 <Dialog
