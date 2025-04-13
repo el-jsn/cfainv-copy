@@ -131,11 +131,7 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(express.static('frontend/dist', {
   setHeaders: (res, path) => {
-    if (path.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    } else {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    }
+    res.set('Cache-Control', 'public, max-age=0,  must-revalidate');
   },
 }));
 
@@ -150,6 +146,7 @@ app.all('*', (req, res) => {
     status: 'fail',
     message: `Can't find ${req.originalUrl} on this server!`,
   });
+  res.set('Cache-Control', 'public, max-age=0,  must-revalidate');
 });
 
 // Start the server and connect to the database
