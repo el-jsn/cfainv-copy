@@ -18,7 +18,6 @@ const KeepBackendWarm = () => {
         pingBackend();
 
         // Then ping every 4 minutes (to prevent cold starts)
-        // Vercel functions go cold after 5 minutes of inactivity
         const interval = setInterval(pingBackend, 4 * 60 * 1000);
 
         // Clean up the interval on component unmount

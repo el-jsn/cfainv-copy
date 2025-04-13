@@ -15,7 +15,6 @@ class ErrorBoundary extends React.Component {
             error: error,
             errorInfo: errorInfo
         });
-        // You can also log the error to an error reporting service here
         console.error('Error caught by ErrorBoundary:', error, errorInfo);
     }
 
@@ -26,7 +25,7 @@ class ErrorBoundary extends React.Component {
                     <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg">
                         <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
                         <p className="text-gray-600 mb-4">
-                            We're sorry, but something went wrong. Please try refreshing the page or contact support if the problem persists.
+                            We're sorry, but something went wrong. Please try refreshing the page or try refreshing the page using =={'>'} <code className="bg-gray-200 p-1 rounded">Ctrl + Shift + R</code> or <code className="bg-gray-200 p-1 rounded">Cmd + Shift + R</code> on Mac .
                         </p>
                         <button
                             onClick={() => window.location.reload()}

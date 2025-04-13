@@ -91,7 +91,6 @@ const App = () => {
   };
 
   return (
-    <ErrorBoundary>
       <SWRConfig
         value={{
           revalidateOnFocus: true,
@@ -118,6 +117,7 @@ const App = () => {
                     <LoadingSpinner />
                   </div>
                 }>
+                  <ErrorBoundary >
                   <Routes>
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/dev-info" element={<DeveloperInfo />} />
@@ -193,13 +193,13 @@ const App = () => {
                     } />
                     <Route path="/future-projections" element={<FutureProjectionsCalendar />} />
                   </Routes>
+                  </ErrorBoundary >
                 </Suspense>
               </Layout>
             </Router>
           </SWRConfig>
         </AuthProvider>
       </SWRConfig>
-    </ErrorBoundary>
   );
 };
 

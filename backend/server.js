@@ -120,7 +120,7 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
     // Skip API routes
     if (req.path.startsWith('/api')) {
-      return;
+      return next();
     }
     res.sendFile(path.resolve(__dirname, 'frontend', 'dist', 'index.html'));
   });
@@ -131,8 +131,11 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(express.static('frontend/dist', {
   setHeaders: (res, path) => {
-    res.set('Cache-Control', 'public, max-age=0,  must-revalidate');
-  },
+    if (filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }  },
 }));
 
 // Schedule cleanup task using cron jobs
@@ -146,7 +149,6 @@ app.all('*', (req, res) => {
     status: 'fail',
     message: `Can't find ${req.originalUrl} on this server!`,
   });
-  res.set('Cache-Control', 'public, max-age=0,  must-revalidate');
 });
 
 // Start the server and connect to the database
