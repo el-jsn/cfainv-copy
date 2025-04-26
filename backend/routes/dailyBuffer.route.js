@@ -28,22 +28,50 @@ router.get('/:day', authenticateToken, async (req, res) => {
 // Add or update daily buffer (admin only)
 router.post('/', authenticateToken, adminAuth, async (req, res) => {
     try {
-        const { day, productName, bufferPrcnt } = req.body;
-        
-        const update = {
-            day,
-            productName,
-            bufferPrcnt,
-            lastModified: new Date()
-        };
+        // Check if the request body is an array
+        if (Array.isArray(req.body)) {
+            const results = [];
 
-        const dailyBuffer = await DailyBuffer.findOneAndUpdate(
-            { day, productName },
-            update,
-            { upsert: true, new: true }
-        );
+            // Process each buffer in the array
+            for (const buffer of req.body) {
+                const { day, productName, bufferPrcnt } = buffer;
 
-        res.json(dailyBuffer);
+                const update = {
+                    day,
+                    productName,
+                    bufferPrcnt,
+                    lastModified: new Date()
+                };
+
+                const dailyBuffer = await DailyBuffer.findOneAndUpdate(
+                    { day, productName },
+                    update,
+                    { upsert: true, new: true }
+                );
+
+                results.push(dailyBuffer);
+            }
+
+            res.json(results);
+        } else {
+            // Handle single object case for backward compatibility
+            const { day, productName, bufferPrcnt } = req.body;
+
+            const update = {
+                day,
+                productName,
+                bufferPrcnt,
+                lastModified: new Date()
+            };
+
+            const dailyBuffer = await DailyBuffer.findOneAndUpdate(
+                { day, productName },
+                update,
+                { upsert: true, new: true }
+            );
+
+            res.json(dailyBuffer);
+        }
     } catch (err) {
         res.status(400).json('Error: ' + err);
     }
@@ -59,4 +87,4 @@ router.delete('/:id', authenticateToken, adminAuth, async (req, res) => {
     }
 });
 
-export default router; 
+export default router;
