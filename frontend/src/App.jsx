@@ -17,7 +17,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { SWRConfig } from 'swr';
 import KeepBackendWarm from './components/KeepBackendWarm';
 import AllocationsDashboard from './components/AllocationsDashboard';
-
+// 
 // Lazy load components
 const HomePage = lazy(() => import('./components/HomePage'));
 const ThawingCabinet = lazy(() => import('./components/ThawingCabinet'));
