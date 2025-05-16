@@ -563,7 +563,7 @@ const ThawingCabinet = ({
         <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg">
           <h2 className="text-xl font-bold text-red-600 mb-4">Error Loading Data</h2>
           <p className="text-gray-600 mb-4">
-            There was an error loading some of the required data. Please try refreshing the page or contact support if the problem persists.
+            There was an error loading some of the required data. Please try refreshing the page or contact developer if the problem persists.
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -611,7 +611,7 @@ const ThawingCabinet = ({
 
   // Regular standalone view
   return (
-    <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
+    <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto ">
       <div className="min-h-full w-full bg-white rounded-lg md:rounded-xl shadow-xl p-2 sm:p-4 border border-gray-100 flex flex-col">
         <div className="flex items-center justify-between mb-2 sm:mb-3">
           <div className="flex items-center gap-2">
