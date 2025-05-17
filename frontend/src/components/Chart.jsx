@@ -7,7 +7,6 @@ import {
   Button,
   IconButton,
   Tooltip as MTTooltip, // Renamed to avoid conflict with ChartJS Tooltip
-  Chip, // Keep Chip for the trend display for now, or replace with custom div
 } from "@material-tailwind/react";
 import { Info, TrendingUp, TrendingDown } from "lucide-react";
 

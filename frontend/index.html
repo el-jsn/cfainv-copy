@@ -2,11 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./src/assets/inventory-svgrepo-com.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon_ico/favicon.ico" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#007bff" /> <!-- Match theme_color in manifest.webmanifest -->
+
+    <!-- iOS specific tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"> <!-- or "default" or "black" -->
+    <meta name="apple-mobile-web-app-title" content="CFA NB Inventory"> <!-- Should match short_name -->
+    <link rel="apple-touch-icon" href="/favicon_ico/apple-touch-icon.png"> <!-- e.g., 180x180px, place in public/icons/ -->
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="google-site-verification" content="Ax7FW83ntlXVCIO3ThZejbpmBJdLsZnYoETWBDMOMqk" />
-    <title>CFA Inventory Manager</title>
+    <title>CFA NB Inventory Manager</title>
   </head>
   <body>
     <div id="root"></div>

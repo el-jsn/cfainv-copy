@@ -4,7 +4,6 @@ import axiosInstance from "./axiosInstance";
 import { jwtDecode } from "jwt-decode";
 import { useAuth } from "./AuthContext";
 import { motion } from "framer-motion";
-import { BackgroundPaths } from "./ui/background-paths";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
@@ -40,7 +39,6 @@ const LoginPage = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <BackgroundPaths />
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
         <motion.div

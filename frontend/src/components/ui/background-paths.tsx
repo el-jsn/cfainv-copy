@@ -1,21 +1,38 @@
 "use client";
 
+import * as React from "react";
 import { motion } from "framer-motion";
-import { Button } from "./button";
+
+// Number of paths to generate. Reducing this can improve performance.
+const PATH_COUNT = 36;
 
 function FloatingPaths({ position }: { position: number }) {
-  const paths = Array.from({ length: 36 }, (_, i) => ({
-    id: i,
-    d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
-      380 - i * 5 * position
-    } -${189 + i * 6} -${312 - i * 5 * position} ${216 - i * 6} ${
-      152 - i * 5 * position
-    } ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${
-      684 - i * 5 * position
-    } ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
-    color: `rgba(15,23,42,${0.1 + i * 0.03})`,
-    width: 0.5 + i * 0.03,
-  }));
+  const paths = React.useMemo(() => {
+    return Array.from({ length: PATH_COUNT }, (_, i) => {
+      const offsetX = i * 5 * position;
+      const offsetY = i * 6;
+      // Path definition: M P0 C P0 P1 P2 C P3 P4 P4
+      // P0 = (-380 + offsetX, -189 - offsetY)
+      // P1 = (-312 + offsetX,  216 - offsetY)
+      // P2 = ( 152 + offsetX,  343 - offsetY)
+      // P3 = ( 616 + offsetX,  470 - offsetY)
+      // P4 = ( 684 + offsetX,  875 - offsetY)
+      const d = `M ${-380 + offsetX} ${-189 - offsetY} C ${-380 + offsetX} ${
+        -189 - offsetY
+      } ${-312 + offsetX} ${216 - offsetY} ${152 + offsetX} ${
+        343 - offsetY
+      } C ${616 + offsetX} ${470 - offsetY} ${684 + offsetX} ${
+        875 - offsetY
+      } ${684 + offsetX} ${875 - offsetY}`;
+
+      return {
+        id: i,
+        d: d,
+        strokeWidthValue: 0.5 + i * 0.03,
+        strokeOpacityValue: 0.1 + i * 0.03,
+      };
+    });
+  }, [position]);
 
   return (
     <div className="absolute inset-0 pointer-events-none">
@@ -30,8 +47,8 @@ function FloatingPaths({ position }: { position: number }) {
             key={path.id}
             d={path.d}
             stroke="currentColor"
-            strokeWidth={path.width}
-            strokeOpacity={0.1 + path.id * 0.03}
+            strokeWidth={path.strokeWidthValue}
+            strokeOpacity={path.strokeOpacityValue}
             initial={{ pathLength: 0.3, opacity: 0.6 }}
             animate={{
               pathLength: 1,
@@ -52,7 +69,7 @@ function FloatingPaths({ position }: { position: number }) {
 
 export function BackgroundPaths({
   title = "Background Paths",
-}: {
+}: { // It's good practice to define props interface separately for better readability
   title?: string;
 }) {
   const words = title.split(" ");

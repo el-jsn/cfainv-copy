@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Code, Server, Database, Shield, Github, ExternalLink, Workflow, Route, Settings2, PlayCircle } from 'lucide-react'; // Added icons
+import { Code, Server, Database, Shield, ExternalLink, Workflow, Route, Settings2, PlayCircle } from 'lucide-react'; // Added icons
 
 const DeveloperInfo = () => {
     useEffect(() => {
