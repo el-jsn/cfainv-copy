@@ -99,12 +99,12 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments = [], 
         const calculateBufferMultiplier = (bufferPrcnt) => (100 + bufferPrcnt) / 100;
 
         const getBufferMultiplier = (productName, day) => {
-            // Check for daily buffer first
+            
             const dailyBuffer = dailyBuffers?.find(b => b.day === day && b.productName === productName);
             if (dailyBuffer) {
                 return calculateBufferMultiplier(dailyBuffer.bufferPrcnt);
             }
-            // Fall back to global buffer
+            
             return calculateBufferMultiplier(bufferData.find(item => item.productName === productName)?.bufferPrcnt || 1);
         };
 
@@ -115,6 +115,8 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments = [], 
             "Diet Lemonade": utpData.find(item => item.productName === "Diet Lemonade")?.utp || 1.0,
             "Sunjoy Lemonade": utpData.find(item => item.productName === "Sunjoy Lemonade")?.utp || 1.0,
             Romaine: utpData.find(item => item.productName === "Romaine")?.utp || 1.0,
+            "Large Romaine": utpData.find(item => item.productName === "Large Romaine")?.utp || 1.0,
+            "Small Romaine": utpData.find(item => item.productName === "Small Romaine")?.utp || 1.0,
             "Cobb Salad": utpData.find(item => item.productName === "Cobb Salad")?.utp || 1.0,
             "Southwest Salad": utpData.find(item => item.productName === "Southwest Salad")?.utp || 1.0,
         };
@@ -124,7 +126,7 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments = [], 
             let targetDate;
 
             if (isNextWeek) {
-                // For next week's view
+                
                 const nextMonday = new Date(today);
                 nextMonday.setDate(today.getDate() + (8 - today.getDay()));
                 targetDate = new Date(nextMonday);
@@ -173,20 +175,36 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments = [], 
                 return { pans: Math.max(0, finalPans), buckets: Math.max(0, finalBuckets), modified: !!message };
             };
 
-            const calculateLettucePans = (utp) => Math.round(((utp * (projectedSales / 1000)) / 144) * getBufferMultiplier("Lettuce", day));
-            const calculateTomatoPans = (utp) => Math.round(((utp * (projectedSales / 1000)) / 166) * getBufferMultiplier("Tomato", day));
-            const calculateRomainePans = (utp) => Math.round(((utp * (projectedSales / 1000)) / 2585.48) * getBufferMultiplier("Romaine", day));
-            const calculateBuckets = (utp, bufferMultiplier) => Math.ceil((((utp / 33.814) * (projectedSales * drinkMultiplier)) / 1000 / 12) * bufferMultiplier);
-            const calculateCobbSalads = (utp) => Math.round(((utp * (projectedSales / 1000))) * getBufferMultiplier("Cobb Salad", day));
-            const calculateSouthwestSalads = (utp) => Math.round(((utp * (projectedSales / 1000))) * getBufferMultiplier("Southwest Salad", day));
+            const calculateLettucePans = (utp) => Math.ceil(((utp * (projectedSales / 1000)) / 160) * getBufferMultiplier("Lettuce", day));
+
+            const calculateTomatoPans = (utp) => Math.ceil(((utp * (projectedSales / 1000)) / 156) * getBufferMultiplier("Tomato", day));
+
+            // const calculateRomainePans = (utp) => Math.round(((utp * (projectedSales / 1000)) / 2585.48) * getBufferMultiplier("Romaine", day));
+
+            const calculateLargeRomainePans = (utp) => Math.ceil(((utp * (projectedSales / 1000)) / 24) * getBufferMultiplier("Romaine", day)); // 24 large salads in a pan
+
+            const calculateSmallRomainePans = (utp) => Math.ceil(((utp * (projectedSales / 1000)) / 40) * getBufferMultiplier("Romaine", day)); // 40 small salads in a pan
+
+            const calculateBuckets = (utp, bufferMultiplier) => Math.ceil((((utp / 33.814) * (projectedSales * drinkMultiplier)) / 1000 / 12) * bufferMultiplier); 
+            
+            const calculateCobbSalads = (utp) => Math.ceil(((utp * (projectedSales / 1000))) * getBufferMultiplier("Cobb Salad", day));
+
+            const calculateSouthwestSalads = (utp) => Math.ceil(((utp * (projectedSales / 1000))) * getBufferMultiplier("Southwest Salad", day));
 
             const lettucePans = calculateLettucePans(utpValues.Lettuce);
+
             const tomatoPans = calculateTomatoPans(utpValues.Tomato);
+
             const lemonadeBuckets = calculateBuckets(utpValues.Lemonade, getBufferMultiplier("Lemonade", day));
+
             const dietLemonadeBuckets = calculateBuckets(utpValues["Diet Lemonade"], getBufferMultiplier("Diet Lemonade", day));
+
             const sunjoyLemonadeBuckets = calculateBuckets(utpValues["Sunjoy Lemonade"], getBufferMultiplier("Sunjoy Lemonade", day));
-            const romainePans = calculateRomainePans(utpValues.Romaine);
+
+            const romainePans = calculateLargeRomainePans(utpValues["Large Romaine"]) + calculateSmallRomainePans(utpValues["Small Romaine"]);
+
             const cobbSalads = calculateCobbSalads(utpValues["Cobb Salad"]);
+            
             const southwestSalads = calculateSouthwestSalads(utpValues["Southwest Salad"]);
 
             return {

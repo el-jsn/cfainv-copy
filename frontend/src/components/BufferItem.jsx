@@ -19,7 +19,7 @@ const BufferItem = ({
     return (
         <div
             key={buffer._id} // Key is still useful here for React's list rendering
-            className={`rounded-xl p-4 border transition-all duration-300 hover:scale-105 hover:shadow-md ${statusClasses}`}
+            className={`rounded-xl p-4 border transition-all duration-300 hover:scale-105 hover:shadow-md `}
         >
             <div className="flex justify-between items-start mb-2">
                 <Typography variant="h6" className="font-semibold text-[#262626] text-base">

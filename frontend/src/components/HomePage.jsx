@@ -987,7 +987,6 @@ const HomePage = () => {
                     <BufferItem
                       key={buffer._id} // Pass key here
                       buffer={buffer}
-                      statusClasses={statusClasses}
                       editingBuffer={editingBuffer}
                       handleBufferEdit={handleBufferEdit}
                       handleBufferUpdate={handleBufferUpdate}
