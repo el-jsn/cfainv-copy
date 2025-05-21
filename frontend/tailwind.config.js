@@ -11,7 +11,7 @@ export default withMT({
         'sfprodisplay': ['SF Pro Display', 'Helvetica Neue', 'sans-serif'],
       },
         colors: {
-            primary: '#007AFF', // Example primary color, replace with your brand color
+            primary: '#007AFF',
             textPrimary: '#37474f',
             textSecondary: '#78909c',
             background: '#f5f5f5',

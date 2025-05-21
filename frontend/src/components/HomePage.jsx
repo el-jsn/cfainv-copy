@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Line } from "react-chartjs-2";
 import Chart from "./Chart";
-import BufferItem from "./BufferItem"; // Import the new component
-import LogoutButton from "./LogoutButton";
+import BufferItem from "./BufferItem";
 import axiosInstance from "./axiosInstance";
 import { useAuth } from "./AuthContext";
 import {

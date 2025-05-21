@@ -1,8 +1,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Code, HelpCircle, Home, Grid } from 'lucide-react';
+import logoSrc from '/public/imgs/Chick-fil-A-North-Barrie-Logo.png'
 
-const Footer = () => {
+// Define link data outside the component for better organization
+const quickLinksData = [
+    { to: "/", Icon: Home, text: "Dashboard" },
+    { to: "/how-to", Icon: HelpCircle, text: "Help Guide" },
+    { to: "/thawing-cabinet", Icon: Grid, text: "Thawing Cabinet" },
+    { to: "/prep-allocations", Icon: Grid, text: "Prep Allocations" },
+];
+
+const supportLinksData = [
+    { to: "/dev-info", Icon: Code, text: "Developer Information" },
+];
+
+const Footer = React.memo(() => {
+    const year = new Date().getFullYear();
     return (
         <footer className="bg-white border-t border-gray-100">
             <div className="max-w-7xl mx-auto">
@@ -13,7 +27,7 @@ const Footer = () => {
                         <div className="flex flex-col space-y-4">
                             <Link to="/" className="flex items-center space-x-2">
                                 <img
-                                    src="./imgs/Chick-fil-A-North-Barrie-Logo.png"
+                                    src={logoSrc}
                                     alt="Chick-fil-A Logo"
                                     className="h-16 w-auto"
                                 />
@@ -29,22 +43,12 @@ const Footer = () => {
                                 Quick Links
                             </h3>
                             <div className="flex flex-col space-y-3">
-                                <Link to="/" className="text-gray-600 hover:text-red-600 transition-colors flex items-center group">
-                                    <Home className="w-4 h-4 mr-2 group-hover:text-red-600" />
-                                    <span>Dashboard</span>
-                                </Link>
-                                <Link to="/how-to" className="text-gray-600 hover:text-red-600 transition-colors flex items-center group">
-                                    <HelpCircle className="w-4 h-4 mr-2 group-hover:text-red-600" />
-                                    <span>Help Guide</span>
-                                </Link>
-                                <Link to="/thawing-cabinet" className="text-gray-600 hover:text-red-600 transition-colors flex items-center group">
-                                    <Grid className="w-4 h-4 mr-2 group-hover:text-red-600" />
-                                    <span>Thawing Cabinet</span>
-                                </Link>
-                                <Link to="/prep-allocations" className="text-gray-600 hover:text-red-600 transition-colors flex items-center group">
-                                    <Grid className="w-4 h-4 mr-2 group-hover:text-red-600" />
-                                    <span>Prep Allocations</span>
-                                </Link>
+                                {quickLinksData.map(({ to, Icon, text }) => (
+                                    <Link key={to} to={to} className="text-gray-600 hover:text-red-600 transition-colors flex items-center group">
+                                        <Icon className="w-4 h-4 mr-2 group-hover:text-red-600" />
+                                        <span>{text}</span>
+                                    </Link>
+                                ))}
                             </div>
                         </div>
 
@@ -54,10 +58,12 @@ const Footer = () => {
                                 Support
                             </h3>
                             <div className="flex flex-col space-y-3">
-                                <Link to="/dev-info" className="text-gray-600 hover:text-red-600 transition-colors flex items-center group">
-                                    <Code className="w-4 h-4 mr-2 group-hover:text-red-600" />
-                                    <span>Developer Information</span>
-                                </Link>
+                                {supportLinksData.map(({ to, Icon, text }) => (
+                                    <Link key={to} to={to} className="text-gray-600 hover:text-red-600 transition-colors flex items-center group">
+                                        <Icon className="w-4 h-4 mr-2 group-hover:text-red-600" />
+                                        <span>{text}</span>
+                                    </Link>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -67,13 +73,16 @@ const Footer = () => {
                 <div className="border-t border-gray-100 px-4 py-4">
                     <div className="flex justify-center items-center">
                         <p className="text-gray-600 text-sm">
-                            © {new Date().getFullYear()} CFA-North Barrie Internal Tools
+                            © {year} CFA-North Barrie Internal Tools
                         </p>
                     </div>
                 </div>
             </div>
         </footer>
     );
-};
+});
+
+// Set a display name for the memoized component for easier debugging
+Footer.displayName = 'Footer';
 
 export default Footer; 

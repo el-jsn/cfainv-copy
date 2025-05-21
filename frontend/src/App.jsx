@@ -1,8 +1,7 @@
-import React, { Suspense, lazy } from 'react';
+import React, {  lazy, Suspense } from 'react';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
-import LoadingSpinner from './components/LoadingSpinner';
 import { AuthProvider, useAuth } from "./components/AuthContext";
 import { Navigate } from "react-router-dom";
 import SalesProjectionConfig from './components/SalesProjectionConfig';
@@ -14,7 +13,6 @@ import HowToUse from "./components/HowToUse";
 import MessageFormComponent from "./components/MessageFormComponent";
 import MessageListPage from "./components/MessageListPage";
 import ErrorBoundary from './components/ErrorBoundary';
-import { SWRConfig } from 'swr';
 import AllocationsDashboard from './components/AllocationsDashboard';
 // 
 // Lazy load components
@@ -29,16 +27,7 @@ const TruckItems = lazy(() => import('./components/TruckItems.jsx'));
 
 const App = () => {
 
-  const fetcher = async (url) => {
-    const res = await fetch(url);
-    if (!res.ok) {
-      const error = new Error('An error occurred while fetching the data.');
-      error.info = await res.json().catch(() => ({ message: 'Failed to parse error JSON' }));
-      error.status = res.status;
-      throw error;
-    }
-    return res.json();
-  };
+  
 
   const ProtectedRoute = ({ children, adminOnly = false }) => {
     const { user } = useAuth();
@@ -55,15 +44,10 @@ const App = () => {
   };
 
   return (
-    <SWRConfig value={{ fetcher }}>
         <AuthProvider>
         <Router>
             <Layout>
-              <Suspense fallback={
-                <div className="flex items-center justify-center h-screen">
-                  <LoadingSpinner />
-                </div>
-              }>
+              <Suspense fallback={<div>Loading...</div>}>
                 <ErrorBoundary >
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
@@ -141,11 +125,10 @@ const App = () => {
                   <Route path="/future-projections" element={<FutureProjectionsCalendar />} />
                 </Routes>
                 </ErrorBoundary >
-              </Suspense>
+            </Suspense>
             </Layout>
           </Router>
         </AuthProvider>
-      </SWRConfig>
   );
 };
 
