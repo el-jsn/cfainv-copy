@@ -25,7 +25,8 @@ class ErrorBoundary extends React.Component {
                     <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg">
                         <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
                         <p className="text-gray-600 mb-4">
-                            We're sorry, but something went wrong. Please try refreshing the page or try refreshing the page using =={'>'} <code className="bg-gray-200 p-1 rounded">Ctrl + Shift + R</code> or <code className="bg-gray-200 p-1 rounded">Cmd + Shift + R</code> on Mac .
+                            We're sorry, but something went wrong. Please try refreshing the page or try refreshing the page using =={'>'} <code className="bg-gray-200 p-1 rounded">Ctrl + Shift + R</code> or <code className="bg-gray-200 p-1 rounded">Cmd + Shift + R</code> on Mac.
+                            or <code className="bg-gray-200 p-1 rounded">Clear Browser Data.</code>
                         </p>
                         <button
                             onClick={() => window.location.reload()}
