@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Code, HelpCircle, Home, Grid } from 'lucide-react';
-import logoSrc from '/public/imgs/Chick-fil-A-North-Barrie-Logo.png'
+import logoSrc from '/imgs/Chick-fil-A-North-Barrie-Logo.png'
 
 // Define link data outside the component for better organization
 const quickLinksData = [
