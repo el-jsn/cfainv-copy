@@ -1,16 +1,19 @@
-const CACHE_NAME = 'cfanbinv-cache-v5';
-const urlsToCache = [
-  '/',
-  '/index.html',
+const CACHE_NAME = 'cfanbinv-cache-v7' 
+const URLS_TO_PRECACHE = [
+  '/css/style.css',
+  '/js/main.js'
 ];
+const HTML_FILE = '/index.html'; 
 
 self.addEventListener('install', (event) => {
   console.log('Service Worker: Installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Caching app shell');
-        return cache.addAll(urlsToCache);
+        return Promise.all([
+          cache.addAll(URLS_TO_PRECACHE),
+          cache.add(HTML_FILE)
+        ]);
       }).then(() => self.skipWaiting())
   );
 });
@@ -27,18 +30,49 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim()) 
   );
-  
-  return self.clients.claim(); 
 });
 
 self.addEventListener('fetch', (event) => {
-  
+  const requestUrl = new URL(event.request.url);
+
+  if (requestUrl.pathname === '/' || requestUrl.pathname === HTML_FILE) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+   
+          });
+        })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        return response || fetch(event.request);
+        return response || fetch(event.request).then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        });
       })
   );
 });
