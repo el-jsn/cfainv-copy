@@ -158,7 +158,7 @@ const HomePage = () => {
     const chartData = useMemo(() => ({
         labels: salesProjection.map((projection) => {
             const date = new Date(projection.date);
-            return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${getShortDayName(date)})`;
+            return `${date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} (${getShortDayName(date)})`;
         }),
         datasets: [{
             label: "Sales Projection",
@@ -213,7 +213,7 @@ const HomePage = () => {
                         const projection = salesProjection[tooltipItems[0].dataIndex];
                         if (!projection) return '';
                         const date = new Date(projection.date);
-                        const formattedDate = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+                        const formattedDate = date.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' });
                         return projection.hasFutureProjection ? `${formattedDate} (Manual Projection)` : formattedDate;
                     },
                     label: (context) => {
@@ -403,7 +403,7 @@ const HomePage = () => {
     return (
         <div className={`min-h-screen ${BG_PAGE}`}>
             <header className={`bg-white ${BORDER_NEUTRAL} border-b sticky top-0 z-30`}>
-                <div className="container mx-auto px-4 sm:px-6 py-4">
+                <div className="container mx-auto px-4 sm:px-6 py-2">
                     <div className="flex items-center">
                         <LayoutDashboard className={CFA_RED_TEXT} size={26} />
                         <div className="ml-3">
@@ -411,7 +411,7 @@ const HomePage = () => {
                                 {user?.isAdmin ? 'Admin Dashboard' : 'Dashboard'}
                             </Typography>
                             <Typography variant="small" className={cardSubtitleClasses}>
-                                Welcome back, {user?.name || 'User'}
+                                Welcome back
                             </Typography>
                         </div>
                     </div>
@@ -510,7 +510,7 @@ const HomePage = () => {
                                                 )}
                                             </div>
                                             <Typography variant="small" className={`${TEXT_SECONDARY} text-xs mb-1.5`}>
-                                                {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                {date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}
                                             </Typography>
                                             <Typography variant="h6" className={`${TEXT_PRIMARY} font-semibold text-base sm:text-lg`}>
                                                 {projection.sales.toLocaleString()}
