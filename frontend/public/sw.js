@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cfanbinv-cache-v4';
+const CACHE_NAME = 'cfanbinv-cache-v5';
 const urlsToCache = [
   '/',
   '/index.html',

@@ -5,8 +5,10 @@ import { Snowflake, UtensilsCrossed, Clock, Maximize, Minimize, Settings, Calend
 import { useAuth } from "./AuthContext";
 import useSWR from 'swr';
 import axiosInstance from "./axiosInstance";
-import ThawingCabinet from "./ThawingCabinet";
-import PrepAllocations from "./PrepAllocations";
+
+const ThawingCabinet = React.lazy(() => import("./ThawingCabinet"));
+const PrepAllocations = React.lazy(() => import("./PrepAllocations"));
+
 
 const AllocationsDashboard = () => {
     const { user } = useAuth();

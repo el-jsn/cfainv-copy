@@ -7,23 +7,23 @@ import { Navigate } from "react-router-dom";
 import SalesProjectionConfig from './components/SalesProjectionConfig';
 import ClosurePlannerComponent from "./components/ClosurePlannerComponent";
 import ClosurePlanList from "./components/ClosurePlanList";
-import Instructions from "./components/InstructionsComponent";
-import PrepAllocations from "./components/PrepAllocations";
 import HowToUse from "./components/HowToUse";
 import MessageFormComponent from "./components/MessageFormComponent";
 import MessageListPage from "./components/MessageListPage";
 import ErrorBoundary from './components/ErrorBoundary';
-import AllocationsDashboard from './components/AllocationsDashboard';
 // 
 // Lazy load components
 const HomePage = lazy(() => import('./components/HomePage'));
 const ThawingCabinet = lazy(() => import('./components/ThawingCabinet'));
+const PrepAllocations = lazy(() => import('./components/PrepAllocations'));
 const UpdateUPTs = lazy(() => import('./components/UpdateUPTs'));
 const UpdateSalesProjection = lazy(() => import('./components/UpdateSalesProjection'));
 const LoginPage = lazy(() => import('./components/LoginPage'));
 const FutureProjectionsCalendar = lazy(() => import('./components/FutureProjectionsCalendar'));
 const DeveloperInfo = lazy(() => import('./components/DeveloperInfo'));
 const TruckItems = lazy(() => import('./components/TruckItems.jsx'));
+const AllocationsDashboard = lazy(() => import('./components/AllocationsDashboard'));
+const Instructions = lazy(() => import('./components/InstructionsComponent'));
 
 const App = () => {
 
@@ -47,7 +47,11 @@ const App = () => {
         <AuthProvider>
         <Router>
             <Layout>
-              <Suspense fallback={<div>Loading...</div>}>
+              <Suspense fallback={
+                <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+                <div className="w-12 h-12 rounded-full border-4 border-[#E51636] border-t-transparent animate-spin"></div>
+              </div>
+              }>
                 <ErrorBoundary >
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />

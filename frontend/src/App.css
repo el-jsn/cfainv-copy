@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
-
-
 @keyframes bubble {
     0% {
       transform: translateY(0);
@@ -16,61 +13,5 @@
     }
   }
   
-  .bubble {
-    position: absolute;
-    bottom: -25px;
-    border-radius: 50%;
-    background-color: rgba(252, 191, 191, 0.851);
-    animation: bubble linear infinite;
-  }
-  
-  .bubble:nth-child(1) {
-    width: 60px;
-    height: 60px;
-    left: 20%;
-    animation-duration: 4s;
-  }
-  
-  .bubble:nth-child(2) {
-    width: 40px;
-    height: 40px;
-    left: 50%;
-    animation-duration: 5s;
-  }
-  
-  .bubble:nth-child(3) {
-    width: 80px;
-    height: 80px;
-    left: 70%;
-    animation-duration: 6s;
-  }
-  
-  .bubble:nth-child(4) {
-    width: 30px;
-    height: 30px;
-    left: 30%;
-    animation-duration: 3s;
-  }
-  
-
-  @keyframes fade-scale {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-  }
-  .animate-fade-scale {
-    animation: fade-scale 0.2s ease-out;
-  }
-
-  /* styles.css */
-  .fullscreen {
-    max-height: 100% !important;
-}
-.fullscreen > *{
-    flex: 1;
-    width: 16.66% !important;
-    max-width: none !important;
-}
-
-.shrink {
-    flex-shrink: 1;
-}
+ 
+   
