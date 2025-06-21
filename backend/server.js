@@ -82,7 +82,7 @@ app.use(limiter);
 // Enable CORS with specific options to restrict origins and methods
 app.use(
   cors({
-    origin: ["https://cfanbinv.vercel.app", "https://cfanbinv.onrender.com", "https://cfanb.vercel.app","http://localhost:3000", "http://localhost:5173"],
+    origin: ["https://cfanbinv.vercel.app", "https://plan-hospitality-inventory.vercel.app","http://localhost:3000", "http://localhost:5173"],
     credentials: true, // Allow cookies to be sent
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
