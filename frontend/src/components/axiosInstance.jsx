@@ -34,7 +34,7 @@ const axiosRetry = async (axios, error) => {
 const axiosInstance = axios.create({
   // baseURL: "https://cfanbinv.onrender.com/api", // Set the base URL for all requests
   // baseURL: "http://localhost:5000/api", // Set the base URL for
-  baseURL: "https://cfanbinv.vercel.app/api",
+  baseURL: "https://plan-hospitality-inventory.vercel.app/api",
   withCredentials: true, // Send cookies when cross-origin
   headers: {
     "Content-Type": "application/json", // Default headers
