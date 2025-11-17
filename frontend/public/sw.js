@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cfanbinv-cache-v8' 
+const CACHE_NAME = 'cfainv-cache-v8' 
 const URLS_TO_PRECACHE = [
   '/css/style.css',
   '/js/main.js'

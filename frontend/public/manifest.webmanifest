@@ -1,7 +1,7 @@
 {
-    "name": "CFA NB Inventory Manager",
-    "short_name": "CFA NB Inventory",
-    "description": "An application to manage CFA NB inventory.",
+    "name": "CFA Inventory Manager",
+    "short_name": "CFA Inventory",
+    "description": "An application to manage CFA inventory.",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",

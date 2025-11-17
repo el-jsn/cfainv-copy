@@ -116,7 +116,7 @@ const Layout = React.memo(({ children }) => {
                     <div className="flex items-center justify-between h-16">
                         <Link to="/" className="flex items-center space-x-2 shrink-0" onClick={handleLogoClick}>
                             <img
-                                src="./imgs/Chick-fil-A-North-Barrie-Logo.png" // Ensure this path is correct relative to public folder
+                                src="./imgs/cfa.png" // Ensure this path is correct relative to public folder
                                 alt="Chick-fil-A Logo"
                                 className="h-16 w-auto" // Slightly smaller logo
                             />

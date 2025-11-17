@@ -57,7 +57,7 @@ const LoginPage = () => {
                 stiffness: 260,
                 damping: 20
               }}
-              src="./imgs/Chick-fil-A-North-Barrie-Logo.png"
+              src="./imgs/cfa.png"
               alt="Chick-fil-A Logo"
               className="h-32 w-auto drop-shadow-xl"
             />
