@@ -73,7 +73,7 @@ const Footer = React.memo(() => {
                 <div className="border-t border-gray-100 px-4 py-4">
                     <div className="flex justify-center items-center">
                         <p className="text-gray-600 text-sm">
-                            © {year} CFA-North Barrie Internal Tools
+                            © {year} CFA- Internal Tools
                         </p>
                     </div>
                 </div>

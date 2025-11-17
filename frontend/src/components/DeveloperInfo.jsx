@@ -42,7 +42,7 @@ const DeveloperInfo = () => {
                 className="text-center space-y-4 mb-12"
             >
                 <h1 className="text-5xl font-bold text-gray-800">
-                    Technical Overview: CFA North Barrie Allocations
+                    Technical Overview: CFA  Allocations
                 </h1>
             </motion.div>
 
@@ -55,7 +55,7 @@ const DeveloperInfo = () => {
                     <Workflow className="w-6 h-6 text-red-500" /> Project Purpose & Core Functionality
                 </h2>
                 <p className="text-gray-600 leading-relaxed">
-                    This MERN stack application serves as an internal management tool for the Chick-fil-A North Barrie location.
+                    This MERN stack application serves as an internal management tool for the Chick-fil-A  location.
                     Its primary goal is to automate and streamline inventory allocation, thawing/prep scheduling, and truck ordering.
                     It achieves this by integrating sales projections (historical and future), Units Per Thousand (UPT) data,
                     configurable product buffer percentages, and operational messages/closures into a unified system.
