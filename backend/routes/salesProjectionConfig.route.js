@@ -54,12 +54,7 @@ router.post('/sales-projection-config', authenticateToken, async (req, res) => {
             const dayTotal = Object.values(configData[day])
                 .reduce((sum, val) => sum + Number(val), 0);
             
-            // Allow either 0% (empty) or 100% total
-            if (dayTotal !== 0 && Math.abs(dayTotal - 100) > 0.01) {
-                return res.status(400).json({ 
-                    message: `Percentages for ${day} must sum to either 0% or 100%. Current sum: ${dayTotal}` 
-                });
-            }
+           
         }
 
         // Update or create the configuration
