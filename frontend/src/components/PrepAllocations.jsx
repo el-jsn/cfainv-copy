@@ -383,6 +383,8 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
                             renderSaladCount(productData.data.pans, 8)
                         ) : productData.name === "Southwest Salad" ? (
                             renderSaladCount(productData.data.pans, 6)
+                        ) : productData.name === "Tomato" ? (
+                            productData.data.pans > 0 && <div>{Math.ceil(productData.data.pans / 2)} pans</div>
                         ) : (
                             <>
                                 {productData.data.pans > 0 && <div>{productData.data.pans} pans</div>}
