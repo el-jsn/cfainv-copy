@@ -1,13 +1,14 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowBackIos } from "@mui/icons-material";
-import { Snowflake, UtensilsCrossed, Clock, Maximize, Minimize, Settings, Calendar } from "lucide-react";
+import { Snowflake, UtensilsCrossed, Clock, Maximize, Minimize, Settings, Calendar, Coffee } from "lucide-react";
 import { useAuth } from "./AuthContext";
 import useSWR from 'swr';
 import axiosInstance from "./axiosInstance";
 
-const ThawingCabinet = React.lazy(() => import("./ThawingCabinet"));
-const PrepAllocations = React.lazy(() => import("./PrepAllocations"));
+import ThawingCabinet from "./ThawingCabinet";
+import PrepAllocations from "./PrepAllocations";
+import BeverageAllocations from "./BeverageAllocations";
 
 
 const AllocationsDashboard = () => {
@@ -226,6 +227,16 @@ const AllocationsDashboard = () => {
                             <UtensilsCrossed className="w-4 h-4" />
                             <span className="font-medium">Prep</span>
                         </button>
+                        <button
+                            onClick={() => setActiveView("beverage")}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all duration-300 ${activeView === "beverage"
+                                ? "bg-yellow-700 text-white shadow-sm"
+                                : "text-gray-700 hover:bg-gray-200"
+                                }`}
+                        >
+                            <Coffee className="w-4 h-4" />
+                            <span className="font-medium">Beverages</span>
+                        </button>
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3">
@@ -299,8 +310,23 @@ const AllocationsDashboard = () => {
                             futureProjections={futureProjections}
                             containerMode={true}
                         />
-                    ) : (
+                    ) : activeView === "prep" ? (
                         <PrepAllocations
+                            data={data}
+                            showAdminView={showAdminView}
+                            showNextWeek={showNextWeek}
+                            isFullScreen={isFullScreen}
+                            adjustments={adjustments}
+                            closures={closures}
+                            messages={messages}
+                            salesProjectionConfig={salesProjectionConfig}
+                            futureProjections={futureProjections}
+                            dailyBuffers={dailyBuffers}
+                            onAdjustBuffer={handleAdjustBuffer}
+                            containerMode={true}
+                        />
+                    ) : (
+                        <BeverageAllocations
                             data={data}
                             showAdminView={showAdminView}
                             showNextWeek={showNextWeek}

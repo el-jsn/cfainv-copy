@@ -1,5 +1,3 @@
-// src/components/PrepAllocations.js
-
 import React, { useState, useCallback, useRef, memo, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Clock, Maximize, Minimize, Settings } from "lucide-react";
@@ -10,19 +8,18 @@ import useSWR from 'swr';
 
 const BufferAdjustmentModal = memo(({ isOpen, onClose, day, dailyBuffers, onSave }) => {
     const [buffers, setBuffers] = useState({
-        Lettuce: '',
-        Tomato: '',
-        Romaine: '',
-        "Cobb Salad": '',
-        "Cobb Salad": '',
-        "Southwest Salad": ''
+        Lemonade: '',
+        "Diet Lemonade": '',
+        "Sunjoy Lemonade": ''
     });
 
     useEffect(() => {
         if (dailyBuffers) {
             const newBuffers = { ...buffers };
             dailyBuffers.forEach(buffer => {
-                newBuffers[buffer.productName] = buffer.bufferPrcnt.toString();
+                if (newBuffers.hasOwnProperty(buffer.productName)) {
+                    newBuffers[buffer.productName] = buffer.bufferPrcnt.toString();
+                }
             });
             setBuffers(newBuffers);
         }
@@ -110,13 +107,9 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments = [], 
         };
 
         const utpValues = {
-            Lettuce: utpData.find(item => item.productName === "Lettuce")?.utp || 1.0,
-            Tomato: utpData.find(item => item.productName === "Tomato")?.utp || 1.0,
-            Romaine: utpData.find(item => item.productName === "Romaine")?.utp || 1.0,
-            "Large Romaine": utpData.find(item => item.productName === "Large Romaine")?.utp || 1.0,
-            "Small Romaine": utpData.find(item => item.productName === "Small Romaine")?.utp || 1.0,
-            "Cobb Salad": utpData.find(item => item.productName === "Cobb Salad")?.utp || 1.0,
-            "Southwest Salad": utpData.find(item => item.productName === "Southwest Salad")?.utp || 1.0,
+            Lemonade: utpData.find(item => item.productName === "Lemonade")?.utp || 1.0,
+            "Diet Lemonade": utpData.find(item => item.productName === "Diet Lemonade")?.utp || 1.0,
+            "Sunjoy Lemonade": utpData.find(item => item.productName === "Sunjoy Lemonade")?.utp || 1.0,
         };
 
         return daysOrder.map((day, index) => {
@@ -173,31 +166,13 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments = [], 
                 return { pans: Math.max(0, finalPans), buckets: Math.max(0, finalBuckets), modified: !!message };
             };
 
-            const calculateLettucePans = (utp) => Math.ceil(((utp * (projectedSales / 1000)) / 160) * getBufferMultiplier("Lettuce", day));
-
-            const calculateTomatoPans = (utp) => Math.ceil(((utp * (projectedSales / 1000)) / 156) * getBufferMultiplier("Tomato", day));
-
-            // const calculateRomainePans = (utp) => Math.round(((utp * (projectedSales / 1000)) / 2585.48) * getBufferMultiplier("Romaine", day));
-
-            const calculateLargeRomainePans = (utp) => Math.ceil(((utp * (projectedSales / 1000)) / 24) * getBufferMultiplier("Romaine", day)); // 24 large salads in a pan
-
-            const calculateSmallRomainePans = (utp) => Math.ceil(((utp * (projectedSales / 1000)) / 40) * getBufferMultiplier("Romaine", day)); // 40 small salads in a pan
-
             const calculateBuckets = (utp, bufferMultiplier) => Math.ceil((((utp / 33.814) * (projectedSales * drinkMultiplier)) / 1000 / 12) * bufferMultiplier); 
             
-            const calculateCobbSalads = (utp) => Math.ceil(((utp * (projectedSales / 1000))) * getBufferMultiplier("Cobb Salad", day));
+            const lemonadeBuckets = calculateBuckets(utpValues.Lemonade, getBufferMultiplier("Lemonade", day));
 
-            const calculateSouthwestSalads = (utp) => Math.ceil(((utp * (projectedSales / 1000))) * getBufferMultiplier("Southwest Salad", day));
+            const dietLemonadeBuckets = calculateBuckets(utpValues["Diet Lemonade"], getBufferMultiplier("Diet Lemonade", day));
 
-            const lettucePans = calculateLettucePans(utpValues.Lettuce);
-
-            const tomatoPans = calculateTomatoPans(utpValues.Tomato);
-
-            const romainePans = calculateLargeRomainePans(utpValues["Large Romaine"]) + calculateSmallRomainePans(utpValues["Small Romaine"]);
-
-            const cobbSalads = calculateCobbSalads(utpValues["Cobb Salad"]);
-            
-            const southwestSalads = calculateSouthwestSalads(utpValues["Southwest Salad"]);
+            const sunjoyLemonadeBuckets = calculateBuckets(utpValues["Sunjoy Lemonade"], getBufferMultiplier("Sunjoy Lemonade", day));
 
             return {
                 day: day,
@@ -210,11 +185,9 @@ const useCalculatePrepData = (salesData, utpData, bufferData, adjustments = [], 
                     isFromFutureProjection: projectedSales !== salesData.find(e => e.day === day)?.sales,
                     date: targetDate
                 }],
-                lettuce: applyMessage("Lettuce", lettucePans),
-                romaine: applyMessage("Romaine", romainePans),
-                tomato: applyMessage("Tomato", tomatoPans),
-                cobbSalads: applyMessage("Cobb Salad", cobbSalads),
-                southwestSalads: applyMessage("Southwest Salad", southwestSalads),
+                lemonade: applyMessage("Lemonade", 0, lemonadeBuckets),
+                dietLemonade: applyMessage("Diet Lemonade", 0, dietLemonadeBuckets),
+                sunjoyLemonade: applyMessage("Sunjoy Lemonade", 0, sunjoyLemonadeBuckets),
             };
         });
     }, [salesData, utpData, bufferData, adjustments, futureProjections, isNextWeek, dailyBuffers]);
@@ -293,27 +266,14 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
 
     const productsMap = useMemo(() => {
         return {
-            "Lettuce": { name: "Lettuce", data: entry.lettuce, bg: "bg-green-200 text-gray-800", index: 0 },
-            "Romaine": { name: "Romaine", data: entry.romaine, bg: "bg-green-300 text-gray-800", index: 1 },
-            "Tomato": { name: "Tomato", data: entry.tomato, bg: "bg-red-200 text-gray-800", index: 2 },
-            "Cobb Salad": {
-                name: "Cobb Salad",
-                data: entry.cobbSalads,
-                bg: "bg-gradient-to-br from-green-100 to-green-200 relative overflow-hidden",
-                index: 3
-            },
-            "Southwest Salad": {
-                name: "Southwest Salad",
-                data: entry.southwestSalads,
-                bg: "bg-gradient-to-br from-green-200 to-green-300 relative overflow-hidden",
-                index: 4
-            },
+            "Lemonade": { name: "Lemonade", data: entry.lemonade, bg: "bg-yellow-200 text-gray-800", index: 5 },
+            "Diet Lemonade": { name: "Diet Lemonade", data: entry.dietLemonade, bg: "bg-yellow-100 text-gray-800", index: 6 },
+            "Sunjoy Lemonade": { name: "Sunjoy Lemonade", data: entry.sunjoyLemonade, bg: "bg-orange-200 text-gray-800", index: 7 },
         }
     }, [entry]);
 
     const renderProductBox = (productName) => {
         const productData = productsMap[productName];
-        const isSalad = productName.includes('Salad');
 
         const relevantMessages = productMessages.filter(msg => {
             const products = msg.products ? msg.products.split(',') : [];
@@ -327,34 +287,12 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
 
         if (!productData) return null;
 
-        // Special formatting for salads
-        const renderSaladCount = (count, traySize) => {
-            return (
-                <div>
-                    {count} salads ({Math.round(count / traySize)} trays)
-                </div>
-            );
-        };
-
         return (
             <div
                 key={productData.index}
                 className={`flex-1 ${productData.bg} p-2 m-1 rounded-md transition-all duration-200
                     hover:shadow-sm flex flex-col relative`}
             >
-                {isSalad && (
-                    <div className="absolute inset-0 opacity-10">
-                        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                            <pattern id="salad-pattern" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
-                                <path d="M0 5 L10 5 M5 0 L5 10"
-                                    stroke="currentColor"
-                                    strokeWidth="0.5"
-                                    className="text-green-800" />
-                            </pattern>
-                            <rect x="0" y="0" width="100%" height="100%" fill="url(#salad-pattern)" />
-                        </svg>
-                    </div>
-                )}
                 <div className="relative z-10">
                     <div className="font-semibold text-center mb-1 text-sm sm:text-base">
                         {productData.name}
@@ -365,18 +303,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
                         )}
                     </div>
                     <div className={`text-center text-sm sm:text-base ${productData.data.modified ? "text-red-700 font-bold" : ""}`}>
-                        {productData.name === "Cobb Salad" ? (
-                            renderSaladCount(productData.data.pans, 8)
-                        ) : productData.name === "Southwest Salad" ? (
-                            renderSaladCount(productData.data.pans, 6)
-                        ) : productData.name === "Tomato" ? (
-                            productData.data.pans > 0 && <div>{Math.ceil(productData.data.pans / 2)} pans</div>
-                        ) : (
-                            <>
-                                {productData.data.pans > 0 && <div>{productData.data.pans} pans</div>}
-                                {productData.data.buckets > 0 && <div>{productData.data.buckets} buckets (12qt)</div>}
-                            </>
-                        )}
+                        {productData.data.buckets > 0 && <div>{productData.data.buckets} buckets (12qt)</div>}
                     </div>
                     {relevantMessages.length > 0 && (
                         <div className="mt-2 space-y-1">
@@ -482,7 +409,7 @@ const DayCard = memo(({ entry, currentDay, closures, messages, showAdminView, on
     );
 });
 
-const PrepAllocations = ({
+const BeverageAllocations = ({
     data,
     showAdminView: propShowAdminView,
     showNextWeek: propShowNextWeek,
@@ -750,6 +677,9 @@ const PrepAllocations = ({
                         </div>
                     ))}
                 </div>
+                <div className="mt-2 text-xs text-gray-500 text-center w-full">
+                    *Beverage allocations for Monday - Friday are based on 75% of projected daily sales; Saturday allocations are based on 100%.
+                </div>
             </div>
         );
     }
@@ -761,7 +691,7 @@ const PrepAllocations = ({
                 <div className="flex items-center justify-between mb-2 sm:mb-3">
                     <div className="flex items-center gap-2">
                         <Link to={"/"} className="text-lg sm:text-xl font-bold text-gray-800">
-                            <ArrowBackIos /> Prep Allocations
+                            <ArrowBackIos /> Beverage Allocations
                         </Link>
                         {showNextWeek && (
                             <span className="px-2 py-1 bg-green-100 text-green-800 rounded-md text-sm font-medium">
@@ -831,10 +761,11 @@ const PrepAllocations = ({
                     ))}
                 </div>
                 <div className="mt-2 text-xs text-gray-500 text-right">
+                    *Beverage allocations for Monday - Friday are based on 75% of projected daily sales; Saturday allocations are based on 100%.
                 </div>
             </div>
         </div>
     );
 };
 
-export default PrepAllocations;
+export default BeverageAllocations;
