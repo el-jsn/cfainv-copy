@@ -21,7 +21,6 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { blueGrey } from "@mui/material/colors";
 import DeleteIcon from '@mui/icons-material/Delete';
-import PropTypes from 'prop-types';
 
 // Extend dayjs with plugins
 dayjs.extend(utc);
@@ -411,9 +410,5 @@ const FutureProjectionsCalendar = ({ onProjectionChange }) => {
     );
 };
 
-// Add prop types
-FutureProjectionsCalendar.propTypes = {
-    onProjectionChange: PropTypes.func
-};
 
 export default FutureProjectionsCalendar; 
