@@ -14,7 +14,6 @@ const BufferAdjustmentModal = memo(({ isOpen, onClose, day, dailyBuffers, onSave
         Tomato: '',
         Romaine: '',
         "Cobb Salad": '',
-        "Cobb Salad": '',
         "Southwest Salad": ''
     });
 
