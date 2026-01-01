@@ -1,4 +1,4 @@
-edit       # Inventory Manager
+edit again      # Inventory Manager
 
 This repository contains the source code for the Inventory Manager application, featuring a Node.js/Express backend and a React/Vite frontend.
 
